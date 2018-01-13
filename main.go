@@ -75,21 +75,29 @@ func bearerAuthToken(c *gin.Context) *Token {
 	return token
 }
 
-func getAuthorizedApplication(c *gin.Context) (app *Application) {
+func getAuthorizedApplication(c *gin.Context) *Application {
 	token := bearerAuthToken(c)
 	if token == nil || token.ApplicationId == nil {
 		return nil
 	}
+	var app = &Application{}
 	DatabaseConnection().Where("id = ?", token.ApplicationId).Find(&app)
+	if app.Id != uuid.Nil {
+		return nil
+	}
 	return app
 }
 
-func getAuthorizedUser(c *gin.Context) (user *User) {
+func getAuthorizedUser(c *gin.Context) *User {
 	token := bearerAuthToken(c)
 	if token == nil || token.UserId == nil {
 		return nil
 	}
+	var user = &User{}
 	DatabaseConnection().Where("id = ?", token.UserId).Find(&user)
+	if user.Id != uuid.Nil {
+		return nil
+	}
 	return user
 }
 
@@ -197,6 +205,7 @@ func createApplicationHandler(c *gin.Context) {
 		renderError(err.Error(), 422, c)
 		return
 	}
+	app.UserId = user.Id
 
 	if app.Create() {
 		render(app, 201, c)
