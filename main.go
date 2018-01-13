@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	uuid "github.com/satori/go.uuid"
 )
@@ -39,6 +40,18 @@ func main() {
 	} else {
 		r.Run(ListenAddr)
 	}
+}
+
+func authorize(c *gin.Context) *Authenticable {
+	var authenticable *Authenticable
+	authorization := c.GetHeader("authorization")
+	if authorization == "" {
+		return nil
+	}
+	jwt.Parse(authorization, func(*jwt.Token) (interface{}, error) {
+		return nil, nil
+	})
+	return authenticable
 }
 
 func render(obj interface{}, status int, c *gin.Context) {
@@ -160,26 +173,7 @@ func tokensListHandler(c *gin.Context) {
 }
 
 func createTokenHandler(c *gin.Context) {
-	buf, err := c.GetRawData()
-	if err != nil {
-		renderError(err.Error(), 400, c)
-		return
-	}
-
-	token := &Token{}
-	err = json.Unmarshal(buf, token)
-	if err != nil {
-		renderError(err.Error(), 422, c)
-		return
-	}
-
-	if token.Create() {
-		render(token, 201, c)
-	} else {
-		obj := map[string]interface{}{}
-		obj["errors"] = token.Errors
-		render(obj, 422, c)
-	}
+	renderError("not implemented", 501, c)
 }
 
 func deleteTokenHandler(c *gin.Context) {

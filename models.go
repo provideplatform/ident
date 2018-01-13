@@ -12,6 +12,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type Authenticable interface {
+	//func GetScope() *AuthenticableScope
+}
+
 type Model struct {
 	Id        uuid.UUID `sql:"primary_key;type:uuid;default:uuid_generate_v4()" json:"id"`
 	CreatedAt time.Time `sql:"not null" json:"created_at"`
@@ -25,6 +29,7 @@ type Error struct {
 
 type Application struct {
 	Model
+	Authenticable
 	UserId      uuid.UUID        `sql:"type:uuid not null" json:"user_id"`
 	Name        *string          `sql:"not null" json:"name"`
 	Description *string          `json:"description"`
@@ -36,7 +41,7 @@ type Token struct {
 	IssuedAt      *time.Time       `sql:"not null" json:"issued_at"`
 	ExpiresAt     *time.Time       `json:"expires_at"`
 	Secret        *string          `sql:"not null" json:"secret"`
-	Token         *string          `sql:"not null" json:"token"`
+	Token         *string          `json:"token"`
 	ApplicationId *uuid.UUID       `sql:"type:uuid" json:"-"`
 	UserId        *uuid.UUID       `sql:"type:uuid" json:"-"`
 	Data          *json.RawMessage `sql:"-" json:"data"`
@@ -44,9 +49,11 @@ type Token struct {
 
 type User struct {
 	Model
-	Name     *string `sql:"not null" json:"name"`
-	Email    *string `sql:"not null" json:"email"`
-	Password *string `sql:"not null" json:"password"`
+	Authenticable
+	ApplicationId *uuid.UUID `json:"application_id", json:"-"`
+	Name          *string    `sql:"not null" json:"name"`
+	Email         *string    `sql:"not null" json:"email"`
+	Password      *string    `sql:"not null" json:"password"`
 }
 
 type TokenResponse struct {
@@ -133,7 +140,19 @@ func (t *Token) Create() bool {
 			}
 		}
 		if !db.NewRecord(t) {
-			return rowsAffected > 0
+			if rowsAffected > 0 {
+				var err error
+				t.Token, err = t.encodeJWT()
+				if err != nil {
+					t.Errors = append(t.Errors, &Error{
+						Message: stringOrNil(err.Error()),
+					})
+					return false
+				}
+				db.Save(&t) // FIXME-- harden for unexpected failure case
+				return true
+			}
+			return false
 		}
 	}
 	return false
@@ -158,7 +177,7 @@ func (t *Token) encodeJWT() (*string, error) {
 	}
 
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwt.MapClaims{
-		"jti":  t.Id,
+		"jti":  t.Id.String(),
 		"iat":  t.IssuedAt.Unix(),
 		"sub":  stringOrNil(sub),
 		"exp":  exp,
@@ -183,20 +202,18 @@ func (t *Token) Validate() bool {
 		} else {
 			iat := time.Now()
 			t.IssuedAt = &iat
+			if t.ExpiresAt != nil && t.ExpiresAt.Before(*t.IssuedAt) {
+				t.Errors = append(t.Errors, &Error{
+					Message: stringOrNil("token expiration must not preceed issuance"),
+				})
+			}
 		}
 		if t.Secret != nil {
 			t.Errors = append(t.Errors, &Error{
-				Message: stringOrNil("token secret must not be supplied as it will be generated"),
+				Message: stringOrNil("token secret must not be supplied; it must be generated at this time"),
 			})
 		} else {
-			var err error
 			t.Secret = stringOrNil(uuid.NewV4().String())
-			t.Token, err = t.encodeJWT()
-			if err != nil {
-				t.Errors = append(t.Errors, &Error{
-					Message: stringOrNil(err.Error()),
-				})
-			}
 		}
 	}
 	return len(t.Errors) == 0
@@ -244,7 +261,7 @@ func AuthenticateUser(email string, password string) (*UserAuthenticationRespons
 	db.Where("email = ?", strings.ToLower(email)).First(&user)
 	if user != nil && user.Id != uuid.Nil {
 		if !user.authenticate(password) {
-			return nil, errors.New("authentication failed with given credential")
+			return nil, errors.New("authentication failed with given credentials")
 		}
 	} else {
 		return nil, fmt.Errorf("invalid email")
@@ -296,11 +313,6 @@ func (u *User) Create() bool {
 		}
 	}
 	return false
-}
-
-func (u *User) createToken() (*Token, error) {
-	token := &Token{}
-	return token, nil
 }
 
 func (u *User) Validate() bool {
