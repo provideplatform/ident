@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/badoux/checkmail"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -363,7 +364,12 @@ func (u *User) Validate() bool {
 	if db.NewRecord(u) {
 		if u.Email != nil {
 			u.Email = stringOrNil(strings.ToLower(*u.Email))
-			// TOOD- validate email address
+			err := checkmail.ValidateFormat(*u.Email)
+			if err != nil {
+				u.Errors = append(u.Errors, &Error{
+					Message: stringOrNil(err.Error()),
+				})
+			}
 		}
 		if u.Password != nil {
 			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*u.Password), bcrypt.DefaultCost)
