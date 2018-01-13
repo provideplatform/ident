@@ -90,10 +90,11 @@ Enumerate platform applications visible to the authorized caller.
 ]
 ```
 
-
 ##### `POST /api/v1/applications`
 
-Create a new application on behalf of the authorized `User`, which MUST NOT have been created on behalf of an `Application`.
+Create a new application on behalf of the authorized platform `User`.
+
+*A platform `User` is a user that was not created on behalf of an `Application`.*
 
 ```
 curl -v -XPOST -H "content-type: application/json" https://ident.provide.services/api/v1/applications -d '{"name": "Unicorn"}'
@@ -187,4 +188,58 @@ Destroy a previously authorized `Token` on behalf of the authorized `User` or `A
 < Content-Type: application/json; charset=UTF-8
 < Date: Sat, 13 Jan 2018 04:01:16 GMT
 <
+```
+
+
+### Users API
+
+##### `GET /api/v1/users`
+
+Enumerate previous created `User`s for the authorized `Application`. This method will return `401 Unauthorized` if the `bearer` authorization header does not resolve to to an `Application`.
+
+```
+[prvd@vpc ~]# curl -v https://ident.provide.services/api/v1/users
+
+> GET /api/v1/users HTTP/1.1
+> Host: ident.provide.services
+> User-Agent: curl/7.54.0
+> Accept: */*
+>
+< HTTP/1.1 200 OK
+< Content-Type: application/json; charset=UTF-8
+< Date: Sat, 13 Jan 2018 03:51:52 GMT
+< Content-Length: 3
+<
+[]
+```
+
+
+##### `POST /api/v1/users`
+
+Create a new platform `User` or a `User` on behalf of an authorized `Application`.
+
+```
+curl -v -XPOST -H "content-type: application/json" https://ident.provide.services/api/v1/applications -d '{"name": "Unicorn"}'
+
+> POST /api/v1/users HTTP/1.1
+> Host: ident.provide.services
+> User-Agent: curl/7.54.0
+> Accept: */*
+> authorization: bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7fSwiZXhwIjpudWxsLCJpYXQiOjE1MTU4MzQ0OTIsImp0aSI6IjMzMGFkNGVkLTAzMDItNGRhMS1hYTgyLWQxNTg2NDM2YTZkNCIsInN1YiI6ImFwcGxpY2F0aW9uOjNhOWMzYzE5LTU0NTUtNDQyZS04OWI1LTM1NzUyZjZmZGMzYSJ9.BUS7Q-ph6wu-WxKrETzFwnSJgq3EeEf4W2esbHSmgjQ
+> content-type: application/json
+> Content-Length: 65
+>
+* upload completely sent off: 65 out of 65 bytes
+< HTTP/1.1 201 Created
+< Content-Type: application/json; charset=UTF-8
+< Date: Sat, 13 Jan 2018 09:15:13 GMT
+< Content-Length: 162
+<
+{
+    "id": "82254ad2-a847-455f-a351-672a193106ef",
+    "created_at": "2018-01-13T04:15:13.024833-05:00",
+    "name": "Hello World",
+    "email": "hello@world.com"
+}
+
 ```
