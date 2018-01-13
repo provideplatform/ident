@@ -4,13 +4,11 @@ Microservice for managing authentication and authorization for platform users an
 
 ### Authentication
 
-Consumers of this API will present a `bearer` authentication header (i.e., using a `JWT` token) for all requests. The `sub` of the authenticated caller must be a `User` when attempting to create or access `Application` APIs.
+Consumers of this API will present a `bearer` authentication header (i.e., using a `JWT` token) for all requests. The `sub` of the authenticated caller must reference a `User` when attempting to create or access `Application` APIs.
 
 ### Authorization
 
 The `bearer` authorization header will be scoped to an authorized platform user or application. The `bearer` authorization header may contain a `sub` (see [RFC-7519 §§ 4.1.2](https://tools.ietf.org/html/rfc7519#section-4.1.2)) to further limit its authorized scope to a specific token or smart contract, wallet or other entity.
-
-Certain APIs will be metered similarly to how AWS meters some of its webservices. Production applications will need a sufficient PRVD token balance to consume metered APIs (based on market conditions at the time of consumption, some quantity of PRVD tokens will be burned as a result of such metered API usage. *The PRVD token model and economics are in the process of being peer-reviewed and finalized; the documentation will be updated accordingly with specifics.*
 
 ---
 The following APIs are exposed:
