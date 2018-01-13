@@ -16,14 +16,14 @@ The following APIs are exposed:
 
 ### Authentication API
 
-##### `POST /api/v1/tokens`
+##### `POST /api/v1/authenticate`
 
 Authorize a `Token` on behalf of the authorized `User` or `Application`.
 
 ```
-[prvd@vpc ~]# curl -v -XPOST -H 'content-type: application/json' https://ident.provide.services/api/v1/tokens -d '{"email": "hello@example.com", "password": "h3ll0pw"}'
+[prvd@vpc ~]# curl -v -XPOST -H 'content-type: application/json' https://ident.provide.services/api/v1/authenticate -d '{"email": "hello@example.com", "password": "h3ll0pw"}'
 
-> POST /api/v1/tokens HTTP/1.1
+> POST /api/v1/authenticate HTTP/1.1
 > Host: ident.provide.services
 > User-Agent: curl/7.54.0
 > Accept: */*
