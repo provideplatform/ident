@@ -44,7 +44,7 @@ type Token struct {
 
 type User struct {
 	Model
-	ApplicationId *uuid.UUID `json:"application_id", json:"-"`
+	ApplicationId *uuid.UUID `sql:"type:uuid" json:"-"`
 	Name          *string    `sql:"not null" json:"name"`
 	Email         *string    `sql:"not null" json:"email"`
 	Password      *string    `sql:"not null" json:"password"`
@@ -69,6 +69,18 @@ type UserAuthenticationResponse struct {
 }
 
 // application
+
+func (app *Application) CreateToken() (*Token, error) {
+	token := &Token{
+		ApplicationId: &app.Id,
+	}
+	if !token.Create() {
+		if len(token.Errors) > 0 {
+			return nil, fmt.Errorf("Failed to create token for application: %s; %s", app.Id.String(), *token.Errors[0].Message)
+		}
+	}
+	return token, nil
+}
 
 func (app *Application) Create() bool {
 	db := DatabaseConnection()
@@ -115,6 +127,24 @@ func (app *Application) Delete() bool {
 }
 
 // token
+
+func (t *Token) GetApplication() *Application {
+	var app = &Application{}
+	DatabaseConnection().Model(t).Related(&app)
+	if app.Id == uuid.Nil {
+		return nil
+	}
+	return app
+}
+
+func (t *Token) GetUser() *User {
+	var user = &User{}
+	DatabaseConnection().Model(t).Related(&user)
+	if user.Id == uuid.Nil {
+		return nil
+	}
+	return user
+}
 
 func (t *Token) Create() bool {
 	if !t.Validate() {
@@ -189,6 +219,11 @@ func (t *Token) Validate() bool {
 	t.Errors = make([]*Error, 0)
 	db := DatabaseConnection()
 	if db.NewRecord(t) {
+		if t.ApplicationId != nil && t.UserId != nil {
+			t.Errors = append(t.Errors, &Error{
+				Message: stringOrNil("ambiguous token subject"),
+			})
+		}
 		if t.IssuedAt != nil {
 			t.Errors = append(t.Errors, &Error{
 				Message: stringOrNil("token must not attempt assert iat JWT claim"),
@@ -282,6 +317,12 @@ func AuthenticateUser(email string, password string) (*UserAuthenticationRespons
 
 func (u *User) authenticate(password string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(*u.Password), []byte(password)) == nil
+}
+
+func (u *User) Applications() []Application {
+	var apps []Application
+	DatabaseConnection().Where("user_id = ?", u.Id).Find(&apps)
+	return apps
 }
 
 func (u *User) Create() bool {

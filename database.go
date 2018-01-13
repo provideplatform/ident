@@ -23,6 +23,7 @@ func migrateSchema() {
 
 		db.AutoMigrate(&Application{})
 		db.Model(&Application{}).AddForeignKey("user_id", "users(id)", "SET NULL", "CASCADE")
+		db.Model(&User{}).AddForeignKey("application_id", "applications(id)", "SET NULL", "CASCADE")
 
 		db.AutoMigrate(&Token{})
 		db.Model(&Token{}).AddIndex("idx_tokens_token", "token")
