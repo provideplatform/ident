@@ -16,6 +16,43 @@ Certain APIs will be metered similarly to how AWS meters some of its webservices
 The following APIs are exposed:
 
 
+### Authentication API
+
+##### `POST /api/v1/tokens`
+
+Authorize a `Token` on behalf of the authorized `User` or `Application`.
+
+```
+[prvd@vpc ~]# curl -v -XPOST -H 'content-type: application/json' https://ident.provide.services/api/v1/tokens -d '{"email": "hello@example.com", "password": "h3ll0pw"}'
+
+> POST /api/v1/tokens HTTP/1.1
+> Host: ident.provide.services
+> User-Agent: curl/7.54.0
+> Accept: */*
+> Content-Length: 50
+> Content-Type: application/json
+>
+* upload completely sent off: 50 out of 50 bytes
+< HTTP/1.1 201 Created
+< Content-Type: application/json; charset=UTF-8
+< Date: Sat, 13 Jan 2018 03:57:50 GMT
+< Content-Length: 607
+<
+{
+    "user": {
+        "id": "83420c49-1b45-4144-9eb8-7e3c09aa2111",
+        "created_at": "2018-01-12T18:51:19.99177-05:00",
+        "name": "kt",
+        "email": "kyle@unmarked.io"
+    },
+    "token": {
+        "id": "c0c81296-8587-4e12-bba2-40b6e91f1590",
+        "secret": "843addaf-88f9-4b02-8675-0853a7a34e74",
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7fSwiZXhwIjpudWxsLCJpYXQiOjE1MTU4MTU4NzAsImp0aSI6IjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMCIsInN1YiI6InVzZXI6ODM0MjBjNDktMWI0NS00MTQ0LTllYjgtN2UzYzA5YWEyMTExIn0.ZNkGppXioiuKe8SAKtakRLnAwm80cQZuaOHj0OMlgJY"
+    }
+}
+```
+
 ### Applications API
 
 ##### `GET /api/v1/applications`
@@ -133,36 +170,7 @@ Enumerate previously authorized `Token`s for the authorized `User` or `Applicati
 
 Authorize a `Token` on behalf of the authorized `User` or `Application`.
 
-```
-[prvd@vpc ~]# curl -v -XPOST -H 'content-type: application/json' https://ident.provide.services/api/v1/tokens -d '{"email": "hello@example.com", "password": "h3ll0pw"}'
-
-> POST /api/v1/tokens HTTP/1.1
-> Host: ident.provide.services
-> User-Agent: curl/7.54.0
-> Accept: */*
-> Content-Length: 50
-> Content-Type: application/json
->
-* upload completely sent off: 50 out of 50 bytes
-< HTTP/1.1 201 Created
-< Content-Type: application/json; charset=UTF-8
-< Date: Sat, 13 Jan 2018 03:57:50 GMT
-< Content-Length: 607
-<
-{
-    "user": {
-        "id": "83420c49-1b45-4144-9eb8-7e3c09aa2111",
-        "created_at": "2018-01-12T18:51:19.99177-05:00",
-        "name": "kt",
-        "email": "kyle@unmarked.io"
-    },
-    "token": {
-        "id": "c0c81296-8587-4e12-bba2-40b6e91f1590",
-        "secret": "843addaf-88f9-4b02-8675-0853a7a34e74",
-        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7fSwiZXhwIjpudWxsLCJpYXQiOjE1MTU4MTU4NzAsImp0aSI6IjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMCIsInN1YiI6InVzZXI6ODM0MjBjNDktMWI0NS00MTQ0LTllYjgtN2UzYzA5YWEyMTExIn0.ZNkGppXioiuKe8SAKtakRLnAwm80cQZuaOHj0OMlgJY"
-    }
-}
-```
+*See the `api/v1/authenticate` API to authorize a new `Token`.*
 
 
 ##### `DELETE /api/v1/tokens/:id`
