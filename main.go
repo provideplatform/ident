@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/provideapp/go-core"
+
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	uuid "github.com/satori/go.uuid"
@@ -44,18 +46,8 @@ func main() {
 
 func bearerAuthToken(c *gin.Context) *Token {
 	var token *Token
-	authorization := c.GetHeader("authorization")
-	if authorization == "" {
-		return nil
-	}
-	hdrprts := strings.Split(authorization, "bearer ")
-	if len(hdrprts) != 2 {
-		Log.Warningf("Failed to parse bearer authentication header: %s", authorization)
-		return nil
-	}
-	authorization = hdrprts[1]
-	_, err := jwt.Parse(authorization, func(_jwtToken *jwt.Token) (interface{}, error) {
-		if claims, ok := _jwtToken.Claims.(jwt.MapClaims); ok {
+	keyfn := func(jwtToken *jwt.Token) (interface{}, error) {
+		if claims, ok := jwtToken.Claims.(jwt.MapClaims); ok {
 			if jti, jtiok := claims["jti"]; jtiok {
 				token = &Token{}
 				DatabaseConnection().Where("id = ?", jti).Find(&token)
@@ -65,12 +57,8 @@ func bearerAuthToken(c *gin.Context) *Token {
 			}
 		}
 		return nil, nil
-	})
-	if err != nil {
-		Log.Warningf("Failed to parse bearer authentication header as valid JWT; %s", err.Error())
-		return nil
 	}
-
+	gocore.ParseBearerAuthorizationHeader(c, &keyfn)
 	return token
 }
 
