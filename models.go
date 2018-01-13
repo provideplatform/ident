@@ -367,7 +367,7 @@ func (u *User) Validate() bool {
 			err := checkmail.ValidateFormat(*u.Email)
 			if err != nil {
 				u.Errors = append(u.Errors, &Error{
-					Message: stringOrNil(err.Error()),
+					Message: stringOrNil(fmt.Sprintf("invalid email address: %s; %s", *u.Email, err.Error())),
 				})
 			}
 		}
