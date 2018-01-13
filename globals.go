@@ -4,9 +4,13 @@ import (
 	"fmt"
 	"os"
 	"sync"
+
+	logger "github.com/kthomas/go-logger"
 )
 
 var (
+	Log *logger.Logger
+
 	ListenAddr      string
 	CertificatePath string
 	PrivateKeyPath  string
@@ -28,6 +32,12 @@ func bootstrap() {
 		if os.Getenv("PRIVATE_KEY_PATH") != "" {
 			PrivateKeyPath = os.Getenv("PRIVATE_KEY_PATH")
 		}
+
+		lvl := os.Getenv("LOG_LEVEL")
+		if lvl == "" {
+			lvl = "INFO"
+		}
+		Log = logger.NewLogger("ident", lvl, true)
 	})
 }
 

@@ -24,5 +24,5 @@ _cgo_export.*
 .idea/
 *.iml
 
-run-local.sh
+run_local.sh
 ident

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	uuid "github.com/satori/go.uuid"
 )
 
 func main() {
@@ -15,6 +16,21 @@ func main() {
 	migrateSchema()
 
 	r := gin.Default()
+
+	r.GET("/api/v1/applications", applicationsListHandler)
+	r.POST("/api/v1/applications", createApplicationHandler)
+	r.GET("/api/v1/applications/:id", applicationDetailsHandler)
+	r.DELETE("/api/v1/applications/:id", deleteApplicationHandler)
+
+	r.POST("/api/v1/authenticate", authenticationHandler)
+
+	r.GET("/api/v1/tokens", tokensListHandler)
+	r.POST("/api/v1/tokens", createTokenHandler)
+	r.DELETE("/api/v1/tokens/:id", deleteTokenHandler)
+
+	r.GET("/api/v1/users", usersListHandler)
+	r.POST("/api/v1/users", createUserHandler)
+	r.DELETE("/api/v1/users/:id", deleteUserHandler)
 
 	r.GET("/status", statusHandler)
 
@@ -62,4 +78,155 @@ func requireParams(requiredParams []string, c *gin.Context) error {
 
 func statusHandler(c *gin.Context) {
 	render(nil, 204, c)
+}
+
+func authenticationHandler(c *gin.Context) {
+	buf, err := c.GetRawData()
+	if err != nil {
+		renderError(err.Error(), 400, c)
+		return
+	}
+
+	params := map[string]interface{}{}
+	err = json.Unmarshal(buf, &params)
+	if err != nil {
+		renderError(err.Error(), 400, c)
+		return
+	}
+
+	if email, ok := params["email"].(string); ok {
+		if pw, pwok := params["password"].(string); pwok {
+			resp, err := AuthenticateUser(email, pw)
+			if err != nil {
+				renderError(err.Error(), 401, c)
+				return
+			}
+			render(resp, 201, c)
+			return
+		}
+		msg := fmt.Sprintf("password required to attempt user authentication; email address: %s", email)
+		renderError(msg, 422, c)
+		return
+	}
+
+	renderError("unauthorized", 401, c)
+}
+
+// applications
+
+func applicationsListHandler(c *gin.Context) {
+	var apps []Application
+	DatabaseConnection().Find(&apps)
+	render(apps, 200, c)
+}
+
+func createApplicationHandler(c *gin.Context) {
+	buf, err := c.GetRawData()
+	if err != nil {
+		renderError(err.Error(), 400, c)
+		return
+	}
+
+	app := &Application{}
+	err = json.Unmarshal(buf, app)
+	if err != nil {
+		renderError(err.Error(), 422, c)
+		return
+	}
+
+	if app.Create() {
+		render(app, 201, c)
+	} else {
+		obj := map[string]interface{}{}
+		obj["errors"] = app.Errors
+		render(obj, 422, c)
+	}
+}
+
+func applicationDetailsHandler(c *gin.Context) {
+	renderError("not implemented", 501, c)
+}
+
+func deleteApplicationHandler(c *gin.Context) {
+	renderError("not implemented", 501, c)
+}
+
+// tokens
+
+func tokensListHandler(c *gin.Context) {
+	var tokens []Token
+	DatabaseConnection().Find(&tokens)
+	render(tokens, 200, c)
+}
+
+func createTokenHandler(c *gin.Context) {
+	buf, err := c.GetRawData()
+	if err != nil {
+		renderError(err.Error(), 400, c)
+		return
+	}
+
+	token := &Token{}
+	err = json.Unmarshal(buf, token)
+	if err != nil {
+		renderError(err.Error(), 422, c)
+		return
+	}
+
+	if token.Create() {
+		render(token, 201, c)
+	} else {
+		obj := map[string]interface{}{}
+		obj["errors"] = token.Errors
+		render(obj, 422, c)
+	}
+}
+
+func deleteTokenHandler(c *gin.Context) {
+	var token = &Token{}
+	DatabaseConnection().Where("id = ?", c.Param("id")).Find(&token)
+	if token.Id == uuid.Nil {
+		renderError("token not found", 404, c)
+		return
+	}
+	if !token.Delete() {
+		renderError("token not deleted", 500, c)
+		return
+	}
+	render(nil, 204, c)
+}
+
+// users
+
+func usersListHandler(c *gin.Context) {
+	var users []User
+	DatabaseConnection().Find(&users)
+	render(users, 200, c)
+}
+
+func createUserHandler(c *gin.Context) {
+	buf, err := c.GetRawData()
+	if err != nil {
+		renderError(err.Error(), 400, c)
+		return
+	}
+
+	user := &User{}
+	err = json.Unmarshal(buf, user)
+	if err != nil {
+		renderError(err.Error(), 422, c)
+		return
+	}
+
+	if user.Create() {
+		render(user.AsResponse(), 201, c)
+	} else {
+		obj := map[string]interface{}{}
+		obj["errors"] = user.Errors
+		render(obj, 422, c)
+	}
+}
+
+func deleteUserHandler(c *gin.Context) {
+	renderError("not implemented", 501, c)
 }
