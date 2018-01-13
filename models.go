@@ -36,7 +36,7 @@ type Token struct {
 	IssuedAt      *time.Time       `sql:"not null" json:"issued_at"`
 	ExpiresAt     *time.Time       `json:"expires_at"`
 	Secret        *string          `sql:"not null" json:"secret"`
-	Token         *string          `json:"token"`
+	Token         *string          `json:"token"` // JWT https://tools.ietf.org/html/rfc7519
 	ApplicationId *uuid.UUID       `sql:"type:uuid" json:"-"`
 	UserId        *uuid.UUID       `sql:"type:uuid" json:"-"`
 	Data          *json.RawMessage `sql:"-" json:"data"`
