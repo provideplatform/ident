@@ -12,10 +12,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type Authenticable interface {
-	//func GetScope() *AuthenticableScope
-}
-
 type Model struct {
 	Id        uuid.UUID `sql:"primary_key;type:uuid;default:uuid_generate_v4()" json:"id"`
 	CreatedAt time.Time `sql:"not null" json:"created_at"`
@@ -29,7 +25,6 @@ type Error struct {
 
 type Application struct {
 	Model
-	Authenticable
 	UserId      uuid.UUID        `sql:"type:uuid not null" json:"user_id"`
 	Name        *string          `sql:"not null" json:"name"`
 	Description *string          `json:"description"`
@@ -49,7 +44,6 @@ type Token struct {
 
 type User struct {
 	Model
-	Authenticable
 	ApplicationId *uuid.UUID `json:"application_id", json:"-"`
 	Name          *string    `sql:"not null" json:"name"`
 	Email         *string    `sql:"not null" json:"email"`

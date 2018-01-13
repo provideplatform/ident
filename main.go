@@ -42,8 +42,8 @@ func main() {
 	}
 }
 
-func authorize(c *gin.Context) *Authenticable {
-	var authenticable *Authenticable
+func authorize(c *gin.Context) *Model {
+	var authenticable *Model
 	authorization := c.GetHeader("authorization")
 	if authorization == "" {
 		return nil
