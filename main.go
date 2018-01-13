@@ -314,6 +314,10 @@ func createUserHandler(c *gin.Context) {
 		return
 	}
 
+	if bearer != nil {
+		user.ApplicationId = bearer.ApplicationId
+	}
+
 	if user.Create() {
 		render(user.AsResponse(), 201, c)
 	} else {
