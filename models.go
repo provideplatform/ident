@@ -242,7 +242,14 @@ func (t *Token) Validate() bool {
 				Message: stringOrNil("token secret must not be supplied; it must be generated at this time"),
 			})
 		} else {
-			t.Secret = stringOrNil(uuid.NewV4().String())
+			uuidV4, err := uuid.NewV4()
+			if err == nil {
+				t.Secret = stringOrNil(uuidV4.String())
+			} else {
+				t.Errors = append(t.Errors, &Error{
+					Message: stringOrNil(fmt.Sprintf("token secret generation failed; %s", err.Error())),
+				})
+			}
 		}
 	}
 	return len(t.Errors) == 0
