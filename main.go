@@ -210,7 +210,27 @@ func createApplicationHandler(c *gin.Context) {
 }
 
 func applicationDetailsHandler(c *gin.Context) {
-	renderError("not implemented", 501, c)
+	bearer := bearerAuthToken(c)
+	if bearer == nil {
+		renderError("unauthorized", 401, c)
+		return
+	}
+	if bearer.ApplicationID != nil && bearer.ApplicationID.String() != c.Param("id") {
+		renderError("forbidden", 403, c)
+		return
+	}
+
+	var app = &Application{}
+	DatabaseConnection().Where("id = ?", c.Param("id")).Find(&app)
+	if app.ID == uuid.Nil {
+		renderError("application not found", 404, c)
+		return
+	}
+	if bearer.UserID != nil && *bearer.UserID != app.UserID {
+		renderError("forbidden", 403, c)
+		return
+	}
+	render(app, 200, c)
 }
 
 func deleteApplicationHandler(c *gin.Context) {
