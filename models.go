@@ -125,6 +125,13 @@ func (app *Application) Delete() bool {
 	return len(app.Errors) == 0
 }
 
+// GetTokens - retrieve the tokens associated with the application
+func (app *Application) GetTokens() []*Token {
+	var tokens []*Token
+	DatabaseConnection().Where("application_id = ?", app.ID).Find(&tokens)
+	return tokens
+}
+
 // GetApplication - retrieve the application associated with the token (or nil if one does not exist)
 func (t *Token) GetApplication() *Application {
 	var app = &Application{}
