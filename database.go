@@ -36,27 +36,3 @@ func migrateSchema() {
 func DatabaseConnection() *gorm.DB {
 	return dbconf.DatabaseConnection()
 }
-
-func PgEncrypt() (*string, error) {
-	// var result
-	// db.Raw("SELECT pgp_pub_encrypt(?, dearmor(?)) as private_key", encodedPrivateKey, gpgPublicKey).Scan(&result)
-	return nil, nil
-}
-
-func PgDecrypt() (*string, error) {
-	// results := make([]byte, 1)
-	// db := DatabaseConnection()
-	// rows, err := db.Raw("SELECT pgp_pub_decrypt(?, dearmor(?), ?) as private_key", w.PrivateKey, gpgPrivateKey, gpgEncryptionKey).Rows()
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// if rows.Next() {
-	// 	rows.Scan(&results)
-	// 	privateKeyBytes, err := hex.DecodeString(string(results))
-	// 	if err != nil {
-	// 		Log.Warningf("Failed to decode ecdsa private key from encrypted storage; %s", err.Error())
-	// 		return nil, err
-	// 	}
-	// }
-	return nil, nil
-}

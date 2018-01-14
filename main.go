@@ -11,7 +11,7 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
-	uuid "github.com/satori/go.uuid"
+	uuid "github.com/kthomas/go.uuid"
 )
 
 func main() {
@@ -51,7 +51,7 @@ func bearerAuthToken(c *gin.Context) *Token {
 			if jti, jtiok := claims["jti"]; jtiok {
 				token = &Token{}
 				DatabaseConnection().Where("id = ?", jti).Find(&token)
-				if token.Id != uuid.Nil {
+				if token.ID != uuid.Nil {
 					return []byte(*token.Secret), nil
 				}
 			}
@@ -64,7 +64,7 @@ func bearerAuthToken(c *gin.Context) *Token {
 
 func getAuthorizedApplication(c *gin.Context) *Application {
 	token := bearerAuthToken(c)
-	if token == nil || token.ApplicationId == nil {
+	if token == nil || token.ApplicationID == nil {
 		return nil
 	}
 	return token.GetApplication()
@@ -72,7 +72,7 @@ func getAuthorizedApplication(c *gin.Context) *Application {
 
 func getAuthorizedUser(c *gin.Context) *User {
 	token := bearerAuthToken(c)
-	if token == nil || token.UserId == nil {
+	if token == nil || token.UserID == nil {
 		return nil
 	}
 	return token.GetUser()
@@ -148,10 +148,10 @@ func authenticationHandler(c *gin.Context) {
 			renderError(msg, 422, c)
 			return
 		}
-	} else if applicationId, ok := params["application_id"].(string); ok {
+	} else if applicationID, ok := params["application_id"].(string); ok {
 		var app = &Application{}
-		DatabaseConnection().Where("id = ?", applicationId).Find(&app)
-		if app.Id != uuid.Nil && *bearer.UserId != app.UserId {
+		DatabaseConnection().Where("id = ?", applicationID).Find(&app)
+		if app.ID != uuid.Nil && *bearer.UserID != app.UserID {
 			renderError("forbidden", 403, c)
 			return
 		}
@@ -171,7 +171,7 @@ func authenticationHandler(c *gin.Context) {
 
 func applicationsListHandler(c *gin.Context) {
 	user := getAuthorizedUser(c)
-	if user == nil || user.Id == uuid.Nil {
+	if user == nil || user.ID == uuid.Nil {
 		renderError("unauthorized", 401, c)
 		return
 	}
@@ -198,7 +198,7 @@ func createApplicationHandler(c *gin.Context) {
 		renderError(err.Error(), 422, c)
 		return
 	}
-	app.UserId = user.Id
+	app.UserID = user.ID
 
 	if app.Create() {
 		render(app, 201, c)
@@ -227,10 +227,10 @@ func tokensListHandler(c *gin.Context) {
 	}
 
 	var tokens []Token
-	if bearer.ApplicationId != nil {
-		DatabaseConnection().Where("application_id = ?", bearer.ApplicationId).Find(&tokens)
-	} else if bearer.UserId != nil {
-		DatabaseConnection().Where("user_id = ?", bearer.UserId).Find(&tokens)
+	if bearer.ApplicationID != nil {
+		DatabaseConnection().Where("application_id = ?", bearer.ApplicationID).Find(&tokens)
+	} else if bearer.UserID != nil {
+		DatabaseConnection().Where("user_id = ?", bearer.UserID).Find(&tokens)
 	}
 	render(tokens, 200, c)
 }
@@ -248,16 +248,16 @@ func deleteTokenHandler(c *gin.Context) {
 
 	var token = &Token{}
 	DatabaseConnection().Where("id = ?", c.Param("id")).Find(&token)
-	if token.Id == uuid.Nil {
+	if token.ID == uuid.Nil {
 		renderError("token not found", 404, c)
 		return
 	}
-	if bearer.UserId != nil && *bearer.UserId != *token.UserId {
+	if bearer.UserID != nil && *bearer.UserID != *token.UserID {
 		renderError("forbidden", 403, c)
 		return
 	}
 	tokenUser := token.GetUser()
-	if bearer.ApplicationId != nil && tokenUser != nil && *bearer.ApplicationId != *tokenUser.ApplicationId {
+	if bearer.ApplicationID != nil && tokenUser != nil && *bearer.ApplicationID != *tokenUser.ApplicationID {
 		renderError("forbidden", 403, c)
 		return
 	}
@@ -272,19 +272,19 @@ func deleteTokenHandler(c *gin.Context) {
 
 func usersListHandler(c *gin.Context) {
 	bearer := bearerAuthToken(c)
-	if bearer == nil || bearer.ApplicationId == nil {
+	if bearer == nil || bearer.ApplicationID == nil {
 		renderError("unauthorized", 401, c)
 		return
 	}
 
 	var users []User
-	DatabaseConnection().Where("application_id = ?", bearer.ApplicationId.String()).Find(&users)
+	DatabaseConnection().Where("application_id = ?", bearer.ApplicationID.String()).Find(&users)
 	render(users, 200, c)
 }
 
 func createUserHandler(c *gin.Context) {
 	bearer := bearerAuthToken(c)
-	if bearer != nil && bearer.ApplicationId == nil {
+	if bearer != nil && bearer.ApplicationID == nil {
 		renderError("unauthorized", 401, c)
 		return
 	}
@@ -303,7 +303,7 @@ func createUserHandler(c *gin.Context) {
 	}
 
 	if bearer != nil {
-		user.ApplicationId = bearer.ApplicationId
+		user.ApplicationID = bearer.ApplicationID
 	}
 
 	if user.Create() {

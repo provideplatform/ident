@@ -9,70 +9,76 @@ import (
 
 	"github.com/badoux/checkmail"
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/kthomas/go.uuid"
 	gocore "github.com/provideapp/go-core"
-	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
+// Application model which is initially owned by the user who created it
 type Application struct {
 	gocore.Model
-	UserId      uuid.UUID        `sql:"type:uuid not null" json:"user_id"`
+	UserID      uuid.UUID        `sql:"type:uuid not null" json:"user_id"`
 	Name        *string          `sql:"not null" json:"name"`
 	Description *string          `json:"description"`
 	Config      *json.RawMessage `sql:"type:json" json:"config"`
 }
 
+// Token model which is represented as JWT; tokens will be used is a wide variety of cases
 type Token struct {
 	gocore.Model
 	IssuedAt      *time.Time       `sql:"not null" json:"issued_at"`
 	ExpiresAt     *time.Time       `json:"expires_at"`
 	Secret        *string          `sql:"not null" json:"secret"`
 	Token         *string          `json:"token"` // JWT https://tools.ietf.org/html/rfc7519
-	ApplicationId *uuid.UUID       `sql:"type:uuid" json:"-"`
-	UserId        *uuid.UUID       `sql:"type:uuid" json:"-"`
+	ApplicationID *uuid.UUID       `sql:"type:uuid" json:"-"`
+	UserID        *uuid.UUID       `sql:"type:uuid" json:"-"`
 	Data          *json.RawMessage `sql:"-" json:"data"`
 }
 
+// User model
 type User struct {
 	gocore.Model
-	ApplicationId *uuid.UUID `sql:"type:uuid" json:"-"`
+	ApplicationID *uuid.UUID `sql:"type:uuid" json:"-"`
 	Name          *string    `sql:"not null" json:"name"`
 	Email         *string    `sql:"not null" json:"email"`
 	Password      *string    `sql:"not null" json:"password"`
 }
 
+// TokenResponse represents the token portion of the response to a successful authentication request
 type TokenResponse struct {
-	Id     uuid.UUID `json:"id"`
+	ID     uuid.UUID `json:"id"`
 	Secret string    `json:"secret"`
 	Token  string    `json:"token"`
 }
 
+// UserResponse is preferred over writing an entire User instance as JSON
 type UserResponse struct {
-	Id        uuid.UUID `json:"id"`
+	ID        uuid.UUID `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	Name      string    `json:"name"`
 	Email     string    `json:"email"`
 }
 
+// UserAuthenticationResponse is returned upon successful authentication using an email address
 type UserAuthenticationResponse struct {
 	User  *UserResponse  `json:"user"`
 	Token *TokenResponse `json:"token"`
 }
 
-// application
-
+// Create a new token on behalf of the application
 func (app *Application) CreateToken() (*Token, error) {
 	token := &Token{
-		ApplicationId: &app.Id,
+		ApplicationID: &app.ID,
 	}
 	if !token.Create() {
 		if len(token.Errors) > 0 {
-			return nil, fmt.Errorf("Failed to create token for application: %s; %s", app.Id.String(), *token.Errors[0].Message)
+			return nil, fmt.Errorf("Failed to create token for application: %s; %s", app.ID.String(), *token.Errors[0].Message)
 		}
 	}
 	return token, nil
 }
 
+// Create and persist an application
 func (app *Application) Create() bool {
 	db := DatabaseConnection()
 
@@ -98,11 +104,13 @@ func (app *Application) Create() bool {
 	return false
 }
 
+// Validate an application for persistence
 func (app *Application) Validate() bool {
 	app.Errors = make([]*gocore.Error, 0)
 	return len(app.Errors) == 0
 }
 
+// Delete an application
 func (app *Application) Delete() bool {
 	db := DatabaseConnection()
 	result := db.Delete(app)
@@ -117,26 +125,27 @@ func (app *Application) Delete() bool {
 	return len(app.Errors) == 0
 }
 
-// token
-
+// GetApplication - retrieve the application associated with the token (or nil if one does not exist)
 func (t *Token) GetApplication() *Application {
 	var app = &Application{}
 	DatabaseConnection().Model(t).Related(&app)
-	if app.Id == uuid.Nil {
+	if app.ID == uuid.Nil {
 		return nil
 	}
 	return app
 }
 
+// GetUser - retrieve the user associated with the token (or nil if one does not exist)
 func (t *Token) GetUser() *User {
 	var user = &User{}
 	DatabaseConnection().Model(t).Related(&user)
-	if user.Id == uuid.Nil {
+	if user.ID == uuid.Nil {
 		return nil
 	}
 	return user
 }
 
+// Create and persist a token which may be subsequently used for bearer authorization (among other things)
 func (t *Token) Create() bool {
 	if !t.Validate() {
 		return false
@@ -179,10 +188,10 @@ func (t *Token) encodeJWT() (*string, error) {
 	}
 
 	var sub string
-	if t.ApplicationId != nil {
-		sub = fmt.Sprintf("application:%s", t.ApplicationId.String())
-	} else if t.UserId != nil {
-		sub = fmt.Sprintf("user:%s", t.UserId.String())
+	if t.ApplicationID != nil {
+		sub = fmt.Sprintf("application:%s", t.ApplicationID.String())
+	} else if t.UserID != nil {
+		sub = fmt.Sprintf("user:%s", t.UserID.String())
 	}
 
 	var exp *int64
@@ -192,7 +201,7 @@ func (t *Token) encodeJWT() (*string, error) {
 	}
 
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwt.MapClaims{
-		"jti":  t.Id.String(),
+		"jti":  t.ID.String(),
 		"iat":  t.IssuedAt.Unix(),
 		"sub":  stringOrNil(sub),
 		"exp":  exp,
@@ -206,11 +215,12 @@ func (t *Token) encodeJWT() (*string, error) {
 	return stringOrNil(token), nil
 }
 
+// Validate a token for persistence
 func (t *Token) Validate() bool {
 	t.Errors = make([]*gocore.Error, 0)
 	db := DatabaseConnection()
 	if db.NewRecord(t) {
-		if t.ApplicationId != nil && t.UserId != nil {
+		if t.ApplicationID != nil && t.UserID != nil {
 			t.Errors = append(t.Errors, &gocore.Error{
 				Message: stringOrNil("ambiguous token subject"),
 			})
@@ -246,6 +256,7 @@ func (t *Token) Validate() bool {
 	return len(t.Errors) == 0
 }
 
+// Delete a token; effectively revokes the token resulting in subsequent attempts to authorize requests to fail unless a new (valid) token is acquired
 func (t *Token) Delete() bool {
 	db := DatabaseConnection()
 	result := db.Delete(t)
@@ -260,6 +271,7 @@ func (t *Token) Delete() bool {
 	return len(t.Errors) == 0
 }
 
+// ParseData - parse the optional token data payload
 func (t *Token) ParseData() map[string]interface{} {
 	data := map[string]interface{}{}
 	if t.Data != nil {
@@ -272,21 +284,21 @@ func (t *Token) ParseData() map[string]interface{} {
 	return data
 }
 
+// AsResponse marshals a token into a token response
 func (t *Token) AsResponse() *TokenResponse {
 	return &TokenResponse{
-		Id:     t.Id,
+		ID:     t.ID,
 		Secret: string(*t.Secret),
 		Token:  string(*t.Token),
 	}
 }
 
-// user
-
+// Attempt to authenticate a user using a given email address and password
 func AuthenticateUser(email string, password string) (*UserAuthenticationResponse, error) {
 	var user = &User{}
 	db := DatabaseConnection()
 	db.Where("email = ?", strings.ToLower(email)).First(&user)
-	if user != nil && user.Id != uuid.Nil {
+	if user != nil && user.ID != uuid.Nil {
 		if !user.authenticate(password) {
 			return nil, errors.New("authentication failed with given credentials")
 		}
@@ -294,7 +306,7 @@ func AuthenticateUser(email string, password string) (*UserAuthenticationRespons
 		return nil, fmt.Errorf("invalid email")
 	}
 	token := &Token{
-		UserId: &user.Id,
+		UserID: &user.ID,
 	}
 	if !token.Create() {
 		var err error
@@ -317,12 +329,14 @@ func (u *User) authenticate(password string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(*u.Password), []byte(password)) == nil
 }
 
+// Applications returns a list of applications which have been created by the user
 func (u *User) Applications() []Application {
 	var apps []Application
-	DatabaseConnection().Where("user_id = ?", u.Id).Find(&apps)
+	DatabaseConnection().Where("user_id = ?", u.ID).Find(&apps)
 	return apps
 }
 
+// Create and persist a user
 func (u *User) Create() bool {
 	db := DatabaseConnection()
 
@@ -348,6 +362,7 @@ func (u *User) Create() bool {
 	return false
 }
 
+// Validate a user for persistence
 func (u *User) Validate() bool {
 	u.Errors = make([]*gocore.Error, 0)
 	db := DatabaseConnection()
@@ -380,6 +395,7 @@ func (u *User) Validate() bool {
 	return len(u.Errors) == 0
 }
 
+// Delete a user
 func (u *User) Delete() bool {
 	db := DatabaseConnection()
 	result := db.Delete(u)
@@ -394,9 +410,10 @@ func (u *User) Delete() bool {
 	return len(u.Errors) == 0
 }
 
+// AsResponse marshals a user into a user response
 func (u *User) AsResponse() *UserResponse {
 	return &UserResponse{
-		Id:        u.Id,
+		ID:        u.ID,
 		CreatedAt: u.CreatedAt,
 		Name:      *u.Name,
 		Email:     *u.Email,
