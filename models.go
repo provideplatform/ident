@@ -144,6 +144,9 @@ func (t *Token) GetApplication() *Application {
 
 // GetUser - retrieve the user associated with the token (or nil if one does not exist)
 func (t *Token) GetUser() *User {
+	if t.UserID == nil {
+		return nil
+	}
 	var user = &User{}
 	DatabaseConnection().Model(t).Related(&user)
 	if user.ID == uuid.Nil {
