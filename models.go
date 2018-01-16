@@ -134,6 +134,9 @@ func (app *Application) GetTokens() []*Token {
 
 // GetApplication - retrieve the application associated with the token (or nil if one does not exist)
 func (t *Token) GetApplication() *Application {
+	if t.ApplicationID == nil {
+		return nil
+	}
 	var app = &Application{}
 	DatabaseConnection().Model(t).Related(&app)
 	if app.ID == uuid.Nil {
