@@ -24,5 +24,7 @@ _cgo_export.*
 .idea/
 *.iml
 
+.gocore-id_rsa
+
 run_local.sh
 ident
