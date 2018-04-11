@@ -217,7 +217,7 @@ func applicationDetailsHandler(c *gin.Context) {
 		renderError("unauthorized", 401, c)
 		return
 	}
-	if bearer.ApplicationID != nil && bearer.ApplicationID.String() != c.Param("id") {
+	if *bearer.ApplicationID != uuid.Nil && bearer.ApplicationID.String() != c.Param("id") {
 		renderError("forbidden", 403, c)
 		return
 	}
@@ -228,7 +228,7 @@ func applicationDetailsHandler(c *gin.Context) {
 		renderError("application not found", 404, c)
 		return
 	}
-	if bearer.UserID != nil && *bearer.UserID != app.UserID {
+	if *bearer.UserID != uuid.Nil && *bearer.UserID != app.UserID {
 		renderError("forbidden", 403, c)
 		return
 	}
@@ -245,7 +245,7 @@ func applicationTokensListHandler(c *gin.Context) {
 		renderError("unauthorized", 401, c)
 		return
 	}
-	if bearer.ApplicationID != nil && bearer.ApplicationID.String() != c.Param("id") {
+	if *bearer.ApplicationID != uuid.Nil && bearer.ApplicationID.String() != c.Param("id") {
 		renderError("forbidden", 403, c)
 		return
 	}
@@ -256,7 +256,7 @@ func applicationTokensListHandler(c *gin.Context) {
 		renderError("application not found", 404, c)
 		return
 	}
-	if bearer.UserID != nil && *bearer.UserID != app.UserID {
+	if *bearer.UserID != uuid.Nil && *bearer.UserID != app.UserID {
 		renderError("forbidden", 403, c)
 		return
 	}
@@ -273,9 +273,9 @@ func tokensListHandler(c *gin.Context) {
 	}
 
 	var tokens []Token
-	if bearer.ApplicationID != nil {
+	if *bearer.ApplicationID != uuid.Nil {
 		DatabaseConnection().Where("application_id = ?", bearer.ApplicationID).Find(&tokens)
-	} else if bearer.UserID != nil {
+	} else if *bearer.UserID != uuid.Nil {
 		DatabaseConnection().Where("user_id = ?", bearer.UserID).Find(&tokens)
 	}
 	render(tokens, 200, c)
@@ -298,12 +298,12 @@ func deleteTokenHandler(c *gin.Context) {
 		renderError("token not found", 404, c)
 		return
 	}
-	if bearer.UserID != nil && *bearer.UserID != *token.UserID {
+	if *bearer.UserID != uuid.Nil && *bearer.UserID != *token.UserID {
 		renderError("forbidden", 403, c)
 		return
 	}
 	tokenUser := token.GetUser()
-	if bearer.ApplicationID != nil && tokenUser != nil && *bearer.ApplicationID != *tokenUser.ApplicationID {
+	if *bearer.ApplicationID != uuid.Nil && tokenUser != nil && *bearer.ApplicationID != *tokenUser.ApplicationID {
 		renderError("forbidden", 403, c)
 		return
 	}
@@ -330,7 +330,7 @@ func usersListHandler(c *gin.Context) {
 
 func createUserHandler(c *gin.Context) {
 	bearer := bearerAuthToken(c)
-	if bearer != nil && bearer.ApplicationID == nil {
+	if bearer != nil && *bearer.ApplicationID == uuid.Nil {
 		renderError("unauthorized", 401, c)
 		return
 	}
@@ -363,12 +363,12 @@ func createUserHandler(c *gin.Context) {
 
 func updateUserHandler(c *gin.Context) {
 	bearer := bearerAuthToken(c)
-	if bearer != nil && bearer.ApplicationID == nil && bearer.UserID == nil {
+	if bearer != nil && *bearer.ApplicationID == uuid.Nil && *bearer.UserID == uuid.Nil {
 		renderError("unauthorized", 401, c)
 		return
 	}
 
-	if bearer.UserID != nil && bearer.UserID.String() != c.Param("id") {
+	if *bearer.UserID != uuid.Nil && bearer.UserID.String() != c.Param("id") {
 		renderError("forbidden", 403, c)
 		return
 	}
