@@ -363,7 +363,7 @@ func createUserHandler(c *gin.Context) {
 
 func updateUserHandler(c *gin.Context) {
 	bearer := bearerAuthToken(c)
-	if bearer != nil && *bearer.ApplicationID == uuid.Nil && *bearer.UserID == uuid.Nil {
+	if bearer == nil || (*bearer.ApplicationID == uuid.Nil && *bearer.UserID == uuid.Nil) {
 		renderError("unauthorized", 401, c)
 		return
 	}
