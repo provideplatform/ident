@@ -28,7 +28,7 @@ type Token struct {
 	gocore.Model
 	IssuedAt      *time.Time       `sql:"not null" json:"issued_at"`
 	ExpiresAt     *time.Time       `json:"expires_at"`
-	Secret        *string          `sql:"not null" json:"secret"`
+	Secret        *string          `sql:"secret" json:"-"`
 	Token         *string          `json:"token"` // JWT https://tools.ietf.org/html/rfc7519
 	ApplicationID *uuid.UUID       `sql:"type:uuid" json:"-"`
 	UserID        *uuid.UUID       `sql:"type:uuid" json:"-"`
@@ -46,9 +46,8 @@ type User struct {
 
 // TokenResponse represents the token portion of the response to a successful authentication request
 type TokenResponse struct {
-	ID     uuid.UUID `json:"id"`
-	Secret string    `json:"secret"`
-	Token  string    `json:"token"`
+	ID    uuid.UUID `json:"id"`
+	Token string    `json:"token"`
 }
 
 // UserResponse is preferred over writing an entire User instance as JSON
@@ -300,13 +299,12 @@ func (t *Token) ParseData() map[string]interface{} {
 // AsResponse marshals a token into a token response
 func (t *Token) AsResponse() *TokenResponse {
 	return &TokenResponse{
-		ID:     t.ID,
-		Secret: string(*t.Secret),
-		Token:  string(*t.Token),
+		ID:    t.ID,
+		Token: string(*t.Token),
 	}
 }
 
-// Attempt to authenticate a user using a given email address and password
+// AuthenticateUser attempts to authenticate by email address and password
 func AuthenticateUser(email string, password string) (*UserAuthenticationResponse, error) {
 	var user = &User{}
 	db := DatabaseConnection()
