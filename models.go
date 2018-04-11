@@ -381,7 +381,7 @@ func (u *User) Update() bool {
 		return false
 	}
 
-	result := db.Create(&u)
+	result := db.Save(&u)
 	errors := result.GetErrors()
 	if len(errors) > 0 {
 		for _, err := range errors {
