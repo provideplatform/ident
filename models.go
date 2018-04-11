@@ -373,6 +373,27 @@ func (u *User) Create() bool {
 	return false
 }
 
+// Update an existing user
+func (u *User) Update() bool {
+	db := DatabaseConnection()
+
+	if !u.Validate() {
+		return false
+	}
+
+	result := db.Create(&u)
+	errors := result.GetErrors()
+	if len(errors) > 0 {
+		for _, err := range errors {
+			u.Errors = append(u.Errors, &gocore.Error{
+				Message: stringOrNil(err.Error()),
+			})
+		}
+	}
+
+	return len(u.Errors) == 0
+}
+
 // Validate a user for persistence
 func (u *User) Validate() bool {
 	u.Errors = make([]*gocore.Error, 0)

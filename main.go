@@ -34,6 +34,7 @@ func main() {
 
 	r.GET("/api/v1/users", usersListHandler)
 	r.POST("/api/v1/users", createUserHandler)
+	r.PUT("/api/v1/users/:id", updateUserHandler)
 	r.DELETE("/api/v1/users/:id", deleteUserHandler)
 
 	r.GET("/status", statusHandler)
@@ -353,6 +354,50 @@ func createUserHandler(c *gin.Context) {
 
 	if user.Create() {
 		render(user.AsResponse(), 201, c)
+	} else {
+		obj := map[string]interface{}{}
+		obj["errors"] = user.Errors
+		render(obj, 422, c)
+	}
+}
+
+func updateUserHandler(c *gin.Context) {
+	bearer := bearerAuthToken(c)
+	if bearer != nil && bearer.ApplicationID == nil && bearer.UserID == nil {
+		renderError("unauthorized", 401, c)
+		return
+	}
+
+	if bearer.UserID != nil && bearer.UserID.String() != c.Param("id") {
+		renderError("forbidden", 403, c)
+		return
+	}
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		renderError(err.Error(), 400, c)
+		return
+	}
+
+	user := &User{}
+	DatabaseConnection().Where("id = ?", c.Param("id")).Find(&user)
+	if user.ID == uuid.Nil {
+		renderError("user not found", 404, c)
+		return
+	}
+
+	err = json.Unmarshal(buf, user)
+	if err != nil {
+		renderError(err.Error(), 422, c)
+		return
+	}
+
+	if bearer != nil {
+		user.ApplicationID = bearer.ApplicationID
+	}
+
+	if user.Update() {
+		render(nil, 204, c)
 	} else {
 		obj := map[string]interface{}{}
 		obj["errors"] = user.Errors
