@@ -318,7 +318,7 @@ func deleteTokenHandler(c *gin.Context) {
 
 func usersListHandler(c *gin.Context) {
 	bearer := bearerAuthToken(c)
-	if bearer == nil || bearer.ApplicationID == nil {
+	if bearer == nil || *bearer.ApplicationID == uuid.Nil {
 		renderError("unauthorized", 401, c)
 		return
 	}
