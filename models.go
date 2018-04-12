@@ -21,7 +21,7 @@ type Application struct {
 	Name        *string          `sql:"not null" json:"name"`
 	Description *string          `json:"description"`
 	Config      *json.RawMessage `sql:"type:json" json:"config"`
-	Hidden      bool             `sql:"not null" json:"hidden"` // soft-delete mechanism
+	Hidden      bool             `sql:"not null;default:false" json:"hidden"` // soft-delete mechanism
 }
 
 // Token model which is represented as JWT; tokens will be used is a wide variety of cases
