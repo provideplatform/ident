@@ -21,6 +21,7 @@ type Application struct {
 	Name        *string          `sql:"not null" json:"name"`
 	Description *string          `json:"description"`
 	Config      *json.RawMessage `sql:"type:json" json:"config"`
+	Hidden      bool             `sql:"not null" json:"hidden"` // soft-delete mechanism
 }
 
 // Token model which is represented as JWT; tokens will be used is a wide variety of cases
@@ -341,9 +342,10 @@ func (u *User) authenticate(password string) bool {
 }
 
 // Applications returns a list of applications which have been created by the user
-func (u *User) Applications() []Application {
+func (u *User) Applications(hidden bool) []Application {
+	db := DatabaseConnection()
 	var apps []Application
-	DatabaseConnection().Where("user_id = ?", u.ID).Find(&apps)
+	db.Where("user_id = ? AND hidden = ?", u.ID, hidden).Find(&apps)
 	return apps
 }
 

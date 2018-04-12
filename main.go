@@ -178,7 +178,12 @@ func applicationsListHandler(c *gin.Context) {
 		return
 	}
 
-	render(user.Applications(), 200, c)
+	var hidden = false
+	if c.Query("hidden") == "true" {
+		hidden = true
+	}
+
+	render(user.Applications(hidden), 200, c)
 }
 
 func createApplicationHandler(c *gin.Context) {
