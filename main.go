@@ -24,6 +24,7 @@ func main() {
 	r.POST("/api/v1/applications", createApplicationHandler)
 	r.GET("/api/v1/applications/:id", applicationDetailsHandler)
 	r.GET("/api/v1/applications/:id/tokens", applicationTokensListHandler)
+	r.PUT("/api/v1/applications/:id", updateApplicationHandler)
 	r.DELETE("/api/v1/applications/:id", deleteApplicationHandler)
 
 	r.POST("/api/v1/authenticate", authenticationHandler)
@@ -238,6 +239,46 @@ func applicationDetailsHandler(c *gin.Context) {
 		return
 	}
 	render(app, 200, c)
+}
+
+func updateApplicationHandler(c *gin.Context) {
+	bearer := bearerAuthToken(c)
+	if bearer != nil && bearer.UserID == nil {
+		renderError("unauthorized", 401, c)
+		return
+	}
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		renderError(err.Error(), 400, c)
+		return
+	}
+
+	app := &Application{}
+	DatabaseConnection().Where("id = ?", c.Param("id")).Find(&app)
+	if app.ID == uuid.Nil {
+		renderError("app not found", 404, c)
+		return
+	}
+
+	if bearer.UserID != nil && *bearer.UserID != app.UserID {
+		renderError("forbidden", 403, c)
+		return
+	}
+
+	err = json.Unmarshal(buf, app)
+	if err != nil {
+		renderError(err.Error(), 422, c)
+		return
+	}
+
+	if app.Update() {
+		render(nil, 204, c)
+	} else {
+		obj := map[string]interface{}{}
+		obj["errors"] = app.Errors
+		render(obj, 422, c)
+	}
 }
 
 func deleteApplicationHandler(c *gin.Context) {

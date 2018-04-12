@@ -110,6 +110,27 @@ func (app *Application) Validate() bool {
 	return len(app.Errors) == 0
 }
 
+// Update an existing application
+func (app *Application) Update() bool {
+	db := DatabaseConnection()
+
+	if !app.Validate() {
+		return false
+	}
+
+	result := db.Save(&app)
+	errors := result.GetErrors()
+	if len(errors) > 0 {
+		for _, err := range errors {
+			app.Errors = append(app.Errors, &gocore.Error{
+				Message: stringOrNil(err.Error()),
+			})
+		}
+	}
+
+	return len(app.Errors) == 0
+}
+
 // Delete an application
 func (app *Application) Delete() bool {
 	db := DatabaseConnection()
