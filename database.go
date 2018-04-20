@@ -19,7 +19,9 @@ func migrateSchema() {
 		db.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";")
 
 		db.AutoMigrate(&User{})
-		db.Model(&User{}).AddUniqueIndex("idx_users_email", "email")
+		db.Model(&User{}).AddIndex("idx_users_application_id", "application_id")
+		db.Model(&User{}).AddIndex("idx_users_email", "email")
+		db.Model(&User{}).AddUniqueIndex("idx_users_application_id_email", "application_id", "email")
 
 		db.AutoMigrate(&Application{})
 		db.Model(&Application{}).AddIndex("idx_applications_hidden", "hidden")
