@@ -155,20 +155,32 @@ func authenticationHandler(c *gin.Context) {
 			renderError(msg, 422, c)
 			return
 		}
-	} else if bearer.ApplicationID != nil {
-		var app = &Application{}
-		DatabaseConnection().Where("id = ?", bearer.ApplicationID).Find(&app)
-		if app.ID != uuid.Nil && *bearer.UserID != app.UserID {
-			renderError("forbidden", 403, c)
+	} else {
+		var appID *uuid.UUID
+		if applicationID, ok := params["application_id"].(string); ok {
+			appUUID, err := uuid.FromString(applicationID)
+			if err == nil {
+				appID = &appUUID
+			}
+		} else if bearer.ApplicationID != nil {
+			appID = bearer.ApplicationID
+		}
+
+		if appID != nil {
+			var app = &Application{}
+			DatabaseConnection().Where("id = ?", appID).Find(&app)
+			if app.ID != uuid.Nil && *bearer.UserID != app.UserID {
+				renderError("forbidden", 403, c)
+				return
+			}
+			resp, err := app.CreateToken()
+			if err != nil {
+				renderError(err.Error(), 401, c)
+				return
+			}
+			render(resp, 201, c)
 			return
 		}
-		resp, err := app.CreateToken()
-		if err != nil {
-			renderError(err.Error(), 401, c)
-			return
-		}
-		render(resp, 201, c)
-		return
 	}
 
 	renderError("unauthorized", 401, c)
