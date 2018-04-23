@@ -139,7 +139,11 @@ func authenticationHandler(c *gin.Context) {
 	if bearer == nil || bearer.UserID == nil {
 		if email, ok := params["email"].(string); ok {
 			if pw, pwok := params["password"].(string); pwok {
-				resp, err := AuthenticateUser(email, pw, bearer.ApplicationID)
+				var appID *uuid.UUID
+				if bearer != nil {
+					appID = bearer.ApplicationID
+				}
+				resp, err := AuthenticateUser(email, pw, appID)
 				if err != nil {
 					renderError(err.Error(), 401, c)
 					return
