@@ -136,10 +136,10 @@ func authenticationHandler(c *gin.Context) {
 		return
 	}
 
-	if bearer == nil {
+	if bearer == nil || bearer.UserID == nil {
 		if email, ok := params["email"].(string); ok {
 			if pw, pwok := params["password"].(string); pwok {
-				resp, err := AuthenticateUser(email, pw)
+				resp, err := AuthenticateUser(email, pw, bearer.ApplicationID)
 				if err != nil {
 					renderError(err.Error(), 401, c)
 					return
@@ -151,9 +151,9 @@ func authenticationHandler(c *gin.Context) {
 			renderError(msg, 422, c)
 			return
 		}
-	} else if applicationID, ok := params["application_id"].(string); ok {
+	} else if bearer.ApplicationID != nil {
 		var app = &Application{}
-		DatabaseConnection().Where("id = ?", applicationID).Find(&app)
+		DatabaseConnection().Where("id = ?", bearer.ApplicationID).Find(&app)
 		if app.ID != uuid.Nil && *bearer.UserID != app.UserID {
 			renderError("forbidden", 403, c)
 			return

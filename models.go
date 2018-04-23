@@ -327,10 +327,14 @@ func (t *Token) AsResponse() *TokenResponse {
 }
 
 // AuthenticateUser attempts to authenticate by email address and password
-func AuthenticateUser(email string, password string) (*UserAuthenticationResponse, error) {
+func AuthenticateUser(email, password string, applicationID *uuid.UUID) (*UserAuthenticationResponse, error) {
 	var user = &User{}
 	db := DatabaseConnection()
-	db.Where("email = ?", strings.ToLower(email)).First(&user)
+	query := db.Where("email = ?", strings.ToLower(email))
+	if applicationID != nil {
+		query = query.Where("application_id = ?", applicationID)
+	}
+	query.First(&user)
 	if user != nil && user.ID != uuid.Nil {
 		if !user.authenticate(password) {
 			return nil, errors.New("authentication failed with given credentials")
