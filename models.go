@@ -9,6 +9,7 @@ import (
 
 	"github.com/badoux/checkmail"
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/jinzhu/gorm"
 	"github.com/kthomas/go.uuid"
 	gocore "github.com/provideapp/go-core"
 	"golang.org/x/crypto/bcrypt"
@@ -63,6 +64,14 @@ type UserResponse struct {
 type UserAuthenticationResponse struct {
 	User  *UserResponse  `json:"user"`
 	Token *TokenResponse `json:"token"`
+}
+
+// Paginate the given query given the page number and results per page;
+// returns the update query and total results
+func Paginate(db *gorm.DB, model interface{}, page, rpp int64) (query *gorm.DB, totalResults *uint64) {
+	db.Model(model).Count(&totalResults)
+	query = db.Limit(rpp).Offset((page - 1) * rpp)
+	return query, totalResults
 }
 
 // Create a new token on behalf of the application
