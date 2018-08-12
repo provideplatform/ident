@@ -227,7 +227,7 @@ func applicationsListHandler(c *gin.Context) {
 	query := DatabaseConnection()
 
 	var apps []Application
-	query.Where("user_id = ? AND hidden = ?", user.ID, hidden)
+	query = query.Where("user_id = ? AND hidden = ?", user.ID, hidden)
 	paginate(c, query, &Application{}).Find(&apps)
 	render(apps, 200, c)
 }
