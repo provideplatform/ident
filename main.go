@@ -263,17 +263,20 @@ func createApplicationHandler(c *gin.Context) {
 }
 
 func applicationDetailsHandler(c *gin.Context) {
-	bearer := bearerAuthToken(c)
-	if bearer == nil {
+	user := getAuthorizedUser(c)
+	app := getAuthorizedApplication(c)
+	if (user == nil || user.ID == uuid.Nil) && (app == nil || app.ID == uuid.Nil) {
 		renderError("unauthorized", 401, c)
 		return
 	}
+
+	bearer := bearerAuthToken(c)
 	if bearer.ApplicationID != nil && bearer.ApplicationID.String() != c.Param("id") {
 		renderError("forbidden", 403, c)
 		return
 	}
 
-	var app = &Application{}
+	app = &Application{}
 	DatabaseConnection().Where("id = ?", c.Param("id")).Find(&app)
 	if app.ID == uuid.Nil {
 		renderError("application not found", 404, c)
