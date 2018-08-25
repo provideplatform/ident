@@ -71,7 +71,7 @@ func bearerAuthToken(c *gin.Context) *Token {
 
 func getAuthorizedApplication(c *gin.Context) *Application {
 	token := bearerAuthToken(c)
-	if token == nil || token.ApplicationID == nil {
+	if token == nil || token.ApplicationID == nil || *token.ApplicationID == uuid.Nil {
 		return nil
 	}
 	return token.GetApplication()
@@ -79,7 +79,7 @@ func getAuthorizedApplication(c *gin.Context) *Application {
 
 func getAuthorizedUser(c *gin.Context) *User {
 	token := bearerAuthToken(c)
-	if token == nil || token.UserID == nil {
+	if token == nil || token.UserID == nil || *token.UserID == uuid.Nil {
 		return nil
 	}
 	return token.GetUser()
