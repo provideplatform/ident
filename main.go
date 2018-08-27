@@ -5,15 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
-
-	"github.com/jinzhu/gorm"
-	"github.com/provideapp/go-core"
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	uuid "github.com/kthomas/go.uuid"
+	provide "github.com/provideservices/provide-go"
 )
 
 const defaultResultsPerPage = 25
@@ -23,6 +20,7 @@ func main() {
 	migrateSchema()
 
 	r := gin.Default()
+	configureNewRelicTransactionMiddleware(r)
 
 	r.GET("/api/v1/applications", applicationsListHandler)
 	r.POST("/api/v1/applications", createApplicationHandler)
@@ -65,7 +63,7 @@ func bearerAuthToken(c *gin.Context) *Token {
 		}
 		return nil, nil
 	}
-	gocore.ParseBearerAuthorizationHeader(c, &keyfn)
+	provide.ParseBearerAuthorizationHeader(c, &keyfn)
 	return token
 }
 
@@ -190,26 +188,6 @@ func authenticationHandler(c *gin.Context) {
 	renderError("unauthorized", 401, c)
 }
 
-func paginate(c *gin.Context, db *gorm.DB, model interface{}) *gorm.DB {
-	page := int64(1)
-	rpp := int64(defaultResultsPerPage)
-	if c.Query("page") != "" {
-		if _page, err := strconv.ParseInt(c.Query("page"), 10, 8); err == nil {
-			page = _page
-		}
-	}
-	if c.Query("rpp") != "" {
-		if _rpp, err := strconv.ParseInt(c.Query("rpp"), 10, 8); err == nil {
-			rpp = _rpp
-		}
-	}
-	query, totalResults := Paginate(db, model, page, rpp)
-	if totalResults != nil {
-		c.Header("X-Total-Results-Count", fmt.Sprintf("%d", *totalResults))
-	}
-	return query
-}
-
 // applications
 
 func applicationsListHandler(c *gin.Context) {
@@ -228,7 +206,7 @@ func applicationsListHandler(c *gin.Context) {
 
 	var apps []Application
 	query = query.Where("user_id = ? AND hidden = ?", user.ID, hidden)
-	paginate(c, query, &Application{}).Find(&apps)
+	provide.Paginate(c, query, &Application{}).Find(&apps)
 	render(apps, 200, c)
 }
 
@@ -356,7 +334,7 @@ func applicationTokensListHandler(c *gin.Context) {
 
 	var tokens []*Token
 	query = query.Where("application_id = ?", app.ID)
-	paginate(c, query, &Token{}).Find(&tokens)
+	provide.Paginate(c, query, &Token{}).Find(&tokens)
 	render(app.GetTokens(), 200, c)
 }
 
@@ -377,7 +355,7 @@ func tokensListHandler(c *gin.Context) {
 	} else if bearer.UserID != nil {
 		query = query.Where("user_id = ?", bearer.UserID)
 	}
-	paginate(c, query, &Token{}).Find(&tokens)
+	provide.Paginate(c, query, &Token{}).Find(&tokens)
 	render(tokens, 200, c)
 }
 
@@ -426,7 +404,7 @@ func usersListHandler(c *gin.Context) {
 	var users []User
 	query := DatabaseConnection()
 	query = query.Where("application_id = ?", bearer.ApplicationID.String())
-	paginate(c, query, &User{}).Find(&users)
+	provide.Paginate(c, query, &User{}).Find(&users)
 	render(users, 200, c)
 }
 

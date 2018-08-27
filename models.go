@@ -9,15 +9,14 @@ import (
 
 	"github.com/badoux/checkmail"
 	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/jinzhu/gorm"
 	"github.com/kthomas/go.uuid"
-	gocore "github.com/provideapp/go-core"
+	provide "github.com/provideservices/provide-go"
 	"golang.org/x/crypto/bcrypt"
 )
 
 // Application model which is initially owned by the user who created it
 type Application struct {
-	gocore.Model
+	provide.Model
 	UserID      uuid.UUID        `sql:"type:uuid not null" json:"user_id"`
 	Name        *string          `sql:"not null" json:"name"`
 	Description *string          `json:"description"`
@@ -27,7 +26,7 @@ type Application struct {
 
 // Token model which is represented as JWT; tokens will be used is a wide variety of cases
 type Token struct {
-	gocore.Model
+	provide.Model
 	IssuedAt      *time.Time       `sql:"not null" json:"issued_at"`
 	ExpiresAt     *time.Time       `json:"expires_at"`
 	Secret        *string          `sql:"secret" json:"-"`
@@ -39,7 +38,7 @@ type Token struct {
 
 // User model
 type User struct {
-	gocore.Model
+	provide.Model
 	ApplicationID *uuid.UUID `sql:"type:uuid" json:"-"`
 	Name          *string    `sql:"not null" json:"name"`
 	Email         *string    `sql:"not null" json:"email"`
@@ -64,14 +63,6 @@ type UserResponse struct {
 type UserAuthenticationResponse struct {
 	User  *UserResponse  `json:"user"`
 	Token *TokenResponse `json:"token"`
-}
-
-// Paginate the given query given the page number and results per page;
-// returns the update query and total results
-func Paginate(db *gorm.DB, model interface{}, page, rpp int64) (query *gorm.DB, totalResults *uint64) {
-	db.Model(model).Count(&totalResults)
-	query = db.Limit(rpp).Offset((page - 1) * rpp)
-	return query, totalResults
 }
 
 // Create a new token on behalf of the application
@@ -101,7 +92,7 @@ func (app *Application) Create() bool {
 		errors := result.GetErrors()
 		if len(errors) > 0 {
 			for _, err := range errors {
-				app.Errors = append(app.Errors, &gocore.Error{
+				app.Errors = append(app.Errors, &provide.Error{
 					Message: stringOrNil(err.Error()),
 				})
 			}
@@ -115,7 +106,7 @@ func (app *Application) Create() bool {
 
 // Validate an application for persistence
 func (app *Application) Validate() bool {
-	app.Errors = make([]*gocore.Error, 0)
+	app.Errors = make([]*provide.Error, 0)
 	return len(app.Errors) == 0
 }
 
@@ -131,7 +122,7 @@ func (app *Application) Update() bool {
 	errors := result.GetErrors()
 	if len(errors) > 0 {
 		for _, err := range errors {
-			app.Errors = append(app.Errors, &gocore.Error{
+			app.Errors = append(app.Errors, &provide.Error{
 				Message: stringOrNil(err.Error()),
 			})
 		}
@@ -147,7 +138,7 @@ func (app *Application) Delete() bool {
 	errors := result.GetErrors()
 	if len(errors) > 0 {
 		for _, err := range errors {
-			app.Errors = append(app.Errors, &gocore.Error{
+			app.Errors = append(app.Errors, &provide.Error{
 				Message: stringOrNil(err.Error()),
 			})
 		}
@@ -201,7 +192,7 @@ func (t *Token) Create() bool {
 		errors := result.GetErrors()
 		if len(errors) > 0 {
 			for _, err := range errors {
-				t.Errors = append(t.Errors, &gocore.Error{
+				t.Errors = append(t.Errors, &provide.Error{
 					Message: stringOrNil(err.Error()),
 				})
 			}
@@ -211,7 +202,7 @@ func (t *Token) Create() bool {
 				var err error
 				t.Token, err = t.encodeJWT()
 				if err != nil {
-					t.Errors = append(t.Errors, &gocore.Error{
+					t.Errors = append(t.Errors, &provide.Error{
 						Message: stringOrNil(err.Error()),
 					})
 					return false
@@ -260,29 +251,29 @@ func (t *Token) encodeJWT() (*string, error) {
 
 // Validate a token for persistence
 func (t *Token) Validate() bool {
-	t.Errors = make([]*gocore.Error, 0)
+	t.Errors = make([]*provide.Error, 0)
 	db := DatabaseConnection()
 	if db.NewRecord(t) {
 		if t.ApplicationID != nil && t.UserID != nil {
-			t.Errors = append(t.Errors, &gocore.Error{
+			t.Errors = append(t.Errors, &provide.Error{
 				Message: stringOrNil("ambiguous token subject"),
 			})
 		}
 		if t.IssuedAt != nil {
-			t.Errors = append(t.Errors, &gocore.Error{
+			t.Errors = append(t.Errors, &provide.Error{
 				Message: stringOrNil("token must not attempt assert iat JWT claim"),
 			})
 		} else {
 			iat := time.Now()
 			t.IssuedAt = &iat
 			if t.ExpiresAt != nil && t.ExpiresAt.Before(*t.IssuedAt) {
-				t.Errors = append(t.Errors, &gocore.Error{
+				t.Errors = append(t.Errors, &provide.Error{
 					Message: stringOrNil("token expiration must not preceed issuance"),
 				})
 			}
 		}
 		if t.Secret != nil {
-			t.Errors = append(t.Errors, &gocore.Error{
+			t.Errors = append(t.Errors, &provide.Error{
 				Message: stringOrNil("token secret must not be supplied; it must be generated at this time"),
 			})
 		} else {
@@ -290,7 +281,7 @@ func (t *Token) Validate() bool {
 			if err == nil {
 				t.Secret = stringOrNil(uuidV4.String())
 			} else {
-				t.Errors = append(t.Errors, &gocore.Error{
+				t.Errors = append(t.Errors, &provide.Error{
 					Message: stringOrNil(fmt.Sprintf("token secret generation failed; %s", err.Error())),
 				})
 			}
@@ -306,7 +297,7 @@ func (t *Token) Delete() bool {
 	errors := result.GetErrors()
 	if len(errors) > 0 {
 		for _, err := range errors {
-			t.Errors = append(t.Errors, &gocore.Error{
+			t.Errors = append(t.Errors, &provide.Error{
 				Message: stringOrNil(err.Error()),
 			})
 		}
@@ -397,7 +388,7 @@ func (u *User) Create() bool {
 		errors := result.GetErrors()
 		if len(errors) > 0 {
 			for _, err := range errors {
-				u.Errors = append(u.Errors, &gocore.Error{
+				u.Errors = append(u.Errors, &provide.Error{
 					Message: stringOrNil(err.Error()),
 				})
 			}
@@ -421,7 +412,7 @@ func (u *User) Update() bool {
 	errors := result.GetErrors()
 	if len(errors) > 0 {
 		for _, err := range errors {
-			u.Errors = append(u.Errors, &gocore.Error{
+			u.Errors = append(u.Errors, &provide.Error{
 				Message: stringOrNil(err.Error()),
 			})
 		}
@@ -432,14 +423,14 @@ func (u *User) Update() bool {
 
 // Validate a user for persistence
 func (u *User) Validate() bool {
-	u.Errors = make([]*gocore.Error, 0)
+	u.Errors = make([]*provide.Error, 0)
 	db := DatabaseConnection()
 	if db.NewRecord(u) {
 		if u.Email != nil {
 			u.Email = stringOrNil(strings.ToLower(*u.Email))
 			err := checkmail.ValidateFormat(*u.Email)
 			if err != nil {
-				u.Errors = append(u.Errors, &gocore.Error{
+				u.Errors = append(u.Errors, &provide.Error{
 					Message: stringOrNil(fmt.Sprintf("invalid email address: %s; %s", *u.Email, err.Error())),
 				})
 			}
@@ -448,14 +439,14 @@ func (u *User) Validate() bool {
 			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*u.Password), bcrypt.DefaultCost)
 			if err != nil {
 				u.Password = nil
-				u.Errors = append(u.Errors, &gocore.Error{
+				u.Errors = append(u.Errors, &provide.Error{
 					Message: stringOrNil(err.Error()),
 				})
 			} else {
 				u.Password = stringOrNil(string(hashedPassword))
 			}
 		} else {
-			u.Errors = append(u.Errors, &gocore.Error{
+			u.Errors = append(u.Errors, &provide.Error{
 				Message: stringOrNil("invalid password"),
 			})
 		}
@@ -470,7 +461,7 @@ func (u *User) Delete() bool {
 	errors := result.GetErrors()
 	if len(errors) > 0 {
 		for _, err := range errors {
-			u.Errors = append(u.Errors, &gocore.Error{
+			u.Errors = append(u.Errors, &provide.Error{
 				Message: stringOrNil(err.Error()),
 			})
 		}
