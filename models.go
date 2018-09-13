@@ -333,6 +333,8 @@ func AuthenticateUser(email, password string, applicationID *uuid.UUID) (*UserAu
 	query := db.Where("email = ?", strings.ToLower(email))
 	if applicationID != nil && *applicationID != uuid.Nil {
 		query = query.Where("application_id = ?", applicationID)
+	} else {
+		query = query.Where("application_id IS NULL")
 	}
 	query.First(&user)
 	if user != nil && user.ID != uuid.Nil {
