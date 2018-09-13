@@ -459,6 +459,18 @@ func updateUserHandler(c *gin.Context) {
 		return
 	}
 
+	params := map[string]interface{}{}
+	err = json.Unmarshal(buf, &params)
+	if err != nil {
+		renderError(err.Error(), 400, c)
+		return
+	}
+
+	rehashPassword := false
+	if _, pwok := params["password"].(string); pwok {
+		rehashPassword = true
+	}
+
 	user := &User{}
 	DatabaseConnection().Where("id = ?", c.Param("id")).Find(&user)
 	if user.ID == uuid.Nil {
@@ -474,6 +486,10 @@ func updateUserHandler(c *gin.Context) {
 
 	if bearer != nil {
 		user.ApplicationID = bearer.ApplicationID
+	}
+
+	if rehashPassword {
+		user.rehashPassword()
 	}
 
 	if user.Update() {

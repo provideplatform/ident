@@ -435,23 +435,27 @@ func (u *User) Validate() bool {
 				})
 			}
 		}
-		if u.Password != nil {
-			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*u.Password), bcrypt.DefaultCost)
-			if err != nil {
-				u.Password = nil
-				u.Errors = append(u.Errors, &provide.Error{
-					Message: stringOrNil(err.Error()),
-				})
-			} else {
-				u.Password = stringOrNil(string(hashedPassword))
-			}
-		} else {
-			u.Errors = append(u.Errors, &provide.Error{
-				Message: stringOrNil("invalid password"),
-			})
-		}
+		u.rehashPassword()
 	}
 	return len(u.Errors) == 0
+}
+
+func (u *User) rehashPassword() {
+	if u.Password != nil {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*u.Password), bcrypt.DefaultCost)
+		if err != nil {
+			u.Password = nil
+			u.Errors = append(u.Errors, &provide.Error{
+				Message: stringOrNil(err.Error()),
+			})
+		} else {
+			u.Password = stringOrNil(string(hashedPassword))
+		}
+	} else {
+		u.Errors = append(u.Errors, &provide.Error{
+			Message: stringOrNil("invalid password"),
+		})
+	}
 }
 
 // Delete a user
