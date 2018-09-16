@@ -157,32 +157,6 @@ func authenticationHandler(c *gin.Context) {
 			renderError(msg, 422, c)
 			return
 		}
-	} else {
-		var appID *uuid.UUID
-		if applicationID, ok := params["application_id"].(string); ok {
-			appUUID, err := uuid.FromString(applicationID)
-			if err == nil {
-				appID = &appUUID
-			}
-		} else if bearer.ApplicationID != nil {
-			appID = bearer.ApplicationID
-		}
-
-		if appID != nil {
-			var app = &Application{}
-			DatabaseConnection().Where("id = ?", appID).Find(&app)
-			if app.ID != uuid.Nil && *bearer.UserID != app.UserID {
-				renderError("forbidden", 403, c)
-				return
-			}
-			resp, err := app.CreateToken()
-			if err != nil {
-				renderError(err.Error(), 401, c)
-				return
-			}
-			render(resp, 201, c)
-			return
-		}
 	}
 
 	renderError("unauthorized", 401, c)
@@ -360,7 +334,48 @@ func tokensListHandler(c *gin.Context) {
 }
 
 func createTokenHandler(c *gin.Context) {
-	renderError("not implemented", 501, c)
+	bearer := bearerAuthToken(c)
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		renderError(err.Error(), 400, c)
+		return
+	}
+
+	params := map[string]interface{}{}
+	err = json.Unmarshal(buf, &params)
+	if err != nil {
+		renderError(err.Error(), 400, c)
+		return
+	}
+
+	var appID *uuid.UUID
+	if applicationID, ok := params["application_id"].(string); ok {
+		appUUID, err := uuid.FromString(applicationID)
+		if err == nil {
+			appID = &appUUID
+		}
+	} else if bearer.ApplicationID != nil {
+		appID = bearer.ApplicationID
+	}
+
+	if appID != nil {
+		var app = &Application{}
+		DatabaseConnection().Where("id = ?", appID).Find(&app)
+		if app.ID != uuid.Nil && *bearer.UserID != app.UserID {
+			renderError("forbidden", 403, c)
+			return
+		}
+		resp, err := app.CreateToken()
+		if err != nil {
+			renderError(err.Error(), 401, c)
+			return
+		}
+		render(resp, 201, c)
+		return
+	}
+
+	renderError("unauthorized", 401, c)
 }
 
 func deleteTokenHandler(c *gin.Context) {
