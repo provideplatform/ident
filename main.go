@@ -391,12 +391,11 @@ func deleteTokenHandler(c *gin.Context) {
 		renderError("token not found", 404, c)
 		return
 	}
-	if bearer.UserID != nil && *bearer.UserID != *token.UserID {
+	if bearer.UserID != nil && token.UserID != nil && *bearer.UserID != *token.UserID {
 		renderError("forbidden", 403, c)
 		return
 	}
-	tokenUser := token.GetUser()
-	if bearer.ApplicationID != nil && tokenUser != nil && *bearer.ApplicationID != *tokenUser.ApplicationID {
+	if bearer.ApplicationID != nil && token.ApplicationID != nil && *bearer.ApplicationID != *token.ApplicationID {
 		renderError("forbidden", 403, c)
 		return
 	}
