@@ -362,7 +362,7 @@ func createTokenHandler(c *gin.Context) {
 	if appID != nil {
 		var app = &Application{}
 		DatabaseConnection().Where("id = ?", appID).Find(&app)
-		if app.ID != uuid.Nil && *bearer.UserID != app.UserID {
+		if app != nil && app.ID != uuid.Nil && bearer.UserID != nil && *bearer.UserID != app.UserID {
 			renderError("forbidden", 403, c)
 			return
 		}
