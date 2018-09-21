@@ -84,6 +84,7 @@ func getAuthorizedUser(c *gin.Context) *User {
 }
 
 func render(obj interface{}, status int, c *gin.Context) {
+	c.Header("access-control-allow-origin", "*")
 	c.Header("content-type", "application/json; charset=UTF-8")
 	c.Writer.WriteHeader(status)
 	if &obj != nil && status != http.StatusNoContent {
