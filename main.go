@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	uuid "github.com/kthomas/go.uuid"
 	provide "github.com/provideservices/provide-go"
@@ -20,6 +22,15 @@ func main() {
 	migrateSchema()
 
 	r := gin.Default()
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE"},
+		AllowHeaders:     []string{"Origin"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+
 	configureNewRelicTransactionMiddleware(r)
 
 	r.GET("/api/v1/applications", applicationsListHandler)
@@ -84,7 +95,6 @@ func getAuthorizedUser(c *gin.Context) *User {
 }
 
 func render(obj interface{}, status int, c *gin.Context) {
-	c.Header("access-control-allow-origin", "*")
 	c.Header("content-type", "application/json; charset=UTF-8")
 	c.Writer.WriteHeader(status)
 	if &obj != nil && status != http.StatusNoContent {
