@@ -6,10 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	uuid "github.com/kthomas/go.uuid"
 	provide "github.com/provideservices/provide-go"
@@ -23,14 +21,7 @@ func main() {
 
 	r := gin.Default()
 	r.Use(gin.Recovery())
-	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE"},
-		AllowHeaders:     []string{"Authorization", "Origin", "Content-Length", "Content-Type"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
-	}))
+	r.Use(provide.CORSMiddleware())
 
 	configureNewRelicTransactionMiddleware(r)
 
