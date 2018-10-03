@@ -213,6 +213,18 @@ func createApplicationHandler(c *gin.Context) {
 	}
 	app.UserID = user.ID
 
+	if app.NetworkID == uuid.Nil {
+		cfg := app.ParseConfig()
+		if networkID, ok := cfg["network_id"].(string); ok {
+			networkUUID, err := uuid.FromString(networkID)
+			if err != nil {
+				renderError(err.Error(), 422, c)
+				return
+			}
+			app.NetworkID = networkUUID
+		}
+	}
+
 	if app.Create() {
 		render(app, 201, c)
 	} else {

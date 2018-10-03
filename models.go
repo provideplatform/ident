@@ -154,6 +154,19 @@ func (app *Application) GetTokens() []*Token {
 	return tokens
 }
 
+// ParseConfig - parse the Application JSON configuration
+func (app *Application) ParseConfig() map[string]interface{} {
+	cfg := map[string]interface{}{}
+	if app.Config != nil {
+		err := json.Unmarshal(*app.Config, &cfg)
+		if err != nil {
+			Log.Warningf("Failed to unmarshal application params; %s", err.Error())
+			return nil
+		}
+	}
+	return cfg
+}
+
 // GetApplication - retrieve the application associated with the token (or nil if one does not exist)
 func (t *Token) GetApplication() *Application {
 	if t.ApplicationID == nil {
