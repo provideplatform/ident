@@ -17,6 +17,7 @@ import (
 // Application model which is initially owned by the user who created it
 type Application struct {
 	provide.Model
+	NetworkID   uuid.UUID        `sql:"type:uuid not null" json:"network_id"`
 	UserID      uuid.UUID        `sql:"type:uuid not null" json:"user_id"`
 	Name        *string          `sql:"not null" json:"name"`
 	Description *string          `json:"description"`
