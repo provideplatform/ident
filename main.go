@@ -183,6 +183,11 @@ func applicationsListHandler(c *gin.Context) {
 
 	var apps []Application
 	query = query.Where("user_id = ? AND hidden = ?", user.ID, hidden)
+
+	if c.Param("network_id") != "" {
+		query = query.Where("network_id = ?", c.Param("id"))
+	}
+
 	provide.Paginate(c, query, &Application{}).Find(&apps)
 	render(apps, 200, c)
 }
