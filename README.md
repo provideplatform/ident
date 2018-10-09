@@ -21,35 +21,28 @@ The following APIs are exposed:
 Authorize a `Token` on behalf of the authorized `User` or `Application`.
 
 ```console
-$ curl -v -XPOST \
-    -H 'content-type: application/json' \
+$ curl -i -H 'content-type: application/json' \
     https://ident.provide.services/api/v1/authenticate \
-    -d '{"email": "hello@example.com", "password": "h3ll0pw"}'
+    -d '{"email": "user42@domain.tld", "password": "S00perS3cr3t"}'
+HTTP/2 201
+date: Mon, 08 Oct 2018 23:56:08 GMT
+content-type: application/json; charset=UTF-8
+content-length: 559
+access-control-allow-credentials: true
+access-control-allow-headers: Accept, Accept-Encoding, Authorization, Cache-Control, Content-Length, Content-Type, Origin, User-Agent, X-CSRF-Token, X-Requested-With
+access-control-allow-methods: GET, POST, PUT, DELETE, OPTIONS
+access-control-allow-origin: *
 
-> POST /api/v1/authenticate HTTP/1.1
-> Host: ident.provide.services
-> User-Agent: curl/7.54.0
-> Accept: */*
-> Content-Length: 50
-> Content-Type: application/json
->
-* upload completely sent off: 50 out of 50 bytes
-< HTTP/1.1 201 Created
-< Content-Type: application/json; charset=UTF-8
-< Date: Sat, 13 Jan 2018 03:57:50 GMT
-< Content-Length: 607
-<
 {
     "user": {
-        "id": "83420c49-1b45-4144-9eb8-7e3c09aa2111",
-        "created_at": "2018-01-12T18:51:19.99177-05:00",
-        "name": "kt",
-        "email": "kyle@unmarked.io"
+        "id": "3d9d62e8-0acf-47cd-b74f-52c1f96f8397",
+        "created_at": "2018-10-08T23:34:18.70074Z",
+        "name": "Doc U. Mentation",
+        "email": "user42@domain.tld"
     },
     "token": {
-        "id": "c0c81296-8587-4e12-bba2-40b6e91f1590",
-        "secret": "843addaf-88f9-4b02-8675-0853a7a34e74",
-        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7fSwiZXhwIjpudWxsLCJpYXQiOjE1MTU4MTU4NzAsImp0aSI6IjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMCIsInN1YiI6InVzZXI6ODM0MjBjNDktMWI0NS00MTQ0LTllYjgtN2UzYzA5YWEyMTExIn0.ZNkGppXioiuKe8SAKtakRLnAwm80cQZuaOHj0OMlgJY"
+        "id": "52d9caf3-0a56-4670-886e-8136b633d52b",
+        "token": "yoUr-AutH-TOKeN-FrOm-sIgnINg-in"
     }
 }
 ```
@@ -58,73 +51,79 @@ $ curl -v -XPOST \
 
 ### `GET /api/v1/applications`
 
-Enumerate platform applications visible to the authorized caller.
+Enumerate platform `Application`s visible to the authorized caller.
 
 ```console
-$ curl -v https://ident.provide.services/api/v1/applications
+$ curl -i \
+    -H 'Authorization: bearer yoUr-AutH-TOKeN-FrOm-sIgnINg-in' \
+    https://ident.provide.services/api/v1/applications
+HTTP/2 200
+date: Tue, 09 Oct 2018 01:33:34 GMT
+content-type: application/json; charset=UTF-8
+content-length: 856
+access-control-allow-credentials: true
+access-control-allow-headers: Accept, Accept-Encoding, Authorization, Cache-Control, Content-Length, Content-Type, Origin, User-Agent, X-CSRF-Token, X-Requested-With
+access-control-allow-methods: GET, POST, PUT, DELETE, OPTIONS
+access-control-allow-origin: *
+x-total-results-count: 2
 
-> GET /api/v1/applications HTTP/1.1
-> Host: ident.provide.services
-> User-Agent: curl/7.54.0
-> Accept: */*
->
-< HTTP/1.1 200 OK
-< Content-Type: application/json; charset=UTF-8
-< Date: Sat, 13 Jan 2018 03:50:19 GMT
-< Content-Length: 529
-<
 [
     {
-        "id": "7255bfd3-a6eb-4493-ad99-5e8df7d52afc",
-        "created_at": "2018-01-12T22:29:14.195441-05:00",
-        "user_id": "7cc877a6-5a9e-4db1-a782-7abfca2743a4",
-        "name": "Artcoin",
+        "id": "cf6ae66a-7cba-48ce-bbd5-9dcd674267be",
+        "created_at": "2018-10-09T01:28:52.704799Z",
+        "network_id": "024ff1ef-7369-4dee-969c-1918c6edb5d4",
+        "user_id": "3d9d62e8-0acf-47cd-b74f-52c1f96f8397",
+        "name": "Enterprise Advantage",
         "description": null,
-        "config": null
+        "config": {
+            "network_id": "024ff1ef-7369-4dee-969c-1918c6edb5d4"
+        },
+        "hidden": false
     },
     {
-        "id": "10fd7364-54e4-4de4-a5a1-3c0d5e78888f",
-        "created_at": "2018-01-12T22:36:14.224792-05:00",
-        "user_id": "7cc877a6-5a9e-4db1-a782-7abfca2743a4",
-        "name": "unicorn",
+        "id": "6fd50c17-0d3f-463f-811e-0015e0373f1a",
+        "created_at": "2018-10-09T01:30:05.575747Z",
+        "network_id": "024ff1ef-7369-4dee-969c-1918c6edb5d4",
+        "user_id": "3d9d62e8-0acf-47cd-b74f-52c1f96f8397",
+        "name": "Process Turbo",
         "description": null,
-        "config": null
+        "config": {
+            "network_id": "024ff1ef-7369-4dee-969c-1918c6edb5d4"
+        },
+        "hidden": false
     }
 ]
 ```
 
 ### `POST /api/v1/applications`
 
-Create a new application on behalf of the authorized platform `User`.
+Create a new `Application` on behalf of the authorized platform `User`.
 
 *A platform `User` is a user that was not created on behalf of an `Application`.*
 
 ```console
-curl -v -XPOST \
-    -H "content-type: application/json" \
+$ curl -i \
+    -H 'Authorization: bearer yoUr-AutH-TOKeN-FrOm-sIgnINg-in' \
     https://ident.provide.services/api/v1/applications \
-    -d '{"name": "Unicorn"}'
+    -d '{"name": "SavvyApp"}'
+HTTP/2 201
+date: Tue, 09 Oct 2018 02:03:19 GMT
+content-type: application/json; charset=UTF-8
+content-length: 309
+access-control-allow-credentials: true
+access-control-allow-headers: Accept, Accept-Encoding, Authorization, Cache-Control, Content-Length, Content-Type, Origin, User-Agent, X-CSRF-Token, X-Requested-With
+access-control-allow-methods: GET, POST, PUT, DELETE, OPTIONS
+access-control-allow-origin: *
 
-> POST /api/v1/applications HTTP/1.1
-> Host: localhost:8080
-> User-Agent: curl/7.54.0
-> Accept: */*
-> Content-Length: 70
-> Content-Type: application/json
->
-* upload completely sent off: 70 out of 70 bytes
-< HTTP/1.1 201 Created
-< Content-Type: application/json; charset=UTF-8
-< Date: Sat, 13 Jan 2018 05:46:33 GMT
-< Content-Length: 257
-<
 {
-    "id": "aac664e5-7461-4ac0-87ec-2780d1d38098",
-    "created_at": "2018-01-13T00:46:33.165639-05:00",
-    "user_id": "83420c49-1b45-4144-9eb8-7e3c09aa2111",
-    "name": "Unicorn",
+    "id": "77cb2094-9a99-4de6-ac86-bbd2353b49c8",
+    "created_at": "2018-10-09T02:03:19.617250119Z",
+    "network_id": "00000000-0000-0000-0000-000000000000",
+    "user_id": "3d9d62e8-0acf-47cd-b74f-52c1f96f8397",
+    "name": "SavvyExec",
     "description": null,
-    "config": null
+    "config": null,
+    "hidden": false
 }
 
 ```
@@ -136,35 +135,35 @@ curl -v -XPOST \
 Enumerate previously authorized `Token`s for the authorized `User` or `Application`.
 
 ```console
-$ curl -v https://ident.provide.services/api/v1/tokens
+$ curl -i \
+    -H 'Authorization: bearer yoUr-AutH-TOKeN-FrOm-sIgnINg-in' \
+    https://ident.provide.services/api/v1/tokens
 
-> GET /api/v1/tokens HTTP/1.1
-> Host: ident.provide.services
-> User-Agent: curl/7.54.0
-> Accept: */*
->
-< HTTP/1.1 200 OK
-< Content-Type: application/json; charset=UTF-8
-< Date: Sat, 13 Jan 2018 03:51:52 GMT
-< Content-Length: 1143
-<
+HTTP/2 200
+date: Tue, 09 Oct 2018 01:47:35 GMT
+content-type: application/json; charset=UTF-8
+access-control-allow-credentials: true
+access-control-allow-headers: Accept, Accept-Encoding, Authorization, Cache-Control, Content-Length, Content-Type, Origin, User-Agent, X-CSRF-Token, X-Requested-With
+access-control-allow-methods: GET, POST, PUT, DELETE, OPTIONS
+access-control-allow-origin: *
+x-total-results-count: 17
+
 [
     {
-        "id": "9878b890-4efa-41fe-bcff-ac8d8f39965c",
-        "created_at": "2018-01-12T22:47:09.995048-05:00",
-        "issued_at": "2018-01-12T22:47:09.994119-05:00",
+        "id": "234da41d-0970-4561-bdf9-797ef6807fb5",
+        "created_at": "2018-10-08T23:34:18.843828Z",
+        "issued_at": "2018-10-08T23:34:18.842733Z",
         "expires_at": null,
-        "secret": "51df5bba-4208-4b2f-b8b7-81969a02d43a",
-        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7fSwiZXhwIjpudWxsLCJpYXQiOjE1MTU4MTUyMjksImp0aSI6IjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMCIsInN1YiI6InVzZXI6Y2VkNWMwNjAtNmNjMy00NmNkLTg5YjEtNWVmYzZiZDNhNjY1In0.uHfHhb-tInBeKITEm-bp2D4szwZdXkxUdy3PnQHjc7Y",
+        "token": "a-New-toKeN-VaLuE",
         "data": null
     },
+   ...
     {
-        "id": "3eb63678-86f1-4064-9a4c-4de4fd7c0865",
-        "created_at": "2018-01-12T22:47:29.901568-05:00",
-        "issued_at": "2018-01-12T22:47:29.901292-05:00",
+        "id": "84557020-0180-4e87-ae01-ffa05a587df4",
+        "created_at": "2018-10-08T23:58:28.631901Z",
+        "issued_at": "2018-10-08T23:58:28.630644Z",
         "expires_at": null,
-        "secret": "2a8fcfd3-65bd-4f5b-bbc0-2cad3fc00ece",
-        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7fSwiZXhwIjpudWxsLCJpYXQiOjE1MTU4MTUyNDksImp0aSI6IjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMCIsInN1YiI6InVzZXI6Y2VkNWMwNjAtNmNjMy00NmNkLTg5YjEtNWVmYzZiZDNhNjY1In0.i_4LQj2pMLfidy2rMDPbeWpXX2qF2hZsFg5t2nV1FtA",
+        "token": "anOthEr-New-toKeN-VaLuE",
         "data": null
     }
 ]
@@ -174,46 +173,83 @@ $ curl -v https://ident.provide.services/api/v1/tokens
 
 Authorize a `Token` on behalf of the authorized `User` or `Application`.
 
-*See the `api/v1/authenticate` API to authorize a new `Token`.*
+```console
+$ curl -i -XPOST \
+    -H 'content-type: application/json' \
+    -H 'Authorization: bearer an-apPliCaTIOn-aPi-tOkEn' \
+    https://ident.provide.services/api/v1/tokens \
+    -d '{"name": "PurposeToken"}'
+HTTP/2 201
+date: Tue, 09 Oct 2018 02:47:26 GMT
+content-type: application/json; charset=UTF-8
+content-length: 484
+access-control-allow-credentials: true
+access-control-allow-headers: Accept, Accept-Encoding, Authorization, Cache-Control, Content-Length, Content-Type, Origin, User-Agent, X-CSRF-Token, X-Requested-With
+access-control-allow-methods: GET, POST, PUT, DELETE, OPTIONS
+access-control-allow-origin: *
+
+{
+    "id": "ed3d83ec-8b4f-4538-a240-bf759a2545ff",
+    "created_at": "2018-10-09T02:47:25.981937848Z",
+    "issued_at": "2018-10-09T02:47:25.980910555Z",
+    "expires_at": null,
+    "token": "a-New-toKeN-VaLuE",
+    "data": null
+}
+```
 
 ### `DELETE /api/v1/tokens/:id`
 
 Destroy a previously authorized `Token` on behalf of the authorized `User` or `Application`.
 
 ```console
-$ curl -v -XDELETE https://ident.provide.services/api/v1/tokens/9878b890-4efa-41fe-bcff-ac8d8f39965c
-
-> DELETE /api/v1/tokens/9878b890-4efa-41fe-bcff-ac8d8f39965c HTTP/1.1
-> Host: ident.provide.services
-> User-Agent: curl/7.54.0
-> Accept: */*
->
-< HTTP/1.1 204 No Content
-< Content-Type: application/json; charset=UTF-8
-< Date: Sat, 13 Jan 2018 04:01:16 GMT
-<
+$ curl -i -XDELETE \
+    -H 'Authorization: bearer yoUr-AutH-TOKeN-FrOm-sIgnINg-in' \
+    https://ident.provide.services/api/v1/tokens/84557020-0180-4e87-ae01-ffa05a587df4
+HTTP/2 204
+date: Tue, 09 Oct 2018 01:51:14 GMT
+access-control-allow-credentials: true
+access-control-allow-headers: Accept, Accept-Encoding, Authorization, Cache-Control, Content-Length, Content-Type, Origin, User-Agent, X-CSRF-Token, X-Requested-With
+access-control-allow-methods: GET, POST, PUT, DELETE, OPTIONS
+access-control-allow-origin: *
 ```
 
 ## Users API
 
 ### `GET /api/v1/users`
 
-Enumerate previous created `User`s for the authorized `Application`. This method will return `401 Unauthorized` if the `bearer` authorization header does not resolve to to an `Application`.
+Enumerate previously created `User`s for the authorized `Application`. This method will return `401 Unauthorized` if the `bearer` authorization header does not resolve to an `Application`.
 
 ```console
-$ curl -v https://ident.provide.services/api/v1/users
+$ curl -i \
+    -H 'Authorization: bearer an-apPliCaTIOn-aPi-tOkEn' \
+    https://ident.provide.services/api/v1/users
+HTTP/2 200
+date: Tue, 09 Oct 2018 02:29:47 GMT
+content-type: application/json; charset=UTF-8
+content-length: 547
+access-control-allow-credentials: true
+access-control-allow-headers: Accept, Accept-Encoding, Authorization, Cache-Control, Content-Length, Content-Type, Origin, User-Agent, X-CSRF-Token, X-Requested-With
+access-control-allow-methods: GET, POST, PUT, DELETE, OPTIONS
+access-control-allow-origin: *
+x-total-results-count: 2
 
-> GET /api/v1/users HTTP/1.1
-> Host: ident.provide.services
-> User-Agent: curl/7.54.0
-> Accept: */*
->
-< HTTP/1.1 200 OK
-< Content-Type: application/json; charset=UTF-8
-< Date: Sat, 13 Jan 2018 03:51:52 GMT
-< Content-Length: 3
-<
-[]
+[
+    {
+        "id": "7fc90f5a-45e3-42ed-84b9-c13aed6481f1",
+        "created_at": "2018-10-09T02:29:30.580961Z",
+        "name": "EntArchitect",
+        "email": "big-arch@example.com",
+        "password": "$2a$10$TzD5muUNH0BFrfwwzsuthOlipQ45e5q3ba8l8wIB9ESPD4d5z/e5G"
+    },
+    {
+        "id": "876e4fc6-b379-432c-8f76-7e42a955d527",
+        "created_at": "2018-10-09T02:21:14.531578Z",
+        "name": "SavvyExec",
+        "email": "vip@example.com",
+        "password": "$2a$10$5ebxXX.iWe7OMOHr5CGeye6.G/uj3sb4gRzXxyCEYI2B6KCFYRrz."
+    }
+]
 ```
 
 ### `POST /api/v1/users`
@@ -221,30 +257,23 @@ $ curl -v https://ident.provide.services/api/v1/users
 Create a new platform `User` or a `User` on behalf of an authorized `Application`.
 
 ```console
-$ curl -v -XPOST \
-    -H "content-type: application/json" \
-    https://ident.provide.services/api/v1/applications \
-    -d '{"name": "Unicorn"}'
+$ curl -i \
+    -H 'Authorization: bearer an-apPliCaTIOn-aPi-tOkEn' \
+    https://ident.provide.services/api/v1/users \
+    -d '{"name": "SavvyExec", "email": "vip@example.com", password": "Str0ngPa55w0rd"}'
+HTTP/2 201
+date: Tue, 09 Oct 2018 02:21:14 GMT
+content-type: application/json; charset=UTF-8
+content-length: 162
+access-control-allow-credentials: true
+access-control-allow-headers: Accept, Accept-Encoding, Authorization, Cache-Control, Content-Length, Content-Type, Origin, User-Agent, X-CSRF-Token, X-Requested-With
+access-control-allow-methods: GET, POST, PUT, DELETE, OPTIONS
+access-control-allow-origin: *
 
-> POST /api/v1/users HTTP/1.1
-> Host: ident.provide.services
-> User-Agent: curl/7.54.0
-> Accept: */*
-> authorization: bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7fSwiZXhwIjpudWxsLCJpYXQiOjE1MTU4MzQ0OTIsImp0aSI6IjMzMGFkNGVkLTAzMDItNGRhMS1hYTgyLWQxNTg2NDM2YTZkNCIsInN1YiI6ImFwcGxpY2F0aW9uOjNhOWMzYzE5LTU0NTUtNDQyZS04OWI1LTM1NzUyZjZmZGMzYSJ9.BUS7Q-ph6wu-WxKrETzFwnSJgq3EeEf4W2esbHSmgjQ
-> content-type: application/json
-> Content-Length: 65
->
-* upload completely sent off: 65 out of 65 bytes
-< HTTP/1.1 201 Created
-< Content-Type: application/json; charset=UTF-8
-< Date: Sat, 13 Jan 2018 09:15:13 GMT
-< Content-Length: 162
-<
 {
-    "id": "82254ad2-a847-455f-a351-672a193106ef",
-    "created_at": "2018-01-13T04:15:13.024833-05:00",
-    "name": "Hello World",
-    "email": "hello@world.com"
+    "id": "876e4fc6-b379-432c-8f76-7e42a955d527",
+    "created_at": "2018-10-09T02:21:14.531577683Z",
+    "name": "SavvyExec",
+    "email": "vip@example.com"
 }
-
 ```
