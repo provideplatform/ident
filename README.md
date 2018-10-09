@@ -1,27 +1,30 @@
-## ident
+# ident
 
 Microservice for managing authentication and authorization for platform users and applications.
 
-### Authentication
+## Authentication
 
 Consumers of this API will present a `bearer` authentication header (i.e., using a `JWT` token) for all requests. The `sub` of the authenticated caller must reference a `User` when attempting to create or access `Application` APIs.
 
-### Authorization
+## Authorization
 
 The `bearer` authorization header will be scoped to an authorized platform user or application. The `bearer` authorization header may contain a `sub` (see [RFC-7519 §§ 4.1.2](https://tools.ietf.org/html/rfc7519#section-4.1.2)) to further limit its authorized scope to a specific token or smart contract, wallet or other entity.
 
 ---
+
 The following APIs are exposed:
 
+## Authentication API
 
-### Authentication API
-
-##### `POST /api/v1/authenticate`
+### `POST /api/v1/authenticate`
 
 Authorize a `Token` on behalf of the authorized `User` or `Application`.
 
-```
-[prvd@vpc ~]# curl -v -XPOST -H 'content-type: application/json' https://ident.provide.services/api/v1/authenticate -d '{"email": "hello@example.com", "password": "h3ll0pw"}'
+```console
+$ curl -v -XPOST \
+    -H 'content-type: application/json' \
+    https://ident.provide.services/api/v1/authenticate \
+    -d '{"email": "hello@example.com", "password": "h3ll0pw"}'
 
 > POST /api/v1/authenticate HTTP/1.1
 > Host: ident.provide.services
@@ -51,14 +54,14 @@ Authorize a `Token` on behalf of the authorized `User` or `Application`.
 }
 ```
 
-### Applications API
+## Applications API
 
-##### `GET /api/v1/applications`
+### `GET /api/v1/applications`
 
 Enumerate platform applications visible to the authorized caller.
 
-```
-[prvd@vpc ~]# curl -v https://ident.provide.services/api/v1/applications
+```console
+$ curl -v https://ident.provide.services/api/v1/applications
 
 > GET /api/v1/applications HTTP/1.1
 > Host: ident.provide.services
@@ -90,14 +93,17 @@ Enumerate platform applications visible to the authorized caller.
 ]
 ```
 
-##### `POST /api/v1/applications`
+### `POST /api/v1/applications`
 
 Create a new application on behalf of the authorized platform `User`.
 
 *A platform `User` is a user that was not created on behalf of an `Application`.*
 
-```
-curl -v -XPOST -H "content-type: application/json" https://ident.provide.services/api/v1/applications -d '{"name": "Unicorn"}'
+```console
+curl -v -XPOST \
+    -H "content-type: application/json" \
+    https://ident.provide.services/api/v1/applications \
+    -d '{"name": "Unicorn"}'
 
 > POST /api/v1/applications HTTP/1.1
 > Host: localhost:8080
@@ -123,14 +129,14 @@ curl -v -XPOST -H "content-type: application/json" https://ident.provide.service
 
 ```
 
-### Tokens API
+## Tokens API
 
-##### `GET /api/v1/tokens`
+### `GET /api/v1/tokens`
 
 Enumerate previously authorized `Token`s for the authorized `User` or `Application`.
 
-```
-[prvd@vpc ~]# curl -v https://ident.provide.services/api/v1/tokens
+```console
+$ curl -v https://ident.provide.services/api/v1/tokens
 
 > GET /api/v1/tokens HTTP/1.1
 > Host: ident.provide.services
@@ -164,20 +170,18 @@ Enumerate previously authorized `Token`s for the authorized `User` or `Applicati
 ]
 ```
 
-
-##### `POST /api/v1/tokens`
+### `POST /api/v1/tokens`
 
 Authorize a `Token` on behalf of the authorized `User` or `Application`.
 
 *See the `api/v1/authenticate` API to authorize a new `Token`.*
 
-
-##### `DELETE /api/v1/tokens/:id`
+### `DELETE /api/v1/tokens/:id`
 
 Destroy a previously authorized `Token` on behalf of the authorized `User` or `Application`.
 
-```
-[prvd@vpc ~]# curl -v -XDELETE https://ident.provide.services/api/v1/tokens/9878b890-4efa-41fe-bcff-ac8d8f39965c
+```console
+$ curl -v -XDELETE https://ident.provide.services/api/v1/tokens/9878b890-4efa-41fe-bcff-ac8d8f39965c
 
 > DELETE /api/v1/tokens/9878b890-4efa-41fe-bcff-ac8d8f39965c HTTP/1.1
 > Host: ident.provide.services
@@ -190,15 +194,14 @@ Destroy a previously authorized `Token` on behalf of the authorized `User` or `A
 <
 ```
 
+## Users API
 
-### Users API
-
-##### `GET /api/v1/users`
+### `GET /api/v1/users`
 
 Enumerate previous created `User`s for the authorized `Application`. This method will return `401 Unauthorized` if the `bearer` authorization header does not resolve to to an `Application`.
 
-```
-[prvd@vpc ~]# curl -v https://ident.provide.services/api/v1/users
+```console
+$ curl -v https://ident.provide.services/api/v1/users
 
 > GET /api/v1/users HTTP/1.1
 > Host: ident.provide.services
@@ -213,13 +216,15 @@ Enumerate previous created `User`s for the authorized `Application`. This method
 []
 ```
 
-
-##### `POST /api/v1/users`
+### `POST /api/v1/users`
 
 Create a new platform `User` or a `User` on behalf of an authorized `Application`.
 
-```
-curl -v -XPOST -H "content-type: application/json" https://ident.provide.services/api/v1/applications -d '{"name": "Unicorn"}'
+```console
+$ curl -v -XPOST \
+    -H "content-type: application/json" \
+    https://ident.provide.services/api/v1/applications \
+    -d '{"name": "Unicorn"}'
 
 > POST /api/v1/users HTTP/1.1
 > Host: ident.provide.services
