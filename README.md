@@ -14,6 +14,22 @@ The `bearer` authorization header will be scoped to an authorized platform user 
 
 The following APIs are exposed:
 
+## Status API
+
+### `GET /api/vi/status`
+
+Check the status of the _ident_ microservice. This will return a `204 No Content` if the service is up, and a `404 Not Found` otherwise. 
+
+```console
+$ curl -i https://ident.provide.services/status
+HTTP/2 204
+date: Tue, 09 Oct 2018 03:06:28 GMT
+access-control-allow-credentials: true
+access-control-allow-headers: Accept, Accept-Encoding, Authorization, Cache-Control, Content-Length, Content-Type, Origin, User-Agent, X-CSRF-Token, X-Requested-With
+access-control-allow-methods: GET, POST, PUT, DELETE, OPTIONS
+access-control-allow-origin: *
+```
+
 ## Authentication API
 
 ### `POST /api/v1/authenticate`
@@ -102,7 +118,7 @@ Create a new `Application` on behalf of the authorized platform `User`.
 *A platform `User` is a user that was not created on behalf of an `Application`.*
 
 ```console
-$ curl -i \
+$ curl -i -H 'content-type: application/json' \
     -H 'Authorization: bearer yoUr-AutH-TOKeN-FrOm-sIgnINg-in' \
     https://ident.provide.services/api/v1/applications \
     -d '{"name": "SavvyApp"}'
@@ -125,7 +141,107 @@ access-control-allow-origin: *
     "config": null,
     "hidden": false
 }
+```
 
+### `GET /api/vi/applications/:id`
+
+Retrieve the details of the specified `Application`.
+
+```console
+$ curl -i \
+    -H 'Authorization: bearer yoUr-AutH-TOKeN-FrOm-sIgnINg-in' \
+    https://ident.provide.services/api/v1/applications/cf6ae66a-7cba-48ce-bbd5-9dcd674267be
+HTTP/2 200
+date: Tue, 09 Oct 2018 05:43:27 GMT
+content-type: application/json; charset=UTF-8
+content-length: 381
+access-control-allow-credentials: true
+access-control-allow-headers: Accept, Accept-Encoding, Authorization, Cache-Control, Content-Length, Content-Type, Origin, User-Agent, X-CSRF-Token, X-Requested-With
+access-control-allow-methods: GET, POST, PUT, DELETE, OPTIONS
+access-control-allow-origin: *
+
+{
+    "id": "cf6ae66a-7cba-48ce-bbd5-9dcd674267be",
+    "created_at": "2018-10-09T01:28:52.704799Z",
+    "network_id": "024ff1ef-7369-4dee-969c-1918c6edb5d4",
+    "user_id": "3d9d62e8-0acf-47cd-b74f-52c1f96f8397",
+    "name": "Enterprise Advantage",
+    "description": null,
+    "config": {
+        "network_id": "024ff1ef-7369-4dee-969c-1918c6edb5d4"
+    },
+    "hidden": false
+}
+```
+
+### `PUT /api/vi/applications/:id`
+
+Update details for the given `Application`.
+
+```console
+$ curl -i -XPUT \
+    -H 'content-type: application/json' \
+    -H 'Authorization: bearer yoUr-AutH-TOKeN-FrOm-sIgnINg-in' \
+    https://ident.provide.services/api/v1/applications/6fd50c17-0d3f-463f-811e-0015e0373f1a \
+    -d '{"name": "Turbo Process"}'
+HTTP/2 204
+date: Tue, 09 Oct 2018 05:45:44 GMT
+access-control-allow-credentials: true
+access-control-allow-headers: Accept, Accept-Encoding, Authorization, Cache-Control, Content-Length, Content-Type, Origin, User-Agent, X-CSRF-Token, X-Requested-With
+access-control-allow-methods: GET, POST, PUT, DELETE, OPTIONS
+access-control-allow-origin: *
+```
+
+### `GET /api/vi/applications/:id/tokens`
+
+Fetch the `Token`s for the given `Application`.
+
+```console
+$ curl -i \
+    -H 'Authorization: bearer yoUr-AutH-TOKeN-FrOm-sIgnINg-in' \
+    https://ident.provide.services/api/v1/applications/cf6ae66a-7cba-48ce-bbd5-9dcd674267be/tokens
+HTTP/2 200
+date: Tue, 09 Oct 2018 05:51:25 GMT
+content-type: application/json; charset=UTF-8
+content-length: 514
+access-control-allow-credentials: true
+access-control-allow-headers: Accept, Accept-Encoding, Authorization, Cache-Control, Content-Length, Content-Type, Origin, User-Agent, X-CSRF-Token, X-Requested-With
+access-control-allow-methods: GET, POST, PUT, DELETE, OPTIONS
+access-control-allow-origin: *
+x-total-results-count: 1
+
+[
+    {
+        "id": "ba562b25-ff4e-4f9d-a332-31550ead9f41",
+        "created_at": "2018-10-09T01:28:52.726631Z",
+        "issued_at": "2018-10-09T01:28:52.725677Z",
+        "expires_at": null,
+        "token": "an-apPliCaTIOn-aPi-tOkEn",
+        "data": null
+    }
+]
+```
+
+### `DELETE /api/vi/applications/:id`
+
+Remove the specified `Application`. _Not yet implemented._
+
+```console
+$ curl -i -XDELETE \
+    -H 'Authorization: bearer yoUr-AutH-TOKeN-FrOm-sIgnINg-in' \
+    https://ident.provide.services/api/v1/applications/77cb2094-9a99-4de6-ac86-bbd2353b49c8
+HTTP/2 501
+date: Tue, 09 Oct 2018 05:48:08 GMT
+content-type: application/json; charset=UTF-8
+content-length: 37
+access-control-allow-credentials: true
+access-control-allow-headers: Accept, Accept-Encoding, Authorization, Cache-Control, Content-Length, Content-Type, Origin, User-Agent, X-CSRF-Token, X-Requested-With
+access-control-allow-methods: GET, POST, PUT, DELETE, OPTIONS
+access-control-allow-origin: *
+
+{
+    "message": "not implemented"
+}
 ```
 
 ## Tokens API
@@ -257,7 +373,7 @@ x-total-results-count: 2
 Create a new platform `User` or a `User` on behalf of an authorized `Application`.
 
 ```console
-$ curl -i \
+$ curl -i -H 'content-type: application/json' \
     -H 'Authorization: bearer an-apPliCaTIOn-aPi-tOkEn' \
     https://ident.provide.services/api/v1/users \
     -d '{"name": "SavvyExec", "email": "vip@example.com", password": "Str0ngPa55w0rd"}'
@@ -275,5 +391,45 @@ access-control-allow-origin: *
     "created_at": "2018-10-09T02:21:14.531577683Z",
     "name": "SavvyExec",
     "email": "vip@example.com"
+}
+```
+
+### `PUT /api/vi/users/:id`
+
+Update an existing `User` record. 
+
+```console
+$ curl -i -XPUT \
+    -H 'content-type: application/json' \
+    -H 'Authorization: bearer an-apPliCaTIOn-aPi-tOkEn' \
+    https://ident.provide.services/api/v1/users/876e4fc6-b379-432c-8f76-7e42a955d527 \
+    -d '{"name": "Professional Executive"}'
+HTTP/2 204
+date: Tue, 09 Oct 2018 03:21:53 GMT
+access-control-allow-credentials: true
+access-control-allow-headers: Accept, Accept-Encoding, Authorization, Cache-Control, Content-Length, Content-Type, Origin, User-Agent, X-CSRF-Token, X-Requested-With
+access-control-allow-methods: GET, POST, PUT, DELETE, OPTIONS
+access-control-allow-origin: *
+```
+
+### `DELETE /api/vi/users/:id`
+
+Remove a `User` record. _Not yet implemented._
+
+```console
+$ curl -i -XDELETE \
+    -H 'Authorization: bearer an-apPliCaTIOn-aPi-tOkEn' \
+    https://ident.provide.services/api/v1/users/876e4fc6-b379-432c-8f76-7e42a955d527 
+HTTP/2 501
+date: Tue, 09 Oct 2018 03:25:37 GMT
+content-type: application/json; charset=UTF-8
+content-length: 37
+access-control-allow-credentials: true
+access-control-allow-headers: Accept, Accept-Encoding, Authorization, Cache-Control, Content-Length, Content-Type, Origin, User-Agent, X-CSRF-Token, X-Requested-With
+access-control-allow-methods: GET, POST, PUT, DELETE, OPTIONS
+access-control-allow-origin: *
+
+{
+    "message": "not implemented"
 }
 ```
