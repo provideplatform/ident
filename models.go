@@ -40,10 +40,12 @@ type Token struct {
 // User model
 type User struct {
 	provide.Model
-	ApplicationID *uuid.UUID `sql:"type:uuid" json:"-"`
-	Name          *string    `sql:"not null" json:"name"`
-	Email         *string    `sql:"not null" json:"email"`
-	Password      *string    `sql:"not null" json:"password"`
+	ApplicationID          *uuid.UUID `sql:"type:uuid" json:"-"`
+	Name                   *string    `sql:"not null" json:"name"`
+	Email                  *string    `sql:"not null" json:"email"`
+	Password               *string    `sql:"not null" json:"password"`
+	PrivacyPolicyAgreedAt  *time.Time `json:"privacy_policy_agreed_at"`
+	TermsOfServiceAgreedAt *time.Time `json:"terms_of_service_agreed_at"`
 }
 
 // TokenResponse represents the token portion of the response to a successful authentication request
