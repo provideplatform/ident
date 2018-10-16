@@ -14,22 +14,6 @@ The `bearer` authorization header will be scoped to an authorized platform user 
 
 The following APIs are exposed:
 
-## Status API
-
-### `GET /api/vi/status`
-
-Check the status of the _ident_ microservice. This will return a `204 No Content` if the service is up, and a `404 Not Found` otherwise. 
-
-```console
-$ curl -i https://ident.provide.services/status
-HTTP/2 204
-date: Tue, 09 Oct 2018 03:06:28 GMT
-access-control-allow-credentials: true
-access-control-allow-headers: Accept, Accept-Encoding, Authorization, Cache-Control, Content-Length, Content-Type, Origin, User-Agent, X-CSRF-Token, X-Requested-With
-access-control-allow-methods: GET, POST, PUT, DELETE, OPTIONS
-access-control-allow-origin: *
-```
-
 ## Authentication API
 
 ### `POST /api/v1/authenticate`
@@ -224,7 +208,9 @@ x-total-results-count: 1
 
 ### `DELETE /api/vi/applications/:id`
 
-Remove the specified `Application`. _Not yet implemented._
+Remove the specified `Application`. 
+
+_Not yet implemented._
 
 ```console
 $ curl -i -XDELETE \
@@ -334,7 +320,9 @@ access-control-allow-origin: *
 
 ### `GET /api/v1/users`
 
-Enumerate previously created `User`s for the authorized `Application`. This method will return `401 Unauthorized` if the `bearer` authorization header does not resolve to an `Application`.
+Enumerate previously created `User`s for the authorized `Application`. 
+
+This method will return `401 Unauthorized` if the `bearer` authorization header does not resolve to an `Application`.
 
 ```console
 $ curl -i \
@@ -414,7 +402,9 @@ access-control-allow-origin: *
 
 ### `DELETE /api/vi/users/:id`
 
-Remove a `User` record. _Not yet implemented._
+Remove a `User` record. 
+
+_Not yet implemented._
 
 ```console
 $ curl -i -XDELETE \
@@ -432,4 +422,20 @@ access-control-allow-origin: *
 {
     "message": "not implemented"
 }
+```
+
+## Status API
+
+### `GET status`
+
+Check the status of the _ident_ microservice. This will return a `204 No Content` if the service is up, and a `404 Not Found` otherwise. 
+
+```console
+$ curl -i https://ident.provide.services/status
+HTTP/2 204
+date: Tue, 09 Oct 2018 03:06:28 GMT
+access-control-allow-credentials: true
+access-control-allow-headers: Accept, Accept-Encoding, Authorization, Cache-Control, Content-Length, Content-Type, Origin, User-Agent, X-CSRF-Token, X-Requested-With
+access-control-allow-methods: GET, POST, PUT, DELETE, OPTIONS
+access-control-allow-origin: *
 ```
