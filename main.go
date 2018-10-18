@@ -39,6 +39,7 @@ func main() {
 	r.DELETE("/api/v1/tokens/:id", deleteTokenHandler)
 
 	r.GET("/api/v1/users", usersListHandler)
+	r.GET("/api/v1/users/:id", userDetailsHandler)
 	r.POST("/api/v1/users", createUserHandler)
 	r.PUT("/api/v1/users/:id", updateUserHandler)
 	r.DELETE("/api/v1/users/:id", deleteUserHandler)
@@ -444,6 +445,33 @@ func usersListHandler(c *gin.Context) {
 	query = query.Where("application_id = ?", bearer.ApplicationID.String())
 	provide.Paginate(c, query, &User{}).Find(&users)
 	render(users, 200, c)
+}
+
+func userDetailsHandler(c *gin.Context) {
+	bearer := bearerAuthToken(c)
+	if bearer == nil || (bearer != nil && bearer.ApplicationID == nil && bearer.UserID == nil) {
+		renderError("unauthorized", 401, c)
+		return
+	}
+
+	if bearer.UserID != nil && bearer.UserID.String() != c.Param("id") {
+		renderError("forbidden", 403, c)
+		return
+	}
+
+	user := &User{}
+	query := DatabaseConnection().Where("id = ?", c.Param("id"))
+	if bearer.ApplicationID != nil {
+		query = query.Where("application_id = ?", bearer.ApplicationID)
+	}
+
+	query.Find(&user)
+	if user.ID == uuid.Nil {
+		renderError("user not found", 404, c)
+		return
+	}
+
+	render(user, 200, c)
 }
 
 func createUserHandler(c *gin.Context) {
