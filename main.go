@@ -14,6 +14,8 @@ import (
 )
 
 const defaultResultsPerPage = 25
+const privacyPolicyUpdatedAt = "2018-10-19T00:00:00.000000"
+const termsOfServiceUpdatedAt = "2018-03-17T00:00:00.000000"
 
 func main() {
 	bootstrap()
