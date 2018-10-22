@@ -126,8 +126,8 @@ func requireParams(requiredParams []string, c *gin.Context) error {
 
 func statusHandler(c *gin.Context) {
 	status := map[string]interface{}{
-		"privacy_policy_updated_at":   nil,
-		"terms_of_service_updated_at": nil,
+		"privacy_policy_updated_at":   privacyPolicyUpdatedAt,
+		"terms_of_service_updated_at": termsOfServiceUpdatedAt,
 	}
 	render(status, 200, c)
 }
