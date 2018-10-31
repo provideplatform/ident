@@ -31,7 +31,7 @@ bootstrap_environment()
     export PATH=$PATH:$GOBIN
     echo "GOPATH is: $GOPATH"
     echo '....Go-Getting....'
-    go get ./... -v
+    go get -v ./...
     # TODO: any dependency / package management we want to add here. 
     # go env
     echo '....Environment setup complete....'
