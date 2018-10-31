@@ -16,6 +16,7 @@ echo Executing $0 $*
 bootstrap_environment() 
 {
     echo '....Setting up environment....'
+    mkdir -p reports/linters
     if hash go 2>/dev/null
     then
         echo 'Using' `go version`
@@ -25,6 +26,7 @@ bootstrap_environment()
         sudo apt-get install golang
         export GOROOT=/usr/lib/go
         export GOBIN=/usr/bin/go # TODO: or =$GOPATH/bin ?
+        export PATH=$PATH:$GOBIN
     fi
     # export GOPATH=./go # TODO: Do we want to do this (pros and cons)?
     echo "GOPATH is: $GOPATH"
@@ -51,7 +53,7 @@ go fmt
 go clean -i
 echo '....[PRVD] Analyzing...'
 go vet
-# TODO: ? go lint
+golint -set_exit_status > reports/linters/golint.txt
 echo '....[PRVD] Building....'
 go build -v
 echo '....[PRVD] Testing....'
