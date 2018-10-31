@@ -23,7 +23,7 @@ bootstrap_environment()
     else
         echo 'Installing go'
         sudo apt-get update
-        sudo apt-get install golang
+        sudo apt-get -y install golang
         export GOROOT=/usr/lib/go
         export GOBIN=/usr/bin/go # TODO: or =$GOPATH/bin ?
         export PATH=$PATH:$GOBIN
