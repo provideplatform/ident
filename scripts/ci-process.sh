@@ -43,6 +43,7 @@ echo 'Working Directory =' `pwd`
 bootstrap_environment
 
 # The Process
+# TODO: any other option flags we want for a CI run?
 echo '....[PRVD] Setting Up....'
 rm ./ident 2>/dev/null || true # silence error if not present
 go fix .
@@ -50,10 +51,11 @@ go fmt
 go clean -i
 echo '....[PRVD] Analyzing...'
 go vet
+# TODO: ? go lint
 echo '....[PRVD] Building....'
 go build -v
 echo '....[PRVD] Testing....'
-go test -cover -v ./...
+go test -v -race -cover -html=cover/coverage.cov -o coverage.html ./... # TODO: -msan (for Clang's MemorySanitizer)
 # TODO: build for deployment... go build -o $GOPATH/../build/ident
 # echo '....[PRVD] Docker Build....'
 # echo '....[PRVD] Docker Tag....'
