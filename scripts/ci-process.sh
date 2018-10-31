@@ -24,11 +24,11 @@ bootstrap_environment()
         echo 'Installing go'
         sudo apt-get update
         sudo apt-get -y install golang
+        export GOPATH=~/go
         export GOROOT=/usr/lib/go
-        export GOBIN=/usr/bin/go # TODO: or =$GOPATH/bin ?
+        export GOBIN=/usr/bin/go
         export PATH=$PATH:$GOBIN
     fi
-    # export GOPATH=./go # TODO: Do we want to do this (pros and cons)?
     echo "GOPATH is: $GOPATH"
     echo '....Go-Getting....'
     go get ./... # -v
