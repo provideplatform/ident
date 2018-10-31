@@ -16,22 +16,22 @@ echo Executing $0 $*
 bootstrap_environment() 
 {
     echo '....Setting up environment....'
-    # TODO: Decide if we really want this GOPATH change or not 
-    #       (might slow down builds beyond the benefit of the isolation).
-    #       This also, as is, would mean disabling `set -u` above. 
-    # if [ -z "$WORKSPACE" ]
-    # then
-    #     echo 'Running on Jenkins'
-    # else
-    #     echo 'Not running on Jenkins'
-    #     export GOPATH=$WORKSPACE/go
-    # fi
+    if hash go 2>/dev/null
+    then
+        echo 'Using' `go version`
+    else
+        echo 'Installing go'
+        sudo apt-get update
+        sudo apt-get install golang
+        export GOROOT=/usr/lib/go
+        export GOBIN=/usr/bin/go # TODO: or =$GOPATH/bin ?
+    fi
+    # export GOPATH=./go # TODO: Do we want to do this (pros and cons)?
     echo "GOPATH is: $GOPATH"
     echo '....Go-Getting....'
     go get ./... # -v
     # TODO: any dependency / package management we want to add here. 
     # go env
-    go version
     echo '....Environment setup complete....'
 }
 
