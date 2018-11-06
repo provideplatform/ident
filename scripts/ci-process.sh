@@ -17,6 +17,10 @@ bootstrap_environment()
 {
     echo '....Setting up environment....'
     mkdir -p reports/linters
+    export GOPATH=$HOME/go
+    export GOROOT=$GOPATH
+    export GOBIN=$GOPATH/go/bin
+    export PATH=$GOBIN:$PATH
     if hash go 2>/dev/null
     then
         echo 'Using' `go version`
@@ -25,10 +29,6 @@ bootstrap_environment()
         sudo apt-get update
         sudo apt-get -y install golang
     fi
-    export GOPATH=~/go
-    export GOROOT=/usr/lib/go
-    export GOBIN=/usr/bin/go
-    export PATH=$PATH:$GOBIN
     echo "GOPATH is: $GOPATH"
     echo '....Go-Getting....'
     go get -v ./...
