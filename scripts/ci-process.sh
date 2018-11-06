@@ -18,7 +18,7 @@ bootstrap_environment()
     echo '....Setting up environment....'
     mkdir -p reports/linters
     export GOPATH=$HOME/go
-    export GOBIN=$GOPATH/go/bin
+    export GOBIN=$GOPATH/bin
     export PATH=$GOBIN:$PATH
     if hash go 2>/dev/null
     then
@@ -31,6 +31,13 @@ bootstrap_environment()
     echo "GOPATH is: $GOPATH"
     echo '....Go-Getting....'
     go get -v ./...
+    if hash golint 2>/dev/null
+    then
+        echo 'Using golint...' # No version command or flag
+    else 
+        echo 'Installing golint'
+        go get -u golang.org/x/lint/golint
+    fi
     # TODO: any dependency / package management we want to add here. 
     # go env
     echo '....Environment setup complete....'
@@ -41,11 +48,11 @@ echo '....Running the full continuous integration process....'
 scriptDir=`dirname $0`
 pushd ${scriptDir}/.. &>/dev/null
 echo 'Working Directory =' `pwd`
-bootstrap_environment
 
 # The Process
 # TODO: any other option flags we want for a CI run?
 echo '....[PRVD] Setting Up....'
+bootstrap_environment
 rm ./ident 2>/dev/null || true # silence error if not present
 go fix .
 go fmt
