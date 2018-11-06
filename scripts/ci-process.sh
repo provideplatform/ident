@@ -18,7 +18,6 @@ bootstrap_environment()
     echo '....Setting up environment....'
     mkdir -p reports/linters
     export GOPATH=$HOME/go
-    export GOROOT=$GOPATH
     export GOBIN=$GOPATH/go/bin
     export PATH=$GOBIN:$PATH
     if hash go 2>/dev/null
