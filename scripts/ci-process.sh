@@ -17,7 +17,8 @@ bootstrap_environment()
     mkdir -p reports/linters
     export GOPATH=$HOME/go
     export GOBIN=$GOPATH/bin
-    export PATH=$GOBIN:$PATH
+    export PATH=~/.local/bin:$GOBIN:$PATH
+    echo "Path is now: '$PATH'"
     if hash go 2>/dev/null
     then
         echo 'Using' `go version`
