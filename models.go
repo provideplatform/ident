@@ -68,7 +68,7 @@ type UserAuthenticationResponse struct {
 	Token *TokenResponse `json:"token"`
 }
 
-// Create a new token on behalf of the application
+// CreateToken creates a new token on behalf of the application
 func (app *Application) CreateToken() (*Token, error) {
 	token := &Token{
 		ApplicationID: &app.ID,

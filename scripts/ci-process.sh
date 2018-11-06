@@ -11,8 +11,6 @@ die()
 }
 echo Executing $0 $*
 
-# TODO: make sure GOPATH is set up somewhere relative to --or inside of-- WORKSPACE
-
 bootstrap_environment() 
 {
     echo '....Setting up environment....'
@@ -50,7 +48,6 @@ pushd ${scriptDir}/.. &>/dev/null
 echo 'Working Directory =' `pwd`
 
 # The Process
-# TODO: any other option flags we want for a CI run?
 echo '....[PRVD] Setting Up....'
 bootstrap_environment
 rm ./ident 2>/dev/null || true # silence error if not present

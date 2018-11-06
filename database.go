@@ -37,6 +37,7 @@ func migrateSchema() {
 	})
 }
 
+// DatabaseConnection returns the configured connecetion to the database. 
 func DatabaseConnection() *gorm.DB {
 	return dbconf.DatabaseConnection()
 }
