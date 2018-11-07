@@ -1,5 +1,6 @@
 #1/bin/bash
 # Script for Continuous Integration
+# Example Jenkins usage: /bin/bash -c "AWS_ACCESS_KEY_ID=xyz AWS_SECRET_ACCESS_KEY=abc AWS_DEFAULT_REGION=us-east-1 AWS_DEFAULT_OUTPUT=json ECR_REPOSITORY_NAME=provide/ident ECS_TASK_DEFINITION_FAMILY=ident-fargate ECS_CLUSTER=production ECS_SERVICE_NAME=ident $WORKSPACE/scripts/ci-process.sh"
 set -o errexit # set -e
 set -o nounset # set -u
 set -o pipefail
@@ -118,6 +119,7 @@ perform_deployment()
         sed -E "s/ident:[a-zA-Z0-9\.-]+/ident:${buildRef}/" "./${DEFINITION_FILE}" > "./${MUNGED_FILE}"
         echo '....register-task-definition....'
         ECS_TASK_DEFINITION_ID=$(aws ecs register-task-definition --family "${ECS_TASK_DEFINITION_FAMILY}" --cli-input-json "file://${MUNGED_FILE}" | jq '.taskDefinition.taskDefinitionArn' | sed -E 's/.*\/(.*)"$/\1/')
+        echo '....update-service....'
         aws ecs update-service --cluster "${ECS_CLUSTER}" --service "${ECS_SERVICE_NAME}" --task-definition "${ECS_TASK_DEFINITION_ID}"
     fi
 }
