@@ -1,12 +1,5 @@
 FROM golang:1.9
 
-RUN apt-get update && apt-get install -y ca-certificates git-core ssh
-
-ADD .gocore-id_rsa /root/.ssh/id_rsa
-RUN chmod 600 /root/.ssh/id_rsa
-RUN echo "Host github.com\n\tStrictHostKeyChecking no\n" >> /root/.ssh/config
-RUN git config --global url."https://".insteadOf git://
-
 RUN mkdir -p /go/src/github.com/provideapp
 ADD . /go/src/github.com/provideapp/ident
 WORKDIR /go/src/github.com/provideapp/ident

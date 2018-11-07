@@ -11,11 +11,14 @@ import (
 )
 
 var (
+	// Log is the logger instancee to use within ident.
 	Log *logger.Logger
-
-	ListenAddr      string
+	// ListenAddr is the constructed IP and port that is listening as configured.
+	ListenAddr string
+	// CertificatePath is the path to the certificate as configured in the environment.
 	CertificatePath string
-	PrivateKeyPath  string
+	// PrivateKeyPath is the path to the private key as configured in the environment.
+	PrivateKeyPath string
 
 	newrelicLicenseKey string
 
