@@ -29,5 +29,8 @@ _cgo_export.*
 run_local.sh
 ident
 
+# Miscellaneous
+.DS_Store
+
 # CI-related output
 reports

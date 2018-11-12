@@ -1,6 +1,16 @@
-#1/bin/bash
+#!/bin/bash
 # Script for Continuous Integration
-# Example Jenkins usage: /bin/bash -c "AWS_ACCESS_KEY_ID=xyz AWS_SECRET_ACCESS_KEY=abc AWS_DEFAULT_REGION=us-east-1 AWS_DEFAULT_OUTPUT=json ECR_REPOSITORY_NAME=provide/ident ECS_TASK_DEFINITION_FAMILY=ident-fargate ECS_CLUSTER=production ECS_SERVICE_NAME=ident $WORKSPACE/scripts/ci-process.sh"
+# Example Jenkins usage: 
+#       /bin/bash -c \
+#           "AWS_ACCESS_KEY_ID=xyz \
+#           AWS_SECRET_ACCESS_KEY=abc \
+#           AWS_DEFAULT_REGION=us-east-1 \
+#           AWS_DEFAULT_OUTPUT=json \
+#           ECR_REPOSITORY_NAME=provide/ident \
+#           ECS_TASK_DEFINITION_FAMILY=ident-fargate \
+#           ECS_CLUSTER=production \
+#           ECS_SERVICE_NAME=ident \
+#           '$WORKSPACE/scripts/ci-process.sh'"
 set -o errexit # set -e
 set -o nounset # set -u
 set -o pipefail
@@ -12,14 +22,12 @@ die()
 }
 echo Executing $0 $*
 
-bootstrap_environment() 
+setup_go() 
 {
-    echo '....Setting up environment....'
-    mkdir -p reports/linters
     export GOPATH=$HOME/go
     export GOBIN=$GOPATH/bin
-    export PATH=~/.local/bin:$GOBIN:$PATH
-    echo "Path is now: '$PATH'"
+    export PATH=~/.local/bin:$GOBIN:$PAT
+    echo "PATH is: '$PATH'"
     if hash go 2>/dev/null
     then
         echo 'Using' `go version`
@@ -30,7 +38,7 @@ bootstrap_environment()
     fi
     echo "GOPATH is: $GOPATH"
     echo '....Go-Getting....'
-    go get -v ./...
+    go get -v ./... # TODO: revisit deps, -u, and the GOPATH + symblic link hack from goldmine's script.
     if hash golint 2>/dev/null
     then
         echo 'Using golint...' # No version command or flag
@@ -38,8 +46,11 @@ bootstrap_environment()
         echo 'Installing golint'
         go get -u golang.org/x/lint/golint
     fi
-    # TODO: any dependency / package management we want to add here. 
-    # go env
+    go env
+}
+
+setup_deployment_tools() 
+{
     if hash python 2>/dev/null
     then
         echo 'Using: ' 
@@ -84,6 +95,14 @@ bootstrap_environment()
         sudo apt-get update
         sudo apt-get -y install jq
     fi
+}
+
+bootstrap_environment() 
+{
+    echo '....Setting up environment....'
+    setup_go
+    setup_deployment_tools
+    mkdir -p reports/linters
     echo '....Environment setup complete....'
 }
 
@@ -152,7 +171,6 @@ sudo docker tag provide/ident:latest "085843810865.dkr.ecr.us-east-1.amazonaws.c
 echo '....[PRVD] Docker Push....'
 $(aws ecr get-login --no-include-email --region us-east-1)
 sudo docker push "085843810865.dkr.ecr.us-east-1.amazonaws.com/provide/ident:${buildRef}"
-sudo docker push "085843810865.dkr.ecr.us-east-1.amazonaws.com/provide/ident:latest"
 echo '....[PRVD] AWS Deployment....'
 perform_deployment
 
