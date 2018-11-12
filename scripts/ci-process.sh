@@ -152,6 +152,7 @@ sudo docker tag provide/ident:latest "085843810865.dkr.ecr.us-east-1.amazonaws.c
 echo '....[PRVD] Docker Push....'
 $(aws ecr get-login --no-include-email --region us-east-1)
 sudo docker push "085843810865.dkr.ecr.us-east-1.amazonaws.com/provide/ident:${buildRef}"
+sudo docker push "085843810865.dkr.ecr.us-east-1.amazonaws.com/provide/ident:latest"
 echo '....[PRVD] AWS Deployment....'
 perform_deployment
 
