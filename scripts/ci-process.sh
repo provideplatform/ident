@@ -26,7 +26,7 @@ setup_go()
 {
     export GOPATH=$HOME/go
     export GOBIN=$GOPATH/bin
-    export PATH=~/.local/bin:$GOBIN:$PAT
+    export PATH=~/.local/bin:$GOBIN:$PATH
     echo "PATH is: '$PATH'"
     if hash go 2>/dev/null
     then
