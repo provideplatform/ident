@@ -25,8 +25,6 @@ func main() {
 	r.Use(gin.Recovery())
 	r.Use(provide.CORSMiddleware())
 
-	configureNewRelicTransactionMiddleware(r)
-
 	r.GET("/api/v1/applications", applicationsListHandler)
 	r.POST("/api/v1/applications", createApplicationHandler)
 	r.GET("/api/v1/applications/:id", applicationDetailsHandler)
