@@ -412,7 +412,22 @@ func (u *User) Create() bool {
 			}
 		}
 		if !db.NewRecord(u) {
-			return rowsAffected > 0
+			success := rowsAffected > 0
+			if success && (u.ApplicationID == nil || *u.ApplicationID == uuid.Nil) {
+				if siaAPIKey != "" {
+					go func() {
+						Log.Debugf("Attempting to notify sia about %s", *u.Email)
+						CreateSiaAccount(siaAPIKey, map[string]interface{}{
+							"id":    u.ID,
+							"name":  u.Name,
+							"email": u.Email,
+						})
+					}()
+				} else {
+					Log.Warningf("No sia API key configured in the environment; notification about %s not being reported", *u.Email)
+				}
+			}
+			return success
 		}
 	}
 	return false
