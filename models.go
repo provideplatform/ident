@@ -418,9 +418,9 @@ func (u *User) Create() bool {
 					go func() {
 						Log.Debugf("Attempting to notify sia about %s", *u.Email)
 						CreateSiaAccount(siaAPIKey, map[string]interface{}{
-							"id":    u.ID,
-							"name":  u.Name,
-							"email": u.Email,
+							"prvd_user_id": u.ID,
+							"name":         u.Name,
+							"email":        u.Email,
 						})
 					}()
 				} else {
