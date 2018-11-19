@@ -43,7 +43,7 @@ func createNatsSiaUserNotificationSubscriptions(natsConnection stan.Conn) {
 		go func() {
 			defer natsConnection.Close()
 
-			contractCompilerInvocationSubscription, err := natsConnection.QueueSubscribe(natsSiaUserNotificationSubject, natsSiaUserNotificationSubject, consumeSiaUserNotificationMsg, stan.SetManualAckMode(), stan.AckWait(time.Millisecond*1000), stan.MaxInflight(natsSiaUserNotificationMaxInFlight), stan.DurableName(natsSiaUserNotificationSubject))
+			siaUserNotificationSubscription, err := natsConnection.QueueSubscribe(natsSiaUserNotificationSubject, natsSiaUserNotificationSubject, consumeSiaUserNotificationMsg, stan.SetManualAckMode(), stan.AckWait(time.Millisecond*10000), stan.MaxInflight(natsSiaUserNotificationMaxInFlight), stan.DurableName(natsSiaUserNotificationSubject))
 			if err != nil {
 				Log.Warningf("Failed to subscribe to NATS subject: %s", natsSiaUserNotificationSubject)
 				waitGroup.Done()
@@ -53,7 +53,7 @@ func createNatsSiaUserNotificationSubscriptions(natsConnection stan.Conn) {
 
 			waitGroup.Wait()
 
-			contractCompilerInvocationSubscription.Unsubscribe()
+			siaUserNotificationSubscription.Unsubscribe()
 		}()
 	}
 }
