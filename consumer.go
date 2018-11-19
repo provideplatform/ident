@@ -18,10 +18,14 @@ var (
 	waitGroup sync.WaitGroup
 )
 
-func getNatsStreamingConnection() *stan.Conn {
-	return natsutil.GetNatsStreamingConnection(func(_ stan.Conn, reason error) {
+func getNatsStreamingConnection() stan.Conn {
+	conn := natsutil.GetNatsStreamingConnection(func(_ stan.Conn, reason error) {
 		subscribeNatsStreaming()
 	})
+	if conn == nil {
+		return nil
+	}
+	return *conn
 }
 
 func subscribeNatsStreaming() {
@@ -30,7 +34,7 @@ func subscribeNatsStreaming() {
 		return
 	}
 
-	createNatsSiaUserNotificationSubscriptions(*natsConnection)
+	createNatsSiaUserNotificationSubscriptions(natsConnection)
 }
 
 func createNatsSiaUserNotificationSubscriptions(natsConnection stan.Conn) {
