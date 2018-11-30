@@ -21,10 +21,12 @@ func main() {
 	bootstrap()
 	migrateSchema()
 	subscribeNatsStreaming()
+	runAPIUsageDaemon()
 
 	r := gin.Default()
 	r.Use(gin.Recovery())
 	r.Use(provide.CORSMiddleware())
+	r.Use(provide.TrackAPICalls())
 
 	r.GET("/api/v1/applications", applicationsListHandler)
 	r.POST("/api/v1/applications", createApplicationHandler)
@@ -89,8 +91,6 @@ func getAuthorizedUser(c *gin.Context) *User {
 }
 
 func render(obj interface{}, status int, c *gin.Context) {
-	fmt.Println("MUNC: in render")
-	go SendAPIUsage(c)
 	c.Header("content-type", "application/json; charset=UTF-8")
 	c.Writer.WriteHeader(status)
 	if &obj != nil && status != http.StatusNoContent {
@@ -105,8 +105,6 @@ func render(obj interface{}, status int, c *gin.Context) {
 }
 
 func renderError(message string, status int, c *gin.Context) {
-	fmt.Println("MUNC: in renderError -- NOT SENDING (dupe?)")
-	// go SendAPIUsage(c)
 	err := map[string]*string{}
 	err["message"] = &message
 	render(err, status, c)
