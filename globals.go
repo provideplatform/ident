@@ -6,6 +6,8 @@ import (
 	"sync"
 
 	logger "github.com/kthomas/go-logger"
+	nats "github.com/nats-io/go-nats"
+	"github.com/nats-io/go-nats-streaming"
 )
 
 var (
