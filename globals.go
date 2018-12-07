@@ -18,6 +18,13 @@ var (
 	// PrivateKeyPath is the path to the private key as configured in the environment.
 	PrivateKeyPath string
 
+	natsConsumerConcurrency uint64
+	natsConnection          *nats.Conn
+	natsStreamingConnection *stan.Conn
+	natsToken               string
+	natsURL                 string
+	natsStreamingURL        string
+
 	siaAPIKey string
 
 	bootstrapOnce sync.Once

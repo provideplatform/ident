@@ -14,11 +14,11 @@ const apiUsageDaemonBufferSize = 256
 const apiUsageDaemonFlushInterval = 30000
 
 const natsDefaultClusterID = "provide"
-const natsAPIUsageEventNotificationSubject = "api-usage-event"
+const natsAPIUsageEventNotificationSubject = "api.usage.event"
 const natsAPIUsageEventNotificationMaxInFlight = 32
 const natsSiaUserNotificationConsumerConcurrency = 4
 const natsSiaUserNotificationMaxInFlight = 32
-const natsSiaUserNotificationSubject = "sia-user-notification"
+const natsSiaUserNotificationSubject = "sia.user.notification"
 
 var (
 	waitGroup sync.WaitGroup
