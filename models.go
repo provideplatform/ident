@@ -101,7 +101,13 @@ func (app *Application) Create() bool {
 			}
 		}
 		if !db.NewRecord(app) {
-			return rowsAffected > 0
+			success := rowsAffected > 0
+			if success {
+				payload, _ := json.Marshal(app)
+				natsConnection := getNatsStreamingConnection()
+				natsConnection.Publish(natsSiaApplicationNotificationSubject, payload)
+			}
+			return success
 		}
 	}
 	return false
