@@ -50,9 +50,9 @@ func main() {
 	r.GET("/status", statusHandler)
 
 	if shouldServeTLS() {
-		r.RunTLS(ListenAddr, certificatePath, privateKeyPath)
+		r.RunTLS(listenAddr, certificatePath, privateKeyPath)
 	} else {
-		r.Run(ListenAddr)
+		r.Run(listenAddr)
 	}
 }
 

@@ -168,7 +168,7 @@ func (app *Application) ParseConfig() map[string]interface{} {
 	if app.Config != nil {
 		err := json.Unmarshal(*app.Config, &cfg)
 		if err != nil {
-			Log.Warningf("Failed to unmarshal application params; %s", err.Error())
+			log.Warningf("Failed to unmarshal application params; %s", err.Error())
 			return nil
 		}
 	}
@@ -265,7 +265,7 @@ func (t *Token) encodeJWT() (*string, error) {
 	})
 	token, err := jwtToken.SignedString([]byte(*t.Secret))
 	if err != nil {
-		Log.Warningf("Failed to sign JWT token; %s", err.Error())
+		log.Warningf("Failed to sign JWT token; %s", err.Error())
 		return nil, err
 	}
 	return stringOrNil(token), nil
@@ -333,7 +333,7 @@ func (t *Token) ParseData() map[string]interface{} {
 	if t.Data != nil {
 		err := json.Unmarshal(*t.Data, &data)
 		if err != nil {
-			Log.Warningf("Failed to unmarshal token data; %s", err.Error())
+			log.Warningf("Failed to unmarshal token data; %s", err.Error())
 			return nil
 		}
 	}
@@ -373,7 +373,7 @@ func AuthenticateUser(email, password string, applicationID *uuid.UUID) (*UserAu
 		var err error
 		if len(token.Errors) > 0 {
 			err = fmt.Errorf("Failed to create token for authenticated user: %s; %s", *user.Email, *token.Errors[0].Message)
-			Log.Warningf(err.Error())
+			log.Warningf(err.Error())
 		}
 		return &UserAuthenticationResponse{
 			User:  user.AsResponse(),

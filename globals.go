@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	Log        *logger.Logger
-	ListenAddr string
+	log        *logger.Logger
+	listenAddr string
 
 	certificatePath string
 	privateKeyPath  string
@@ -33,9 +33,9 @@ var (
 
 func bootstrap() {
 	bootstrapOnce.Do(func() {
-		ListenAddr = os.Getenv("LISTEN_ADDR")
-		if ListenAddr == "" {
-			ListenAddr = buildListenAddr()
+		listenAddr = os.Getenv("LISTEN_ADDR")
+		if listenAddr == "" {
+			listenAddr = buildlistenAddr()
 		}
 
 		requireTLS = os.Getenv("REQUIRE_TLS") == "true"
@@ -48,11 +48,11 @@ func bootstrap() {
 		if lvl == "" {
 			lvl = "INFO"
 		}
-		Log = logger.NewLogger("ident", lvl, true)
+		log = logger.NewLogger("ident", lvl, true)
 	})
 }
 
-func buildListenAddr() string {
+func buildlistenAddr() string {
 	listenPort := os.Getenv("PORT")
 	if listenPort == "" {
 		listenPort = "8080"
@@ -64,7 +64,7 @@ func shouldServeTLS() bool {
 	if requireTLS {
 		privKeyPath, certPath, err := selfsignedcert.GenerateToDisk()
 		if err != nil {
-			Log.Panicf("Failed to generate self-signed certificate; %s", err.Error())
+			log.Panicf("Failed to generate self-signed certificate; %s", err.Error())
 		}
 		privateKeyPath = *privKeyPath
 		certificatePath = *certPath
