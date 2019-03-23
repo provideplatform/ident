@@ -6,19 +6,18 @@ import (
 	"sync"
 
 	logger "github.com/kthomas/go-logger"
+	selfsignedcert "github.com/kthomas/go-self-signed-cert"
 	nats "github.com/nats-io/go-nats"
 	"github.com/nats-io/go-nats-streaming"
 )
 
 var (
-	// Log is the logger instancee to use within ident.
-	Log *logger.Logger
-	// ListenAddr is the constructed IP and port that is listening as configured.
+	Log        *logger.Logger
 	ListenAddr string
-	// CertificatePath is the path to the certificate as configured in the environment.
-	CertificatePath string
-	// PrivateKeyPath is the path to the private key as configured in the environment.
-	PrivateKeyPath string
+
+	certificatePath string
+	privateKeyPath  string
+	requireTLS      bool
 
 	natsConsumerConcurrency uint64
 	natsConnection          *nats.Conn
@@ -39,13 +38,7 @@ func bootstrap() {
 			ListenAddr = buildListenAddr()
 		}
 
-		if os.Getenv("CERTIFICATE_PATH") != "" {
-			CertificatePath = os.Getenv("CERTIFICATE_PATH")
-		}
-
-		if os.Getenv("PRIVATE_KEY_PATH") != "" {
-			PrivateKeyPath = os.Getenv("PRIVATE_KEY_PATH")
-		}
+		requireTLS = os.Getenv("REQUIRE_TLS") == "true"
 
 		if os.Getenv("SIA_API_KEY") != "" {
 			siaAPIKey = os.Getenv("SIA_API_KEY")
@@ -68,13 +61,16 @@ func buildListenAddr() string {
 }
 
 func shouldServeTLS() bool {
-	var tls = false
-	if _, err := os.Stat(CertificatePath); err == nil {
-		if _, err := os.Stat(PrivateKeyPath); err == nil {
-			tls = true
+	if requireTLS {
+		privKeyPath, certPath, err := selfsignedcert.GenerateToDisk()
+		if err != nil {
+			Log.Panicf("Failed to generate self-signed certificate; %s", err.Error())
 		}
+		privateKeyPath = *privKeyPath
+		certificatePath = *certPath
+		return true
 	}
-	return tls
+	return false
 }
 
 func panicIfEmpty(val string, msg string) {
