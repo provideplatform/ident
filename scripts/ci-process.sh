@@ -24,10 +24,6 @@ echo Executing $0 $*
 
 setup_go() 
 {
-    export GOPATH=$HOME/go
-    export GOBIN=$GOPATH/bin
-    export PATH=~/.local/bin:$GOBIN:$PATH
-    echo "PATH is: '$PATH'"
     if hash go 2>/dev/null
     then
         echo 'Using' `go version`
@@ -36,9 +32,25 @@ setup_go()
         sudo apt-get update
         sudo apt-get -y install golang
     fi
+
+    # Set up Go environment to treat this workspace as within GOPATH. 
+    export GOPATH=`pwd`
+    export GOBIN=$GOPATH/bin
+    export PATH=~/.local/bin:$GOBIN:$PATH
+    echo "PATH is: '$PATH'"
+    mkdir -p $GOPATH/src/github.com/provideapp
+    ln -f -s `pwd` $GOPATH/src/github.com/provideapp/ident
     echo "GOPATH is: $GOPATH"
-    echo '....Go-Getting....'
-    go get -v ./... # TODO: revisit deps, -u, and the GOPATH + symblic link hack from goldmine's script.
+    mkdir -p $GOBIN
+
+    if hash glide 2>/dev/null
+    then
+        echo 'Using glide...'
+    else 
+        echo 'Installing glide...'
+        curl https://glide.sh/get | sh
+    fi
+
     if hash golint 2>/dev/null
     then
         echo 'Using golint...' # No version command or flag
@@ -157,6 +169,10 @@ rm ./ident 2>/dev/null || true # silence error if not present
 go fix .
 go fmt
 go clean -i
+
+glide install
+(cd vendor/ && tar c .) | (cd src/ && tar xf -)
+
 echo '....[PRVD] Analyzing...'
 go vet
 golint -set_exit_status > reports/linters/golint.txt
