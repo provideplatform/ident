@@ -34,3 +34,5 @@ ident
 
 # CI-related output
 reports
+src/
+vendor/
