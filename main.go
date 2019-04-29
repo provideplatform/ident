@@ -155,7 +155,7 @@ func authenticationHandler(c *gin.Context) {
 				var appID *uuid.UUID
 				if bearer != nil {
 					appID = bearer.ApplicationID
-				} else if appID, appIDOk := params["password"].(string); appIDOk {
+				} else if appID, appIDOk := params["application_id"].(string); appIDOk {
 					appUUID, err := uuid.FromString(appID)
 					if err != nil {
 						msg := fmt.Sprintf("malformed application_id provided; %s", err.Error())
@@ -498,6 +498,13 @@ func createUserHandler(c *gin.Context) {
 		return
 	}
 
+	params := map[string]interface{}{}
+	err = json.Unmarshal(buf, &params)
+	if err != nil {
+		renderError(err.Error(), 400, c)
+		return
+	}
+
 	user := &User{}
 	err = json.Unmarshal(buf, user)
 	if err != nil {
@@ -507,6 +514,14 @@ func createUserHandler(c *gin.Context) {
 
 	if bearer != nil {
 		user.ApplicationID = bearer.ApplicationID
+	} else if appID, appIDOk := params["application_id"].(string); appIDOk {
+		appUUID, err := uuid.FromString(appID)
+		if err != nil {
+			msg := fmt.Sprintf("malformed application_id provided; %s", err.Error())
+			renderError(msg, 422, c)
+			return
+		}
+		user.ApplicationID = &appUUID
 	}
 
 	if user.Create() {
