@@ -155,14 +155,14 @@ func authenticationHandler(c *gin.Context) {
 				var appID *uuid.UUID
 				if bearer != nil && bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
 					appID = bearer.ApplicationID
-				} else if appID, appIDOk := params["application_id"].(string); appIDOk {
-					appUUID, err := uuid.FromString(appID)
+				} else if applicationID, applicationIDOk := params["application_id"].(string); applicationIDOk {
+					appUUID, err := uuid.FromString(applicationID)
 					if err != nil {
 						msg := fmt.Sprintf("malformed application_id provided; %s", err.Error())
 						renderError(msg, 422, c)
 						return
 					}
-					appID = appUUID.String()
+					appID = &appUUID
 				}
 				resp, err := AuthenticateUser(email, pw, appID)
 				if err != nil {
