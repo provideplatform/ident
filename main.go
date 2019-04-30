@@ -153,7 +153,7 @@ func authenticationHandler(c *gin.Context) {
 		if email, ok := params["email"].(string); ok {
 			if pw, pwok := params["password"].(string); pwok {
 				var appID *uuid.UUID
-				if bearer != nil {
+				if bearer != nil && bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
 					appID = bearer.ApplicationID
 				} else if appID, appIDOk := params["application_id"].(string); appIDOk {
 					appUUID, err := uuid.FromString(appID)
@@ -360,9 +360,9 @@ func tokensListHandler(c *gin.Context) {
 	query := DatabaseConnection()
 
 	var tokens []Token
-	if bearer.ApplicationID != nil {
+	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
 		query = query.Where("application_id = ?", bearer.ApplicationID)
-	} else if bearer.UserID != nil {
+	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
 		query = query.Where("user_id = ?", bearer.UserID)
 	}
 	provide.Paginate(c, query, &Token{}).Find(&tokens)
@@ -391,7 +391,7 @@ func createTokenHandler(c *gin.Context) {
 		if err == nil {
 			appID = &appUUID
 		}
-	} else if bearer.ApplicationID != nil {
+	} else if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
 		appID = bearer.ApplicationID
 	}
 
