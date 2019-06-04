@@ -30,6 +30,7 @@ func main() {
 	InstallApplicationAPI(r)
 	InstallTokenAPI(r)
 	InstallUserAPI(r)
+	InstallKYCAPI(r)
 
 	r.GET("/status", statusHandler)
 

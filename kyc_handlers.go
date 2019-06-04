@@ -12,7 +12,6 @@ import (
 func InstallKYCAPI(r *gin.Engine) {
 	r.POST("/api/v1/kyc_applications", createKYCApplicationHandler)
 	r.GET("/api/v1/kyc_applications/:id", kycApplicationDetailsHandler)
-
 }
 
 func kycApplicationDetailsHandler(c *gin.Context) {
