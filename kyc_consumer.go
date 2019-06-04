@@ -33,6 +33,7 @@ func init() {
 	var waitGroup sync.WaitGroup
 
 	createNatsCheckKYCApplicationStatusSubscriptions(natsConnection, &waitGroup)
+	createNatsSubmitKYCApplicationSubscriptions(natsConnection, &waitGroup)
 }
 
 func createNatsCheckKYCApplicationStatusSubscriptions(natsConnection stan.Conn, wg *sync.WaitGroup) {
