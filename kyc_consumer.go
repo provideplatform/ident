@@ -20,7 +20,7 @@ const checkKYCApplicationStatusAckWait = time.Minute * 10
 
 const natsSubmitKYCApplicationSubject = "ident.kyc.submit"
 const natsSubmitKYCApplicationMaxInFlight = 2048
-const submitKYCApplicationAckWait = time.Minute * 10
+const submitKYCApplicationAckWait = time.Minute * 1
 
 var instantKYCEnabled = strings.ToLower(os.Getenv("INSTANT_KYC")) == "true"
 
