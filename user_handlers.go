@@ -16,7 +16,7 @@ func InstallUserAPI(r *gin.Engine) {
 
 	r.GET("/api/v1/users", usersListHandler)
 	r.GET("/api/v1/users/:id", userDetailsHandler)
-	r.GET("/api/v1/users", userKYCApplicationsListHandler)
+	r.GET("/api/v1/users/:id/kyc_applications", userKYCApplicationsListHandler)
 	r.POST("/api/v1/users", createUserHandler)
 	r.PUT("/api/v1/users/:id", updateUserHandler)
 	r.DELETE("/api/v1/users/:id", deleteUserHandler)
