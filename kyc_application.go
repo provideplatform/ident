@@ -68,7 +68,7 @@ type KYCApplication struct {
 	UserID     uuid.UUID `sql:"type:uuid not null" json:"user_id"`
 	Provider   *string   `sql:"not null" json:"provider"`
 	Identifier *string   `json:"identifier"`
-	Status     *string   `sql:"not null;default:'pending'" json:"identifier"`
+	Status     *string   `sql:"not null;default:'pending'" json:"status"`
 }
 
 // Create and persist a new BillingAccount
