@@ -98,6 +98,18 @@ func (u *User) Applications(hidden bool) []Application {
 	return apps
 }
 
+// KYCApplications returns a list of KYC applications which have been created by the user
+func (u *User) KYCApplications(status *string) []KYCApplication {
+	db := DatabaseConnection()
+	var kycApplications []KYCApplication
+	query := db.Where("user_id = ?", u.ID)
+	if status != nil {
+		query = query.Where("status = ?", *status)
+	}
+	query.Find(&kycApplications)
+	return kycApplications
+}
+
 // Create and persist a user
 func (u *User) Create() bool {
 	db := DatabaseConnection()
