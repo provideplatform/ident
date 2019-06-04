@@ -18,6 +18,10 @@ const natsCheckKYCApplicationStatusSubject = "ident.kyc.status"
 const natsCheckKYCApplicationStatusMaxInFlight = 2048
 const checkKYCApplicationStatusAckWait = time.Minute * 10
 
+const natsSubmitKYCApplicationSubject = "ident.kyc.submit"
+const natsSubmitKYCApplicationMaxInFlight = 2048
+const submitKYCApplicationAckWait = time.Minute * 10
+
 var instantKYCEnabled = strings.ToLower(os.Getenv("INSTANT_KYC")) == "true"
 
 func init() {
@@ -45,6 +49,26 @@ func createNatsCheckKYCApplicationStatusSubscriptions(natsConnection stan.Conn, 
 			}
 			defer kycSubscription.Unsubscribe()
 			log.Debugf("Subscribed to NATS subject: %s", natsCheckKYCApplicationStatusSubject)
+
+			wg.Wait()
+		}()
+	}
+}
+
+func createNatsSubmitKYCApplicationSubscriptions(natsConnection stan.Conn, wg *sync.WaitGroup) {
+	for i := uint64(0); i < natsutil.GetNatsConsumerConcurrency(); i++ {
+		wg.Add(1)
+		go func() {
+			defer natsConnection.Close()
+
+			kycSubscription, err := natsConnection.QueueSubscribe(natsSubmitKYCApplicationSubject, natsSubmitKYCApplicationSubject, consumeSubmitKYCApplicationMsg, stan.SetManualAckMode(), stan.AckWait(submitKYCApplicationAckWait), stan.MaxInflight(natsSubmitKYCApplicationMaxInFlight), stan.DurableName(natsSubmitKYCApplicationSubject))
+			if err != nil {
+				log.Warningf("Failed to subscribe to NATS subject: %s", natsSubmitKYCApplicationSubject)
+				wg.Done()
+				return
+			}
+			defer kycSubscription.Unsubscribe()
+			log.Debugf("Subscribed to NATS subject: %s", natsSubmitKYCApplicationSubject)
 
 			wg.Wait()
 		}()
@@ -135,4 +159,45 @@ func consumeCheckKYCApplicationStatusMsg(msg *stan.Msg) {
 		db.Save(&kycApplication)
 		msg.Ack()
 	}
+}
+
+func consumeSubmitKYCApplicationMsg(msg *stan.Msg) {
+	log.Debugf("Consuming %d-byte NATS KYC application submit message on subject: %s", msg.Size(), msg.Subject)
+
+	var params map[string]interface{}
+
+	err := json.Unmarshal(msg.Data, &params)
+	if err != nil {
+		log.Warningf("Failed to umarshal KYC application submit message; %s", err.Error())
+		nack(msg)
+		return
+	}
+
+	kycApplicationID, kycApplicationIDOk := params["kyc_application_id"].(string)
+	if !kycApplicationIDOk {
+		log.Warningf("Failed to unmarshal kyc_application_id during NATS %v message handling", msg.Subject)
+		nack(msg)
+		return
+	}
+
+	db := dbconf.DatabaseConnection()
+
+	kycApplication := &KYCApplication{}
+	db.Where("id = ?", kycApplicationID).Find(&kycApplication)
+
+	if kycApplication == nil || kycApplication.ID == uuid.Nil {
+		log.Warningf("Failed to find KYC application for id: %s", kycApplicationID)
+		nack(msg)
+		return
+	}
+
+	err = kycApplication.submit(db)
+	if err != nil {
+		log.Warningf("Failed to submit KYC application %s during NATS %v message handling", kycApplication.ID, msg.Subject)
+		nack(msg)
+		return
+	}
+
+	log.Debugf("KYC application submitted: %s", kycApplication.ID)
+	msg.Ack()
 }

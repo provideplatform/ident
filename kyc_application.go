@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -12,8 +13,10 @@ import (
 )
 
 const kycApplicationStatusAccepted = "accepted"
+const kycApplicationStatusFailed = "failed" // the KYC application API call itself failed
 const kycApplicationStatusPending = "pending"
 const kycApplicationStatusRejected = "rejected"
+const kycApplicationStatusSubmitted = "submitted"
 const kycApplicationStatusUnderReview = "review"
 
 const defaultKYCProvider = identitymindKYCProvider
@@ -69,11 +72,14 @@ type KYCAPI interface {
 // KYCApplication represents a KYC application process
 type KYCApplication struct {
 	provide.Model
-	UserID     uuid.UUID `sql:"type:uuid not null" json:"user_id"`
-	Provider   *string   `sql:"not null" json:"provider"`
-	Identifier *string   `json:"identifier"`
-	Type       *string   `sql:"not null" json:"type"`
-	Status     *string   `sql:"not null;default:'pending'" json:"status"`
+	UserID                 uuid.UUID              `sql:"type:uuid not null" json:"user_id"`
+	Provider               *string                `sql:"not null" json:"provider"`
+	Identifier             *string                `json:"identifier"`
+	Type                   *string                `sql:"not null" json:"type"`
+	Status                 *string                `sql:"not null;default:'pending'" json:"status"`
+	Params                 map[string]interface{} `sql:"-" json:"params"`
+	EncryptedParams        *string                `sql:"type:bytea" json:"-"`
+	ProviderRepresentation map[string]interface{} `sql:"-" json:"provider_representation"`
 }
 
 // Create and persist a new BillingAccount
@@ -94,6 +100,8 @@ func (k *KYCApplication) Create() bool {
 		return false
 	}
 
+	k.setEncryptedParams(k.Params)
+
 	if db.NewRecord(k) {
 		result := db.Create(&k)
 		rowsAffected := result.RowsAffected
@@ -112,7 +120,7 @@ func (k *KYCApplication) Create() bool {
 					"kyc_application_id": k.ID.String(),
 				})
 				natsConnection := getNatsStreamingConnection()
-				natsConnection.Publish(natsCheckKYCApplicationStatusSubject, payload)
+				natsConnection.Publish(natsSubmitKYCApplicationSubject, payload)
 			}
 			return success
 		}
@@ -141,6 +149,116 @@ func (k *KYCApplication) Validate() bool {
 	return len(k.Errors) == 0
 }
 
+// submit the KYCApplication to the provider
+func (k *KYCApplication) submit(db *gorm.DB) error {
+	if !k.isPending() {
+		return fmt.Errorf("KYC application has been submitted; not attempting to resubmit KYC application: %s", k.ID)
+	}
+	apiClient, err := k.KYCAPIClient()
+	if err != nil {
+		log.Warningf("Failed to submit KYC application; no KYC API client resolved for provider: %s; %s", *k.Provider, err.Error())
+		return err
+	}
+	params, err := k.decryptedParams()
+	if err != nil {
+		log.Warningf("Failed to submit KYC application; failed to decrypt params; %s", err.Error())
+		return err
+	}
+	resp, err := apiClient.SubmitApplication(params)
+	if err != nil {
+		log.Warningf("Failed to resolve KYC API client; %s", err.Error())
+		return err
+	}
+	if apiResponse, apiResponseOk := resp.(map[string]interface{}); apiResponseOk {
+		k.ProviderRepresentation = apiResponse
+
+		switch *k.Provider {
+		case identitymindKYCProvider:
+			if mtid, mtidOk := apiResponse["mtid"].(string); mtidOk {
+				log.Debugf("Resolved identitymind KYC application identifier '%s' for KYC application: %s", mtid, k.ID)
+				k.Identifier = stringOrNil(mtid)
+			} else {
+				k.updateStatus(db, kycApplicationStatusFailed)
+				return fmt.Errorf("Identitymind KYC application submission failed to return valid identifier: %s", k.ID)
+			}
+		default:
+			// no-op
+		}
+	}
+	k.updateStatus(db, kycApplicationStatusSubmitted)
+	payload, _ := json.Marshal(map[string]interface{}{
+		"kyc_application_id": k.ID.String(),
+	})
+	natsConnection := getNatsStreamingConnection()
+	natsConnection.Publish(natsCheckKYCApplicationStatusSubject, payload)
+
+	return nil
+}
+
+// enrich the KYCApplication with the provider's current representation
+func (k *KYCApplication) enrich() error {
+	apiClient, err := k.KYCAPIClient()
+	if err != nil {
+		log.Warningf("Failed to enrich KYC application; no KYC API client resolved for provider: %s", *k.Provider)
+		return err
+	}
+	if k.Identifier == nil {
+		msg := fmt.Sprintf("Failed to enrich KYC application for provider: %s; KYC application id: %s", *k.Provider, k.ID)
+		log.Warning(msg)
+		return errors.New(msg)
+	}
+	resp, err := apiClient.GetApplication(*k.Identifier)
+	if err != nil {
+		log.Warningf("Failed to resolve KYC API client; %s", err.Error())
+		return err
+	}
+	if apiResponse, apiResponseOk := resp.(map[string]interface{}); apiResponseOk {
+		k.ProviderRepresentation = apiResponse
+	}
+	return nil
+}
+
+func (k *KYCApplication) decryptedParams() (map[string]interface{}, error) {
+	decryptedParams := map[string]interface{}{}
+	if k.EncryptedParams != nil {
+		encryptedParamsJSON, err := PGPPubDecrypt(*k.EncryptedParams, gpgPrivateKey, gpgPassword)
+		if err != nil {
+			log.Warningf("Failed to decrypt encrypted KYC application params; %s", err.Error())
+			return decryptedParams, err
+		}
+
+		err = json.Unmarshal(encryptedParamsJSON, &decryptedParams)
+		if err != nil {
+			log.Warningf("Failed to unmarshal decrypted KYC application params; %s", err.Error())
+			return decryptedParams, err
+		}
+	}
+	return decryptedParams, nil
+}
+
+func (k *KYCApplication) encryptParams() bool {
+	if k.EncryptedParams != nil {
+		encryptedParams, err := PGPPubEncrypt(*k.EncryptedParams, gpgPublicKey)
+		if err != nil {
+			log.Warningf("Failed to encrypt KYC application params; %s", err.Error())
+			k.Errors = append(k.Errors, &provide.Error{
+				Message: stringOrNil(err.Error()),
+			})
+			return false
+		}
+		k.EncryptedParams = encryptedParams
+	}
+	return true
+}
+
+func (k *KYCApplication) setEncryptedParams(params map[string]interface{}) {
+	paramsJSON, _ := json.Marshal(params)
+	_paramsJSON := string(json.RawMessage(paramsJSON))
+	k.EncryptedParams = &_paramsJSON
+	k.encryptParams()
+	k.Params = params
+}
+
 func (k *KYCApplication) hasReachedDecision() bool {
 	return k.isAccepted() || k.isRejected()
 }
@@ -164,6 +282,13 @@ func (k *KYCApplication) isRejected() bool {
 		return false
 	}
 	return strings.ToLower(*k.Status) == kycApplicationStatusRejected
+}
+
+func (k *KYCApplication) isSubmitted() bool {
+	if k.Status == nil {
+		return false
+	}
+	return strings.ToLower(*k.Status) == kycApplicationStatusSubmitted
 }
 
 func (k *KYCApplication) isUnderReview() bool {
