@@ -9,6 +9,7 @@ import (
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
+	identitymind "github.com/kthomas/identitymind-golang"
 	provide "github.com/provideservices/provide-go"
 )
 
@@ -196,26 +197,40 @@ func (k *KYCApplication) submit(db *gorm.DB) error {
 }
 
 // enrich the KYCApplication with the provider's current representation
-func (k *KYCApplication) enrich() error {
+func (k *KYCApplication) enrich() (interface{}, error) {
 	apiClient, err := k.KYCAPIClient()
 	if err != nil {
 		log.Warningf("Failed to enrich KYC application; no KYC API client resolved for provider: %s", *k.Provider)
-		return err
+		return nil, err
 	}
 	if k.Identifier == nil {
 		msg := fmt.Sprintf("Failed to enrich KYC application for provider: %s; KYC application id: %s", *k.Provider, k.ID)
 		log.Warning(msg)
-		return errors.New(msg)
+		return nil, errors.New(msg)
 	}
 	resp, err := apiClient.GetApplication(*k.Identifier)
 	if err != nil {
 		log.Warningf("Failed to resolve KYC API client; %s", err.Error())
-		return err
+		return nil, err
 	}
+	var marshaledResponse interface{}
 	if apiResponse, apiResponseOk := resp.(map[string]interface{}); apiResponseOk {
 		k.ProviderRepresentation = apiResponse
+
+		switch *k.Provider {
+		case identitymindKYCProvider:
+			apiResponseJSON, _ := json.Marshal(apiResponse)
+			marshaledResponse = &identitymind.KYCApplication{}
+			err = json.Unmarshal(apiResponseJSON, &marshaledResponse)
+			if err != nil {
+				return nil, fmt.Errorf("Failed to unmarshal identitymind KYC application response to struct; %s", err.Error())
+			}
+		default:
+			// no-op
+		}
+
 	}
-	return nil
+	return marshaledResponse, nil
 }
 
 func (k *KYCApplication) decryptedParams() (map[string]interface{}, error) {

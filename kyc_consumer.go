@@ -106,28 +106,15 @@ func consumeCheckKYCApplicationStatusMsg(msg *stan.Msg) {
 		return
 	}
 
-	if kycApplication.isAccepted() || kycApplication.isRejected() {
+	if kycApplication.hasReachedDecision() {
 		log.Debugf("KYC application status has been finalized; not attempting to update KYC verification status for id: %s", kycApplication.ID)
 		msg.Ack()
 		return
 	}
 
-	apiClient, err := kycApplication.KYCAPIClient()
+	application, err := kycApplication.enrich()
 	if err != nil {
-		log.Warningf("Failed to resolve KYC provider for KYC application %s during NATS %v message handling", kycApplication.ID, msg.Subject)
-		nack(msg)
-		return
-	}
-
-	if kycApplication.Identifier == nil {
-		log.Warningf("Failed to resolve KYC application %s during NATS %v message handling", kycApplication.ID, msg.Subject)
-		nack(msg)
-		return
-	}
-
-	application, err := apiClient.GetApplication(*kycApplication.Identifier)
-	if err != nil {
-		log.Warningf("Failed to fetch account from KYC provider; %s", err.Error())
+		log.Warningf("Failed to enrich KYC application with using KYC provider API; %s", err.Error())
 		nack(msg)
 		return
 	}
