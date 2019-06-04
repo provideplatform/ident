@@ -17,6 +17,7 @@ func migrateSchema() {
 		db := dbconf.DatabaseConnection()
 
 		db.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";")
+		db.Exec("CREATE EXTENSION IF NOT EXISTS \"pgcrypto\";")
 
 		db.AutoMigrate(&User{})
 		db.Model(&User{}).AddIndex("idx_users_application_id", "application_id")
