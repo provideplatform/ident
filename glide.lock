@@ -1,5 +1,5 @@
-hash: 10f0ac869e1e2d625db96b2e8ebf6f0136c28def6298bf1d39eb873d749ecf31
-updated: 2019-03-23T06:45:53.003437-04:00
+hash: 908d803b24e9ab81ba6d713e9ef48a1b44a970fe66e89cb49c77dfcb052ba5a0
+updated: 2019-06-04T03:17:46.086524-04:00
 imports:
 - name: github.com/allegro/bigcache
   version: 84a0ff3f153cbd7e280a19029a864bb04b504e62
@@ -83,7 +83,7 @@ imports:
 - name: github.com/gorilla/websocket
   version: 66b9c49e59c6c48f0ffce28c2d8b8a5678502c6d
 - name: github.com/jinzhu/gorm
-  version: 472c70caa40267cb89fd8facb07fe6454b578626
+  version: b7156195f7f3415f97c20abbd6aff894b847fee8
   subpackages:
   - dialects/postgres
 - name: github.com/jinzhu/inflection
@@ -99,7 +99,9 @@ imports:
 - name: github.com/kthomas/go-self-signed-cert
   version: 35b13d7369947616bd832487ce54c7b8d308fa75
 - name: github.com/kthomas/go.uuid
-  version: b6c5bb1eedd724fc13c44af34da224568529d0c0
+  version: 28d1fa77e9a4efcba826a2a6c8f5a9ff6cea44a6
+- name: github.com/kthomas/identitymind-golang
+  version: 2314c947b0b01fbcb2317bf877680f0f6864ae62
 - name: github.com/lib/pq
   version: 9eb73efc1fcc404148b56765b0d3f61d9a5ef8ee
   subpackages:
@@ -127,7 +129,7 @@ imports:
 - name: github.com/op/go-logging
   version: 970db520ece77730c7e4724c61121037378659d9
 - name: github.com/provideservices/provide-go
-  version: eac53f51f94ccc994a1237eea501c81480182019
+  version: 7b298e7b187dcd06e95474db71dbbbcee32852fd
 - name: github.com/rs/cors
   version: 76f58f330d76a55c5badc74f6212e8a15e742c77
 - name: github.com/satori/go.uuid
