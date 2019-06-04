@@ -11,6 +11,7 @@ import (
 // InstallKYCAPI installs the handlers using the given gin Engine
 func InstallKYCAPI(r *gin.Engine) {
 	r.POST("/api/v1/kyc_applications", createKYCApplicationHandler)
+	r.PUT("/api/v1/kyc_applications/:id", updateKYCApplicationHandler)
 	r.GET("/api/v1/kyc_applications/:id", kycApplicationDetailsHandler)
 }
 
@@ -21,10 +22,8 @@ func kycApplicationDetailsHandler(c *gin.Context) {
 		return
 	}
 
-	if bearer.UserID != nil && bearer.UserID.String() != c.Param("id") {
-		renderError("forbidden", 403, c)
-		return
-	}
+	user := getAuthorizedUser(c)
+	app := getAuthorizedApplication(c)
 
 	kycApplication := &KYCApplication{}
 	query := DatabaseConnection().Where("id = ?", c.Param("id"))
@@ -41,6 +40,14 @@ func kycApplicationDetailsHandler(c *gin.Context) {
 		return
 	}
 
+	if user != nil && user.ID.String() != kycApplication.UserID.String() {
+		renderError("forbidden", 403, c)
+		return
+	} else if app != nil && app.ID.String() != kycApplication.ApplicationID.String() {
+		renderError("forbidden", 403, c)
+		return
+	}
+
 	kycApplication.enrich()
 	render(kycApplication, 200, c)
 }
@@ -52,8 +59,9 @@ func createKYCApplicationHandler(c *gin.Context) {
 		return
 	}
 
-	if bearer.UserID == nil {
-		// HACK: only support KYC for user_id
+	user := getAuthorizedUser(c)
+	if user == nil {
+		// FIXME: only support KYC for user_id
 		renderError("unauthorized", 401, c)
 		return
 	}
@@ -70,7 +78,8 @@ func createKYCApplicationHandler(c *gin.Context) {
 		renderError(err.Error(), 400, c)
 		return
 	}
-	kycApplication.UserID = bearer.UserID
+	kycApplication.ApplicationID = user.ApplicationID
+	kycApplication.UserID = &user.ID
 
 	log.Debugf("Creating new KYC application for user %s", bearer.UserID)
 	if !kycApplication.Create() {
@@ -80,4 +89,63 @@ func createKYCApplicationHandler(c *gin.Context) {
 		return
 	}
 	render(kycApplication, 201, c)
+}
+
+func updateKYCApplicationHandler(c *gin.Context) {
+	bearer := bearerAuthToken(c)
+	if bearer == nil || (bearer != nil && bearer.ApplicationID == nil && bearer.UserID == nil) {
+		renderError("unauthorized", 401, c)
+		return
+	}
+
+	user := getAuthorizedUser(c)
+	if user == nil {
+		renderError("unauthorized", 401, c)
+		return
+	}
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		renderError(err.Error(), 400, c)
+		return
+	}
+
+	params := map[string]interface{}{}
+	err = json.Unmarshal(buf, &params)
+	if err != nil {
+		renderError(err.Error(), 400, c)
+		return
+	}
+
+	db := DatabaseConnection()
+
+	kycApplication := &KYCApplication{}
+	db.Where("id = ?", c.Param("id")).Find(&kycApplication)
+	if kycApplication.ID == uuid.Nil {
+		renderError("kyc application not found", 404, c)
+		return
+	}
+
+	if user.ID.String() != kycApplication.UserID.String() {
+		renderError("forbidden", 403, c)
+		return
+	}
+
+	err = json.Unmarshal(buf, &kycApplication)
+	if err != nil {
+		renderError(err.Error(), 422, c)
+		return
+	}
+
+	kycApplication.ApplicationID = user.ApplicationID
+	kycApplication.UserID = bearer.UserID
+
+	log.Debugf("Updating KYC application %s for user %s", kycApplication.ID, bearer.UserID)
+	if kycApplication.Update() {
+		render(kycApplication, 202, c)
+	} else {
+		obj := map[string]interface{}{}
+		obj["errors"] = user.Errors
+		render(obj, 422, c)
+	}
 }

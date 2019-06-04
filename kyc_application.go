@@ -30,6 +30,7 @@ func init() {
 	db := dbconf.DatabaseConnection()
 
 	db.AutoMigrate(&KYCApplication{})
+	db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_application_id", "application_id")
 	db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_user_id", "user_id")
 	db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_identifier", "identifier")
 	db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_status", "status")
@@ -73,7 +74,8 @@ type KYCAPI interface {
 // KYCApplication represents a KYC application process
 type KYCApplication struct {
 	provide.Model
-	UserID                 *uuid.UUID             `sql:"type:uuid not null" json:"user_id"`
+	ApplicationID          *uuid.UUID             `sql:"type:uuid" json:"application_id"`
+	UserID                 *uuid.UUID             `sql:"type:uuid" json:"user_id"`
 	Provider               *string                `sql:"not null" json:"provider"`
 	Identifier             *string                `json:"identifier"`
 	Type                   *string                `sql:"not null" json:"type"`
@@ -97,7 +99,7 @@ func (k *KYCApplication) Create() bool {
 		k.Type = stringOrNil(strings.ToLower(*k.Type))
 	}
 
-	if !k.Validate() {
+	if !k.Validate(db) {
 		return false
 	}
 
@@ -129,41 +131,92 @@ func (k *KYCApplication) Create() bool {
 	return false
 }
 
+// Update an existing KYC application
+func (k *KYCApplication) Update() bool {
+	db := DatabaseConnection()
+
+	if !k.Validate(db) {
+		return false
+	}
+
+	k.setEncryptedParams(k.Params)
+
+	result := db.Save(&k)
+	errors := result.GetErrors()
+	if len(errors) > 0 {
+		for _, err := range errors {
+			k.Errors = append(k.Errors, &provide.Error{
+				Message: stringOrNil(err.Error()),
+			})
+		}
+	} else {
+		k.submit(db)
+	}
+
+	return len(k.Errors) == 0
+}
+
 // Validate a KYCApplication for persistence
-func (k *KYCApplication) Validate() bool {
+func (k *KYCApplication) Validate(db *gorm.DB) bool {
 	k.Errors = make([]*provide.Error, 0)
 	if k.UserID == nil || *k.UserID == uuid.Nil {
 		k.Errors = append(k.Errors, &provide.Error{
-			Message: stringOrNil("Unable to create a KYC application without an associated user"),
+			Message: stringOrNil("Unable to persist a KYC application without an associated user"),
 		})
+	} else {
+		user := k.User(db)
+		if user != nil {
+			if user.ApplicationID != nil && *user.ApplicationID != uuid.Nil {
+				if k.ApplicationID == nil || *k.ApplicationID != *user.ApplicationID {
+					k.Errors = append(k.Errors, &provide.Error{
+						Message: stringOrNil("Unable to persist a KYC application on behalf of an application user without matching application_id"),
+					})
+				}
+			}
+		}
 	}
 	if k.Provider == nil {
 		k.Errors = append(k.Errors, &provide.Error{
-			Message: stringOrNil("Unable to create a KYC application without a provider-specific identifier"),
+			Message: stringOrNil("Unable to persist a KYC application without a provider-specific identifier"),
 		})
 	}
 	if k.Type == nil || (*k.Type != consumerKYCApplicationType && *k.Type != businessKYCApplicationType) {
 		k.Errors = append(k.Errors, &provide.Error{
-			Message: stringOrNil("Unable to create a KYC application without a type"),
+			Message: stringOrNil("Unable to persist a KYC application without a type"),
 		})
 	}
 	return len(k.Errors) == 0
 }
 
+// User retrieves the user related to the KYC application
+func (k *KYCApplication) User(db *gorm.DB) *User {
+	if k.UserID == nil || *k.UserID == uuid.Nil {
+		return nil
+	}
+	user := &User{}
+	db.Where("id = ?", k.UserID).Find(&user)
+	if user == nil || user.ID == uuid.Nil {
+		return nil
+	}
+	return user
+}
+
 // submit the KYCApplication to the provider
 func (k *KYCApplication) submit(db *gorm.DB) error {
-	if !k.isPending() {
-		return fmt.Errorf("KYC application has been submitted; not attempting to resubmit KYC application: %s", k.ID)
-	}
 	apiClient, err := k.KYCAPIClient()
 	if err != nil {
 		log.Warningf("Failed to submit KYC application; no KYC API client resolved for provider: %s; %s", *k.Provider, err.Error())
 		return err
 	}
-	params, err := k.decryptedParams()
-	if err != nil {
-		log.Warningf("Failed to submit KYC application; failed to decrypt params; %s", err.Error())
-		return err
+	var params map[string]interface{}
+	if k.Params != nil {
+		params = k.Params
+	} else {
+		params, err = k.decryptedParams()
+		if err != nil {
+			log.Warningf("Failed to submit KYC application; failed to decrypt params; %s", err.Error())
+			return err
+		}
 	}
 	resp, err := apiClient.SubmitApplication(params)
 	if err != nil {
@@ -171,6 +224,7 @@ func (k *KYCApplication) submit(db *gorm.DB) error {
 		return err
 	}
 	if apiResponse, apiResponseOk := resp.(map[string]interface{}); apiResponseOk {
+		k.Params, _ = k.decryptedParams()
 		k.ProviderRepresentation = apiResponse
 
 		switch *k.Provider {
@@ -192,7 +246,6 @@ func (k *KYCApplication) submit(db *gorm.DB) error {
 	})
 	natsConnection := getNatsStreamingConnection()
 	natsConnection.Publish(natsCheckKYCApplicationStatusSubject, payload)
-
 	return nil
 }
 
@@ -215,6 +268,7 @@ func (k *KYCApplication) enrich() (interface{}, error) {
 	}
 	var marshaledResponse interface{}
 	if apiResponse, apiResponseOk := resp.(map[string]interface{}); apiResponseOk {
+		k.Params, _ = k.decryptedParams()
 		k.ProviderRepresentation = apiResponse
 
 		switch *k.Provider {
