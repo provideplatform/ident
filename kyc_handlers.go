@@ -70,6 +70,7 @@ func createKYCApplicationHandler(c *gin.Context) {
 		renderError(err.Error(), 400, c)
 		return
 	}
+	kycApplication.UserID = bearer.UserID
 
 	log.Debugf("Creating new KYC application for user %s", bearer.UserID)
 	if !kycApplication.Create() {

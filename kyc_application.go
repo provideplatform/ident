@@ -72,7 +72,7 @@ type KYCAPI interface {
 // KYCApplication represents a KYC application process
 type KYCApplication struct {
 	provide.Model
-	UserID                 uuid.UUID              `sql:"type:uuid not null" json:"user_id"`
+	UserID                 *uuid.UUID             `sql:"type:uuid not null" json:"user_id"`
 	Provider               *string                `sql:"not null" json:"provider"`
 	Identifier             *string                `json:"identifier"`
 	Type                   *string                `sql:"not null" json:"type"`
@@ -131,7 +131,7 @@ func (k *KYCApplication) Create() bool {
 // Validate a KYCApplication for persistence
 func (k *KYCApplication) Validate() bool {
 	k.Errors = make([]*provide.Error, 0)
-	if k.UserID == uuid.Nil {
+	if k.UserID == nil || *k.UserID == uuid.Nil {
 		k.Errors = append(k.Errors, &provide.Error{
 			Message: stringOrNil("Unable to create a KYC application without an associated user"),
 		})
