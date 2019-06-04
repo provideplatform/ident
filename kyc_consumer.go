@@ -194,7 +194,7 @@ func consumeSubmitKYCApplicationMsg(msg *stan.Msg) {
 
 	err = kycApplication.submit(db)
 	if err != nil {
-		log.Warningf("Failed to submit KYC application %s during NATS %v message handling", kycApplication.ID, msg.Subject)
+		log.Warningf("Failed to submit KYC application %s during NATS %v message handling; %s", kycApplication.ID, msg.Subject, err.Error())
 		nack(msg)
 		return
 	}
