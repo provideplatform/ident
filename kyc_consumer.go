@@ -107,22 +107,17 @@ func consumeCheckKYCApplicationStatusMsg(msg *stan.Msg) {
 		return
 	}
 
-	reachedDecision := false
-
 	switch application.(type) {
 	case *identitymind.KYCApplication:
 		identitymindApplication := application.(*identitymind.KYCApplication)
 		if identitymindApplication.State != nil {
 			log.Debugf("Resolved identitymind KYC application status to '%s' for KYC application: %s; will attempt to redeliver %s message", *identitymindApplication.State, kycApplication.ID, msg.Subject)
 			if identitymindApplication.IsAccepted() {
-				reachedDecision = true
-				kycApplication.Status = stringOrNil(kycApplicationStatusAccepted)
+				kycApplication.updateStatus(db, kycApplicationStatusAccepted)
 			} else if identitymindApplication.IsRejected() {
-				reachedDecision = true
-				kycApplication.Status = stringOrNil(kycApplicationStatusRejected)
+				kycApplication.updateStatus(db, kycApplicationStatusRejected)
 			} else if identitymindApplication.IsUnderReview() {
-				kycApplication.Status = stringOrNil(kycApplicationStatusUnderReview)
-				db.Save(&kycApplication)
+				kycApplication.updateStatus(db, kycApplicationStatusUnderReview)
 			}
 		} else {
 			log.Warningf("Identitymind KYC application does not contain a status for KYC application: %s", kycApplication.ID)
@@ -135,7 +130,7 @@ func consumeCheckKYCApplicationStatusMsg(msg *stan.Msg) {
 		return
 	}
 
-	if reachedDecision || instantKYCEnabled {
+	if kycApplication.hasReachedDecision() || instantKYCEnabled {
 		log.Debugf("KYC application decision has been reached; status '%' for KYC application %s", *kycApplication.Status, kycApplication.ID)
 		db.Save(&kycApplication)
 		msg.Ack()

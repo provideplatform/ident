@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
+	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
 	provide "github.com/provideservices/provide-go"
 )
@@ -15,6 +16,7 @@ func InstallUserAPI(r *gin.Engine) {
 
 	r.GET("/api/v1/users", usersListHandler)
 	r.GET("/api/v1/users/:id", userDetailsHandler)
+	r.GET("/api/v1/users", userKYCApplicationsListHandler)
 	r.POST("/api/v1/users", createUserHandler)
 	r.PUT("/api/v1/users/:id", updateUserHandler)
 	r.DELETE("/api/v1/users/:id", deleteUserHandler)
@@ -66,6 +68,31 @@ func authenticationHandler(c *gin.Context) {
 	}
 
 	renderError("unauthorized", 401, c)
+}
+
+func userKYCApplicationsListHandler(c *gin.Context) {
+	bearer := bearerAuthToken(c)
+	if bearer == nil || (bearer != nil && bearer.ApplicationID == nil && bearer.UserID == nil) {
+		renderError("unauthorized", 401, c)
+		return
+	}
+
+	if bearer.UserID == nil {
+		// HACK: only support KYC for user_id
+		renderError("unauthorized", 401, c)
+		return
+	}
+
+	var kycApplications []KYCApplication
+	query := dbconf.DatabaseConnection().Where("user_id = ?", bearer.UserID)
+
+	if c.Query("status") != "" {
+		query = query.Where("status = ?", c.Query("status"))
+	}
+
+	query = query.Order("created_at DESC")
+	provide.Paginate(c, query, &KYCApplication{}).Find(&kycApplications)
+	render(kycApplications, 200, c)
 }
 
 func usersListHandler(c *gin.Context) {

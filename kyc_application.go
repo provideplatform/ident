@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
 	provide "github.com/provideservices/provide-go"
@@ -16,6 +17,9 @@ const kycApplicationStatusRejected = "rejected"
 const kycApplicationStatusUnderReview = "review"
 
 const defaultKYCProvider = identitymindKYCProvider
+const defaultKYCApplicationType = consumerKYCApplicationType
+const consumerKYCApplicationType = "kyc"
+const businessKYCApplicationType = "kyb"
 const identitymindKYCProvider = "identitymind"
 
 func init() {
@@ -68,6 +72,7 @@ type KYCApplication struct {
 	UserID     uuid.UUID `sql:"type:uuid not null" json:"user_id"`
 	Provider   *string   `sql:"not null" json:"provider"`
 	Identifier *string   `json:"identifier"`
+	Type       *string   `sql:"not null" json:"type"`
 	Status     *string   `sql:"not null;default:'pending'" json:"status"`
 }
 
@@ -77,6 +82,12 @@ func (k *KYCApplication) Create() bool {
 
 	if k.Provider == nil {
 		k.Provider = stringOrNil(defaultKYCProvider)
+	}
+
+	if k.Type == nil {
+		k.Type = stringOrNil(defaultKYCApplicationType)
+	} else {
+		k.Type = stringOrNil(strings.ToLower(*k.Type))
 	}
 
 	if !k.Validate() {
@@ -122,7 +133,16 @@ func (k *KYCApplication) Validate() bool {
 			Message: stringOrNil("Unable to create a KYC application without a provider-specific identifier"),
 		})
 	}
+	if k.Type == nil || (*k.Type != consumerKYCApplicationType && *k.Type != businessKYCApplicationType) {
+		k.Errors = append(k.Errors, &provide.Error{
+			Message: stringOrNil("Unable to create a KYC application without a type"),
+		})
+	}
 	return len(k.Errors) == 0
+}
+
+func (k *KYCApplication) hasReachedDecision() bool {
+	return k.isAccepted() || k.isRejected()
 }
 
 func (k *KYCApplication) isAccepted() bool {
@@ -151,6 +171,19 @@ func (k *KYCApplication) isUnderReview() bool {
 		return false
 	}
 	return strings.ToLower(*k.Status) == kycApplicationStatusUnderReview
+}
+
+func (k *KYCApplication) updateStatus(db *gorm.DB, status string) {
+	k.Status = stringOrNil(status)
+	result := db.Save(&k)
+	errors := result.GetErrors()
+	if len(errors) > 0 {
+		for _, err := range errors {
+			k.Errors = append(k.Errors, &provide.Error{
+				Message: stringOrNil(err.Error()),
+			})
+		}
+	}
 }
 
 // KYCAPIClient returns an instance of the billing account's underlying KYCAPI
