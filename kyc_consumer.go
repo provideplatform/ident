@@ -144,7 +144,6 @@ func consumeCheckKYCApplicationStatusMsg(msg *stan.Msg) {
 
 	if kycApplication.hasReachedDecision() || instantKYCEnabled {
 		log.Debugf("KYC application decision has been reached; status '%' for KYC application %s", *kycApplication.Status, kycApplication.ID)
-		db.Save(&kycApplication)
 		msg.Ack()
 	}
 }
