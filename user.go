@@ -8,10 +8,20 @@ import (
 	"time"
 
 	"github.com/badoux/checkmail"
+	dbconf "github.com/kthomas/go-db-config"
 	"github.com/kthomas/go.uuid"
 	provide "github.com/provideservices/provide-go"
 	"golang.org/x/crypto/bcrypt"
 )
+
+func init() {
+	db := dbconf.DatabaseConnection()
+
+	db.AutoMigrate(&User{})
+	db.Model(&User{}).AddIndex("idx_users_application_id", "application_id")
+	db.Model(&User{}).AddIndex("idx_users_email", "email")
+	db.Model(&User{}).AddUniqueIndex("idx_users_application_id_email", "application_id", "email")
+}
 
 // User model
 type User struct {

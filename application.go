@@ -4,9 +4,20 @@ import (
 	"encoding/json"
 	"fmt"
 
+	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
 	provide "github.com/provideservices/provide-go"
 )
+
+func init() {
+	db := dbconf.DatabaseConnection()
+
+	db.AutoMigrate(&Application{})
+	db.Model(&Application{}).AddIndex("idx_applications_hidden", "hidden")
+	db.Model(&Application{}).AddIndex("idx_applications_network_id", "network_id")
+	db.Model(&Application{}).AddForeignKey("user_id", "users(id)", "SET NULL", "CASCADE")
+	db.Model(&User{}).AddForeignKey("application_id", "applications(id)", "SET NULL", "CASCADE")
+}
 
 // Application model which is initially owned by the user who created it
 type Application struct {
