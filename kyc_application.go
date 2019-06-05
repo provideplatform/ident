@@ -54,7 +54,7 @@ type KYCAPI interface {
 	DownloadDocument(string, string) (interface{}, error)
 	GetApplication(string) (interface{}, error)
 	ListDocuments(string) (interface{}, error)
-	ProvideApplicationResponse(applicationID string, params map[string]interface{}) (interface{}, error)
+	ProvideApplicationResponse(string, map[string]interface{}) (interface{}, error)
 	RejectApplication(string, map[string]interface{}) (interface{}, error)
 	SubmitApplication(map[string]interface{}) (interface{}, error)
 	UploadDocument(string, map[string]interface{}) (interface{}, error)
@@ -77,14 +77,14 @@ type KYCAPI interface {
 	UpdateMerchant(string, map[string]interface{}) (interface{}, error)
 
 	// Merchant KYC
-	GetMerchantApplication(applicationID string) (interface{}, error)
-	SubmitMerchantApplication(params map[string]interface{}) (interface{}, error)
-	DownloadMerchantApplicationDocument(applicationID, documentID string) (interface{}, error)
-	UploadMerchantApplicationDocument(applicationID string, params map[string]interface{}) (interface{}, error)
-	UploadMerchantApplicationDocumentVerificationImage(applicationID string, params map[string]interface{}) (interface{}, error)
-	ApproveMerchantApplication(applicationID string, params map[string]interface{}) (interface{}, error)
-	RejectMerchantApplication(applicationID string, params map[string]interface{}) (interface{}, error)
-	ProvideMerchantApplicationResponse(applicationID string, params map[string]interface{}) (interface{}, error)
+	GetMerchantApplication(string) (interface{}, error)
+	SubmitMerchantApplication(map[string]interface{}) (interface{}, error)
+	DownloadMerchantApplicationDocument(string, string) (interface{}, error)
+	UploadMerchantApplicationDocument(string, map[string]interface{}) (interface{}, error)
+	UploadMerchantApplicationDocumentVerificationImage(string, map[string]interface{}) (interface{}, error)
+	ApproveMerchantApplication(string, map[string]interface{}) (interface{}, error)
+	RejectMerchantApplication(string, map[string]interface{}) (interface{}, error)
+	ProvideMerchantApplicationResponse(string, map[string]interface{}) (interface{}, error)
 
 	// Merchant KYB
 	RejectMerchantBusinessApplication(string, map[string]interface{}) (interface{}, error)
