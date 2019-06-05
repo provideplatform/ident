@@ -139,3 +139,131 @@ func (i *IdentityMind) GetBusinessApplication(applicationID string) (interface{}
 func (i *IdentityMind) ListBusinessDocuments(applicationID string) (interface{}, error) {
 	return i.apiClient.ListBusinessDocuments(applicationID)
 }
+
+// Merchant aggregation
+
+// CreateMerchant creates a new merchant account
+func (i *IdentityMind) CreateMerchant(params map[string]interface{}) (interface{}, error) {
+	return i.CreateMerchant(params)
+}
+
+// GetMerchant retrieves a merchant account by id
+func (i *IdentityMind) GetMerchant(merchantID string) (interface{}, error) {
+	return i.GetMerchant(merchantID)
+}
+
+// UpdateMerchant updates an existing merchant account
+func (i *IdentityMind) UpdateMerchant(merchantID string, params map[string]interface{}) (interface{}, error) {
+	return i.UpdateMerchant(merchantID, params)
+}
+
+// Merchant KYC
+
+// ApproveMerchantApplication approves consumer KYC application
+func (i *IdentityMind) ApproveMerchantApplication(applicationID string, params map[string]interface{}) (interface{}, error) {
+	return i.apiClient.ApproveMerchantApplication(applicationID, params)
+}
+
+// RejectMerchantApplication rejects consumer KYC application
+func (i *IdentityMind) RejectMerchantApplication(applicationID string, params map[string]interface{}) (interface{}, error) {
+	return i.apiClient.RejectMerchantApplication(applicationID, params)
+}
+
+// SubmitMerchantApplication submits consumer KYC application
+func (i *IdentityMind) SubmitMerchantApplication(params map[string]interface{}) (interface{}, error) {
+	return i.apiClient.SubmitMerchantApplication(params)
+}
+
+// UploadMerchantApplicationDocument attaches a document to a KYC application
+func (i *IdentityMind) UploadMerchantApplicationDocument(applicationID string, params map[string]interface{}) (interface{}, error) {
+	return i.apiClient.UploadMerchantApplicationDocument(applicationID, params)
+}
+
+// UploadMerchantApplicationDocumentVerificationImage attaches a document image to a KYC application for verification
+func (i *IdentityMind) UploadMerchantApplicationDocumentVerificationImage(applicationID string, params map[string]interface{}) (interface{}, error) {
+	return i.apiClient.UploadMerchantApplicationDocumentVerificationImage(applicationID, params)
+}
+
+// GetMerchantApplication fetches a KYC application
+func (i *IdentityMind) GetMerchantApplication(applicationID string) (interface{}, error) {
+	return i.apiClient.GetMerchantApplication(applicationID)
+}
+
+// ListMerchantApplicationDocuments retrieves a list of documents attached to a KYC application
+func (i *IdentityMind) ListMerchantApplicationDocuments(applicationID string) (interface{}, error) {
+	return i.apiClient.ListMerchantApplicationDocuments(applicationID)
+}
+
+// DownloadMerchantApplicationDocument retrieves a specific document attached to a KYC application
+func (i *IdentityMind) DownloadMerchantApplicationDocument(applicationID, documentID string) (interface{}, error) {
+	return i.apiClient.DownloadMerchantApplicationDocument(applicationID, documentID)
+}
+
+// ProvideApplicationResponse provides a response to a KYC application `prompt
+func (i *IdentityMind) ProvideApplicationResponse(applicationID string, params map[string]interface{}) (interface{}, error) {
+	return i.apiClient.ProvideApplicationResponse(applicationID, params)
+}
+
+// Merchant KYB
+
+// RejectMerchantBusinessApplication see https://edoc.identitymind.com/reference#feedback_1
+func (i *IdentityMind) RejectMerchantBusinessApplication(applicationID string, params map[string]interface{}) (interface{}, error) {
+	return i.RejectMerchantBusinessApplication(applicationID, params)
+}
+
+// GetMerchantBusinessApplication see https://edoc.identitymind.com/reference#getmerchantkyc
+func (i *IdentityMind) GetMerchantBusinessApplication(applicationID string) (interface{}, error) {
+	return i.GetMerchantBusinessApplication(applicationID)
+}
+
+// ReevaluateMerchantBusinessApplication see https://edoc.identitymind.com/reference#reevaluatemerchant
+func (i *IdentityMind) ReevaluateMerchantBusinessApplication(applicationID string) (interface{}, error) {
+	return i.GetMerchantBusinessApplication(applicationID)
+}
+
+// SubmitMerchantBusinessApplication see https://edoc.identitymind.com/reference#merchant
+func (i *IdentityMind) SubmitMerchantBusinessApplication(params map[string]interface{}) (interface{}, error) {
+	return i.SubmitMerchantBusinessApplication(params)
+}
+
+// ListMerchantBusinessApplicationDocuments see https://edoc.identitymind.com/reference#getfilelistforapplicationformerchant
+func (i *IdentityMind) ListMerchantBusinessApplicationDocuments(applicationID string) (interface{}, error) {
+	return i.ListMerchantBusinessApplicationDocuments(applicationID)
+}
+
+// DownloadMerchantBusinessApplicationDocument see https://edoc.identitymind.com/reference#reevaluatemerchant
+func (i *IdentityMind) DownloadMerchantBusinessApplicationDocument(applicationID, documentID string) (interface{}, error) {
+	return i.DownloadMerchantBusinessApplicationDocument(applicationID, documentID)
+}
+
+// UploadMerchantBusinessApplicationDocument see https://edoc.identitymind.com/reference#processfileuploadrequestformerchantkyc
+func (i *IdentityMind) UploadMerchantBusinessApplicationDocument(applicationID string, params map[string]interface{}) (interface{}, error) {
+	return i.UploadMerchantBusinessApplicationDocument(applicationID, params)
+}
+
+// UploadMerchantBusinessApplicationDocumentVerificationImage see https://edoc.identitymind.com/reference#processfileuploadrequestformerchantkyc
+func (i *IdentityMind) UploadMerchantBusinessApplicationDocumentVerificationImage(applicationID string, params map[string]interface{}) (interface{}, error) {
+	return i.UploadMerchantBusinessApplicationDocumentVerificationImage(applicationID, params)
+}
+
+// ApproveMerchantBusinessApplication see https://edoc.identitymind.com/reference#feedback_1
+func (i *IdentityMind) ApproveMerchantBusinessApplication(applicationID string, params map[string]interface{}) (interface{}, error) {
+	return i.ApproveMerchantBusinessApplication(applicationID, params)
+}
+
+// ProvideMerchantApplicationResponse provides a response to a merchant KYC application prompt
+func (i *IdentityMind) ProvideMerchantApplicationResponse(applicationID string, params map[string]interface{}) (interface{}, error) {
+	return i.apiClient.ProvideMerchantApplicationResponse(applicationID, params)
+}
+
+// Merchant Transactions
+
+// EvaluateMerchantFraud evaluates payment fraud on behalf of a merchant
+func (i *IdentityMind) EvaluateMerchantFraud(merchantID string, params map[string]interface{}) (interface{}, error) {
+	return i.EvaluateMerchantFraud(merchantID, params)
+}
+
+// ReportMerchantTransaction reports a transaction on behalf of a merchant
+func (i *IdentityMind) ReportMerchantTransaction(merchantID, txType string, params map[string]interface{}) (interface{}, error) {
+	return i.ReportMerchantTransaction(merchantID, txType, params)
+}

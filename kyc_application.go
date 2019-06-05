@@ -54,6 +54,7 @@ type KYCAPI interface {
 	DownloadDocument(string, string) (interface{}, error)
 	GetApplication(string) (interface{}, error)
 	ListDocuments(string) (interface{}, error)
+	ProvideApplicationResponse(applicationID string, params map[string]interface{}) (interface{}, error)
 	RejectApplication(string, map[string]interface{}) (interface{}, error)
 	SubmitApplication(map[string]interface{}) (interface{}, error)
 	UploadDocument(string, map[string]interface{}) (interface{}, error)
@@ -69,6 +70,36 @@ type KYCAPI interface {
 	RejectBusinessApplication(string, map[string]interface{}) (interface{}, error)
 	UploadBusinessDocument(string, map[string]interface{}) (interface{}, error)
 	UploadBusinessDocumentVerificationImage(string, map[string]interface{}) (interface{}, error)
+
+	// Merchant aggregation
+	CreateMerchant(map[string]interface{}) (interface{}, error)
+	GetMerchant(string) (interface{}, error)
+	UpdateMerchant(string, map[string]interface{}) (interface{}, error)
+
+	// Merchant KYC
+	GetMerchantApplication(applicationID string) (interface{}, error)
+	SubmitMerchantApplication(params map[string]interface{}) (interface{}, error)
+	DownloadMerchantApplicationDocument(applicationID, documentID string) (interface{}, error)
+	UploadMerchantApplicationDocument(applicationID string, params map[string]interface{}) (interface{}, error)
+	UploadMerchantApplicationDocumentVerificationImage(applicationID string, params map[string]interface{}) (interface{}, error)
+	ApproveMerchantApplication(applicationID string, params map[string]interface{}) (interface{}, error)
+	RejectMerchantApplication(applicationID string, params map[string]interface{}) (interface{}, error)
+	ProvideMerchantApplicationResponse(applicationID string, params map[string]interface{}) (interface{}, error)
+
+	// Merchant KYB
+	RejectMerchantBusinessApplication(string, map[string]interface{}) (interface{}, error)
+	GetMerchantBusinessApplication(string) (interface{}, error)
+	ReevaluateMerchantBusinessApplication(string) (interface{}, error)
+	SubmitMerchantBusinessApplication(map[string]interface{}) (interface{}, error)
+	ListMerchantBusinessApplicationDocuments(string) (interface{}, error)
+	DownloadMerchantBusinessApplicationDocument(string, string) (interface{}, error)
+	UploadMerchantBusinessApplicationDocument(string, map[string]interface{}) (interface{}, error)
+	UploadMerchantBusinessApplicationDocumentVerificationImage(string, map[string]interface{}) (interface{}, error)
+	ApproveMerchantBusinessApplication(string, map[string]interface{}) (interface{}, error)
+
+	// Merchant Transactions
+	EvaluateMerchantFraud(string, map[string]interface{}) (interface{}, error)
+	ReportMerchantTransaction(string, string, map[string]interface{}) (interface{}, error)
 }
 
 // KYCApplication represents a KYC application process

@@ -1,5 +1,5 @@
 hash: 908d803b24e9ab81ba6d713e9ef48a1b44a970fe66e89cb49c77dfcb052ba5a0
-updated: 2019-06-04T03:17:46.086524-04:00
+updated: 2019-06-05T04:52:34.643559-04:00
 imports:
 - name: github.com/allegro/bigcache
   version: 84a0ff3f153cbd7e280a19029a864bb04b504e62
@@ -101,7 +101,7 @@ imports:
 - name: github.com/kthomas/go.uuid
   version: 28d1fa77e9a4efcba826a2a6c8f5a9ff6cea44a6
 - name: github.com/kthomas/identitymind-golang
-  version: 2314c947b0b01fbcb2317bf877680f0f6864ae62
+  version: 66ca32584110d90310510d657413c63d42e1bc25
 - name: github.com/lib/pq
   version: 9eb73efc1fcc404148b56765b0d3f61d9a5ef8ee
   subpackages:
@@ -129,7 +129,7 @@ imports:
 - name: github.com/op/go-logging
   version: 970db520ece77730c7e4724c61121037378659d9
 - name: github.com/provideservices/provide-go
-  version: 7b298e7b187dcd06e95474db71dbbbcee32852fd
+  version: 01f6e5432e53dac379e8e3089e40c05ce9f0cc1a
 - name: github.com/rs/cors
   version: 76f58f330d76a55c5badc74f6212e8a15e742c77
 - name: github.com/satori/go.uuid
