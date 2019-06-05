@@ -68,14 +68,14 @@ func (i *IdentityMind) SubmitApplication(params map[string]interface{}) (interfa
 	return i.apiClient.SubmitApplication(params)
 }
 
-// UploadDocument attaches a document to a KYC application
-func (i *IdentityMind) UploadDocument(applicationID string, params map[string]interface{}) (interface{}, error) {
-	return i.apiClient.UploadDocument(applicationID, params)
+// UploadApplicationDocument attaches a document to a KYC application
+func (i *IdentityMind) UploadApplicationDocument(applicationID string, params map[string]interface{}) (interface{}, error) {
+	return i.apiClient.UploadApplicationDocument(applicationID, params)
 }
 
-// UploadDocumentVerificationImage attaches a document image to a KYC application for verification
-func (i *IdentityMind) UploadDocumentVerificationImage(applicationID string, params map[string]interface{}) (interface{}, error) {
-	return i.apiClient.UploadDocumentVerificationImage(applicationID, params)
+// UploadApplicationDocumentVerificationImage attaches a document image to a KYC application for verification
+func (i *IdentityMind) UploadApplicationDocumentVerificationImage(applicationID string, params map[string]interface{}) (interface{}, error) {
+	return i.apiClient.UploadApplicationDocumentVerificationImage(applicationID, params)
 }
 
 // GetApplication fetches a KYC application
@@ -83,14 +83,14 @@ func (i *IdentityMind) GetApplication(applicationID string) (interface{}, error)
 	return i.apiClient.GetApplication(applicationID)
 }
 
-// ListDocuments retrieves a list of documents attached to a KYC application
-func (i *IdentityMind) ListDocuments(applicationID string) (interface{}, error) {
-	return i.apiClient.ListDocuments(applicationID)
+// ListApplicationDocuments retrieves a list of documents attached to a KYC application
+func (i *IdentityMind) ListApplicationDocuments(applicationID string) (interface{}, error) {
+	return i.apiClient.ListApplicationDocuments(applicationID)
 }
 
-// DownloadDocument retrieves a specific document attached to a KYC application
-func (i *IdentityMind) DownloadDocument(applicationID, documentID string) (interface{}, error) {
-	return i.apiClient.DownloadDocument(applicationID, documentID)
+// DownloadApplicationDocument retrieves a specific document attached to a KYC application
+func (i *IdentityMind) DownloadApplicationDocument(applicationID, documentID string) (interface{}, error) {
+	return i.apiClient.DownloadApplicationDocument(applicationID, documentID)
 }
 
 // KYB
@@ -115,19 +115,19 @@ func (i *IdentityMind) SubmitBusinessApplication(params map[string]interface{}) 
 	return i.apiClient.SubmitBusinessApplication(params)
 }
 
-// UploadBusinessDocument attaches a document to a KYB application
-func (i *IdentityMind) UploadBusinessDocument(applicationID string, params map[string]interface{}) (interface{}, error) {
-	return i.apiClient.UploadBusinessDocument(applicationID, params)
+// UploadBusinessApplicationDocument attaches a document to a KYB application
+func (i *IdentityMind) UploadBusinessApplicationDocument(applicationID string, params map[string]interface{}) (interface{}, error) {
+	return i.apiClient.UploadBusinessApplicationDocument(applicationID, params)
 }
 
-// UploadBusinessDocumentVerificationImage attaches a document image to a KYB application for verification
-func (i *IdentityMind) UploadBusinessDocumentVerificationImage(applicationID string, params map[string]interface{}) (interface{}, error) {
-	return i.apiClient.UploadBusinessDocumentVerificationImage(applicationID, params)
+// UploadBusinessApplicationDocumentVerificationImage attaches a document image to a KYB application for verification
+func (i *IdentityMind) UploadBusinessApplicationDocumentVerificationImage(applicationID string, params map[string]interface{}) (interface{}, error) {
+	return i.apiClient.UploadBusinessApplicationDocumentVerificationImage(applicationID, params)
 }
 
-// DownloadBusinessDocument retrieves a specific document attached to a KYB application
-func (i *IdentityMind) DownloadBusinessDocument(applicationID, documentID string) (interface{}, error) {
-	return i.apiClient.DownloadBusinessDocument(applicationID, documentID)
+// DownloadBusinessApplicationDocument retrieves a specific document attached to a KYB application
+func (i *IdentityMind) DownloadBusinessApplicationDocument(applicationID, documentID string) (interface{}, error) {
+	return i.apiClient.DownloadBusinessApplicationDocument(applicationID, documentID)
 }
 
 // GetBusinessApplication fetches a KYB application
@@ -135,9 +135,9 @@ func (i *IdentityMind) GetBusinessApplication(applicationID string) (interface{}
 	return i.apiClient.GetBusinessApplication(applicationID)
 }
 
-// ListBusinessDocuments retrieves a list of documents attached to a KYB application
-func (i *IdentityMind) ListBusinessDocuments(applicationID string) (interface{}, error) {
-	return i.apiClient.ListBusinessDocuments(applicationID)
+// ListBusinessApplicationDocuments retrieves a list of documents attached to a KYB application
+func (i *IdentityMind) ListBusinessApplicationDocuments(applicationID string) (interface{}, error) {
+	return i.apiClient.ListBusinessApplicationDocuments(applicationID)
 }
 
 // Merchant aggregation

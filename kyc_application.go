@@ -51,25 +51,25 @@ type KYCAPI interface {
 
 	// KYC applications
 	ApproveApplication(string, map[string]interface{}) (interface{}, error)
-	DownloadDocument(string, string) (interface{}, error)
+	DownloadApplicationDocument(string, string) (interface{}, error)
 	GetApplication(string) (interface{}, error)
-	ListDocuments(string) (interface{}, error)
+	ListApplicationDocuments(string) (interface{}, error)
 	ProvideApplicationResponse(string, map[string]interface{}) (interface{}, error)
 	RejectApplication(string, map[string]interface{}) (interface{}, error)
 	SubmitApplication(map[string]interface{}) (interface{}, error)
-	UploadDocument(string, map[string]interface{}) (interface{}, error)
-	UploadDocumentVerificationImage(string, map[string]interface{}) (interface{}, error)
+	UploadApplicationDocument(string, map[string]interface{}) (interface{}, error)
+	UploadApplicationDocumentVerificationImage(string, map[string]interface{}) (interface{}, error)
 
 	// KYB applications
 	ApproveBusinessApplication(string, map[string]interface{}) (interface{}, error)
-	DownloadBusinessDocument(string, string) (interface{}, error)
+	DownloadBusinessApplicationDocument(string, string) (interface{}, error)
 	GetBusinessApplication(string) (interface{}, error)
-	ListBusinessDocuments(string) (interface{}, error)
+	ListBusinessApplicationDocuments(string) (interface{}, error)
 	SubmitBusinessApplication(map[string]interface{}) (interface{}, error)
 	ReevaluateBusinessApplication(string) (interface{}, error)
 	RejectBusinessApplication(string, map[string]interface{}) (interface{}, error)
-	UploadBusinessDocument(string, map[string]interface{}) (interface{}, error)
-	UploadBusinessDocumentVerificationImage(string, map[string]interface{}) (interface{}, error)
+	UploadBusinessApplicationDocument(string, map[string]interface{}) (interface{}, error)
+	UploadBusinessApplicationDocumentVerificationImage(string, map[string]interface{}) (interface{}, error)
 
 	// Merchant aggregation
 	CreateMerchant(map[string]interface{}) (interface{}, error)
