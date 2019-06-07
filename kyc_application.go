@@ -117,9 +117,7 @@ type KYCApplication struct {
 }
 
 // Create and persist a new BillingAccount
-func (k *KYCApplication) Create() bool {
-	db := DatabaseConnection()
-
+func (k *KYCApplication) Create(db *gorm.DB) bool {
 	if k.Provider == nil {
 		k.Provider = stringOrNil(defaultKYCProvider)
 	}

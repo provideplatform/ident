@@ -94,11 +94,7 @@ func createKYCApplicationHandler(c *gin.Context) {
 	}
 
 	user := getAuthorizedUser(c)
-	if user == nil {
-		// FIXME: only support KYC for user_id
-		renderError("unauthorized", 401, c)
-		return
-	}
+	app := getAuthorizedApplication(c)
 
 	buf, err := c.GetRawData()
 	if err != nil {
@@ -112,11 +108,29 @@ func createKYCApplicationHandler(c *gin.Context) {
 		renderError(err.Error(), 400, c)
 		return
 	}
-	kycApplication.ApplicationID = user.ApplicationID
-	kycApplication.UserID = &user.ID
+
+	db := DatabaseConnection()
+
+	if app != nil {
+		kycApplication.ApplicationID = &app.ID
+		if kycApplication.UserID != nil && *kycApplication.UserID != uuid.Nil {
+			// Make sure the authorized application has permission to submit KYC application on behalf of the user
+			kycApplicationUser := kycApplication.User(db)
+			if kycApplicationUser == nil {
+				renderError("user does not exist", 404, c)
+				return
+			} else if kycApplicationUser.ApplicationID != nil && *kycApplicationUser.ApplicationID != app.ID {
+				renderError("unauthorized user kyc application creation", 403, c)
+				return
+			}
+		}
+	} else if user != nil {
+		kycApplication.ApplicationID = user.ApplicationID
+		kycApplication.UserID = &user.ID
+	}
 
 	log.Debugf("Creating new KYC application for user %s", bearer.UserID)
-	if !kycApplication.Create() {
+	if !kycApplication.Create(db) {
 		err = fmt.Errorf("Failed to create KYC application; %s", *kycApplication.Errors[0].Message)
 		log.Warningf(err.Error())
 		renderError(err.Error(), 422, c)
