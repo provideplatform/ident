@@ -95,6 +95,10 @@ func createKYCApplicationHandler(c *gin.Context) {
 
 	user := getAuthorizedUser(c)
 	app := getAuthorizedApplication(c)
+	if user == nil && app == nil {
+		renderError("unauthorized", 401, c)
+		return
+	}
 
 	buf, err := c.GetRawData()
 	if err != nil {
@@ -147,7 +151,8 @@ func updateKYCApplicationHandler(c *gin.Context) {
 	}
 
 	user := getAuthorizedUser(c)
-	if user == nil {
+	app := getAuthorizedApplication(c)
+	if user == nil && app == nil {
 		renderError("unauthorized", 401, c)
 		return
 	}
@@ -174,15 +179,34 @@ func updateKYCApplicationHandler(c *gin.Context) {
 		return
 	}
 
-	if user.ID.String() != kycApplication.UserID.String() {
-		renderError("forbidden", 403, c)
-		return
-	}
-
 	err = json.Unmarshal(buf, &kycApplication)
 	if err != nil {
 		renderError(err.Error(), 422, c)
 		return
+	}
+
+	if app != nil {
+		if kycApplication.ApplicationID == nil || app.ID != *kycApplication.ApplicationID {
+			renderError("forbidden", 403, c)
+			return
+		}
+
+		if kycApplication.UserID != nil && *kycApplication.UserID != uuid.Nil {
+			// Make sure the authorized application has permission to update the KYC application on behalf of the user
+			kycApplicationUser := kycApplication.User(db)
+			if kycApplicationUser == nil {
+				renderError("user does not exist", 404, c)
+				return
+			} else if kycApplicationUser.ApplicationID != nil && *kycApplicationUser.ApplicationID != app.ID {
+				renderError("unauthorized user kyc application update", 403, c)
+				return
+			}
+		}
+	} else if user != nil {
+		if user.ID.String() != kycApplication.UserID.String() {
+			renderError("forbidden", 403, c)
+			return
+		}
 	}
 
 	kycApplication.ApplicationID = user.ApplicationID
