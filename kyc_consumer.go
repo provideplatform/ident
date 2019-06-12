@@ -160,11 +160,11 @@ func consumeCheckKYCApplicationStatusMsg(msg *stan.Msg) {
 		if identitymindApplication.State != nil {
 			log.Debugf("Resolved identitymind KYC application status to '%s' for KYC application: %s", *identitymindApplication.State, kycApplication.ID)
 			if identitymindApplication.IsAccepted() {
-				kycApplication.updateStatus(db, kycApplicationStatusAccepted)
+				kycApplication.updateStatus(db, kycApplicationStatusAccepted, nil)
 			} else if identitymindApplication.IsRejected() {
-				kycApplication.updateStatus(db, kycApplicationStatusRejected)
+				kycApplication.updateStatus(db, kycApplicationStatusRejected, nil)
 			} else if identitymindApplication.IsUnderReview() {
-				kycApplication.updateStatus(db, kycApplicationStatusUnderReview)
+				kycApplication.updateStatus(db, kycApplicationStatusUnderReview, nil)
 			}
 		} else {
 			log.Warningf("Identitymind KYC application does not contain a status for KYC application: %s", kycApplication.ID)

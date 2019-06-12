@@ -111,6 +111,7 @@ type KYCApplication struct {
 	Identifier             *string                `json:"identifier"`
 	Type                   *string                `sql:"not null" json:"type"`
 	Status                 *string                `sql:"not null;default:'pending'" json:"status"`
+	Description            *string                `json:"description"`
 	Params                 map[string]interface{} `sql:"-" json:"params"`
 	EncryptedParams        *string                `sql:"type:bytea" json:"-"`
 	ProviderRepresentation map[string]interface{} `sql:"-" json:"provider_representation"`
@@ -262,14 +263,15 @@ func (k *KYCApplication) submit(db *gorm.DB) error {
 				log.Debugf("Resolved identitymind KYC application identifier '%s' for KYC application: %s", mtid, k.ID)
 				k.Identifier = stringOrNil(mtid)
 			} else {
-				k.updateStatus(db, kycApplicationStatusFailed)
-				return fmt.Errorf("Identitymind KYC application submission failed to return valid identifier: %s", k.ID)
+				desc, _ := apiResponse["error_message"].(string)
+				k.updateStatus(db, kycApplicationStatusFailed, stringOrNil(desc))
+				return fmt.Errorf("Identitymind KYC application submission failed to return valid identifier: %s; response: %s", k.ID, apiResponse)
 			}
 		default:
 			// no-op
 		}
 	}
-	k.updateStatus(db, kycApplicationStatusSubmitted)
+	k.updateStatus(db, kycApplicationStatusSubmitted, nil)
 	payload, _ := json.Marshal(map[string]interface{}{
 		"kyc_application_id": k.ID.String(),
 	})
@@ -396,8 +398,9 @@ func (k *KYCApplication) isUnderReview() bool {
 	return strings.ToLower(*k.Status) == kycApplicationStatusUnderReview
 }
 
-func (k *KYCApplication) updateStatus(db *gorm.DB, status string) {
+func (k *KYCApplication) updateStatus(db *gorm.DB, status string, description *string) {
 	k.Status = stringOrNil(status)
+	k.Description = description
 	result := db.Save(&k)
 	errors := result.GetErrors()
 	if len(errors) > 0 {
