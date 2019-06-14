@@ -106,26 +106,24 @@ func (t *Token) encodeJWT() (*string, error) {
 		return nil, fmt.Errorf("Failed to encode JWT; token has already been issued: %s", *t.Token)
 	}
 
-	var sub string
-	if t.ApplicationID != nil {
-		sub = fmt.Sprintf("application:%s", t.ApplicationID.String())
-	} else if t.UserID != nil {
-		sub = fmt.Sprintf("user:%s", t.UserID.String())
-	}
-
-	var exp *int64
-	if t.ExpiresAt != nil {
-		expAt := t.ExpiresAt.Unix()
-		exp = &expAt
-	}
-
-	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwt.MapClaims{
+	claims := &jwt.MapClaims{
 		"jti":  t.ID.String(),
 		"iat":  t.IssuedAt.Unix(),
-		"sub":  stringOrNil(sub),
-		"exp":  exp,
 		"data": t.ParseData(),
-	})
+	}
+
+	var sub string
+	if t.ApplicationID != nil {
+		claims["sub"] = fmt.Sprintf("application:%s", t.ApplicationID.String())
+	} else if t.UserID != nil {
+		claims["sub"] = fmt.Sprintf("user:%s", t.UserID.String())
+	}
+
+	if t.ExpiresAt != nil {
+		claims["exp"] = t.ExpiresAt.Unix()
+	}
+
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	token, err := jwtToken.SignedString([]byte(*t.Secret))
 	if err != nil {
 		log.Warningf("Failed to sign JWT token; %s", err.Error())
