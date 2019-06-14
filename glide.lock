@@ -1,18 +1,18 @@
 hash: 908d803b24e9ab81ba6d713e9ef48a1b44a970fe66e89cb49c77dfcb052ba5a0
-updated: 2019-06-07T08:41:47.186465-04:00
+updated: 2019-06-14T02:33:06.611185-04:00
 imports:
 - name: github.com/allegro/bigcache
   version: e24eb225f15679bbe54f91bfa7da3b00e59b9768
   subpackages:
   - queue
 - name: github.com/aristanetworks/goarista
-  version: a123909ec740ba2ed43a293e3febaf7618aa67d5
+  version: 52c2a7864a0891eefaed13a457510c7405a7105b
   subpackages:
   - monotime
 - name: github.com/badoux/checkmail
   version: 9661bd69e9ad6fce1f7579022bdab0440807722a
 - name: github.com/btcsuite/btcd
-  version: aa6e0f35703c1438cc45860ddc0c3f6e6c633c93
+  version: 962a206e94e9151fe41bbd6d6464af4ba7168f50
   subpackages:
   - btcec
   - btcjson
@@ -23,7 +23,7 @@ imports:
 - name: github.com/btcsuite/btclog
   version: 84c8d2346e9fc8c7b947e243b9c24e6df9fd206a
 - name: github.com/btcsuite/btcutil
-  version: 3ac1210f4b38284536002486ef8a21ac54c14497
+  version: 9e5f4b9a998d263e3ce9c56664a7816001ac8000
   subpackages:
   - base58
   - bech32
@@ -59,7 +59,7 @@ imports:
   - rpc
   - trie
 - name: github.com/gin-contrib/sse
-  version: 5545eab6dad3bbbd6c5ae9186383c2a9d23c0dae
+  version: 54d8467d122d380a14768b6b4e5cd7ca4755938f
 - name: github.com/gin-gonic/gin
   version: b869fe1415e4b9eb52f247441830d502aece2d4d
   subpackages:
@@ -69,13 +69,13 @@ imports:
 - name: github.com/go-stack/stack
   version: 2fee6af1a9795aafbe0253a0cfbdf668e1fb8a9a
 - name: github.com/gogo/protobuf
-  version: 382325bbbb4d1c850eec1f3ec92a1a16f502d68b
+  version: dadb625850898f31a8e40e83492f4a7132e520a2
   subpackages:
   - gogoproto
   - proto
   - protoc-gen-gogo/descriptor
 - name: github.com/golang/protobuf
-  version: d3c38a4eb4970272b87a425ae00ccc4548e2f9bb
+  version: b285ee9cfc6c881bb20c0d8dc73370ea9b9ec90f
   subpackages:
   - proto
 - name: github.com/golang/snappy
@@ -83,38 +83,39 @@ imports:
 - name: github.com/gorilla/websocket
   version: 66b9c49e59c6c48f0ffce28c2d8b8a5678502c6d
 - name: github.com/jinzhu/gorm
-  version: b7156195f7f3415f97c20abbd6aff894b847fee8
+  version: 01b66011427614f01e84a473b0303c917179f2a0
   subpackages:
   - dialects/postgres
 - name: github.com/jinzhu/inflection
-  version: 04140366298a54a039076d798123ffa108fff46c
+  version: f5c5f50e6090ae76a29240b61ae2a90dd810112e
 - name: github.com/json-iterator/go
-  version: 0ff49de124c6f76f8494e194af75bde0f1a49a29
+  version: 0039f4ac3d5680243e7d0650c581e7ec0885ef5a
 - name: github.com/kthomas/go-db-config
   version: fe566ecb4d7e3e2e1cf39d3a739e1ecfbec912f8
 - name: github.com/kthomas/go-logger
   version: 230b452f1919101d0b06c44ca727d78056983a8d
 - name: github.com/kthomas/go-natsutil
-  version: a16a55e7dc26f074c31eb9e6d7ae31da4458a124
+  version: 0f34fd851e3b6d1a143d11ade656fdebd187d3cc
 - name: github.com/kthomas/go-self-signed-cert
   version: a6356df979a5303e6d488550cd7c607a44b66dba
 - name: github.com/kthomas/go.uuid
   version: 28d1fa77e9a4efcba826a2a6c8f5a9ff6cea44a6
 - name: github.com/kthomas/identitymind-golang
-  version: 03f0dd99a5a21e6aab611cc604bf0695f6620cc4
+  version: 6d2ea7e625e14e72515a2ce3a1d9c62f25f56ba4
 - name: github.com/lib/pq
-  version: d6156e141ac6c06345c7c73f450987a9ed4b751f
+  version: 2ff3cb3adc01768e0a552b3a02575a6df38a9bea
   subpackages:
   - hstore
   - oid
+  - scram
 - name: github.com/mattn/go-isatty
-  version: c2a7a6ca930a4cd0bc33a3f298eb71960732a3a7
+  version: 1311e847b0cb909da63b5fecfb5370aa66236465
 - name: github.com/modern-go/concurrent
   version: bacd9c7ef1dd9b15be4a9909b8ac7a4e313eec94
 - name: github.com/modern-go/reflect2
   version: 94122c33edd36123c84d5368cfb2b69df93a0ec8
 - name: github.com/nats-io/go-nats
-  version: c528ff487513eec69347b5598eb35d91f0a63820
+  version: 73ffc26dfe70cc3b217df38d209c83b6d07eaf3c
   subpackages:
   - encoders/builtin
   - util
@@ -122,16 +123,25 @@ imports:
   version: 82824caf82d8e87d762226c5060006dfbd97107f
   subpackages:
   - pb
+- name: github.com/nats-io/nats.go
+  version: 9f4d16fe7c2d5274d584701f59aabaa14a8ddabb
+  subpackages:
+  - encoders/builtin
+  - util
 - name: github.com/nats-io/nkeys
   version: 1546a3320a8f195a5b5c84aef8309377c2e411d5
 - name: github.com/nats-io/nuid
-  version: 3024a71c3cbe30667286099921591e6fcc328230
+  version: 4b96681fa6d28dd0ab5fe79bac63b3a493d9ee94
+- name: github.com/nats-io/stan.go
+  version: c5efdc3e2330fb9c81f34082d0c04a8de817748a
+  subpackages:
+  - pb
 - name: github.com/op/go-logging
   version: 970db520ece77730c7e4724c61121037378659d9
 - name: github.com/provideservices/provide-go
-  version: d82983a00f0b2422bcee5f56513d7287320fe6ae
+  version: f951e0a2a14a34e7410a02f2ee8240f35dda4b81
 - name: github.com/rs/cors
-  version: 76f58f330d76a55c5badc74f6212e8a15e742c77
+  version: 33ffc0734c60052d8b609f1e2d8ebbadc6cd80d8
 - name: github.com/satori/go.uuid
   version: b2ce2384e17bbe0c6d34077efa39dbab3e09123b
 - name: github.com/syndtr/goleveldb
@@ -150,13 +160,13 @@ imports:
   - leveldb/table
   - leveldb/util
 - name: github.com/ugorji/go
-  version: 2dc34c0b87808deb8e2c69e1625db4c14e5d0d4a
+  version: 4843bc3445b4cfc406820ee5343080eacc308788
   subpackages:
   - codec
 - name: github.com/vincent-petithory/dataurl
   version: 9a301d65acbb728fcc3ace14f45f511a4cfeea9c
 - name: golang.org/x/crypto
-  version: 38d8ce5564a5b71b2e3a00553993f1b9a7ae852f
+  version: 5c40567a22f818bd14a1ea7245dad9f8ef0691aa
   subpackages:
   - bcrypt
   - blowfish
@@ -167,11 +177,11 @@ imports:
   - scrypt
   - sha3
 - name: golang.org/x/net
-  version: eb5bcb51f2a31c7d5141d810b70815c05d9c9146
+  version: d28f0bde5980168871434b95cfc858db9f2a7a99
   subpackages:
   - websocket
 - name: golang.org/x/sys
-  version: 4b34438f7a67ee5f45cc6132e2bad873a20324e9
+  version: 5ed2794edfdc1c54dfb61d619c5944285f35d444
   subpackages:
   - cpu
   - unix
