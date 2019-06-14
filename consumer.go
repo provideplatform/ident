@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/kthomas/go-natsutil"
-	"github.com/nats-io/go-nats-streaming"
+	"github.com/nats-io/stan.go"
 	provide "github.com/provideservices/provide-go"
 )
 

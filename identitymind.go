@@ -68,6 +68,11 @@ func (i *IdentityMind) SubmitApplication(params map[string]interface{}) (interfa
 	return i.apiClient.SubmitApplication(params)
 }
 
+// UndecideApplication marks the consumer KYC application undecided
+func (i *IdentityMind) UndecideApplication(applicationID string, params map[string]interface{}) (interface{}, error) {
+	return i.apiClient.UndecideApplication(applicationID, params)
+}
+
 // UploadApplicationDocument attaches a document to a KYC application
 func (i *IdentityMind) UploadApplicationDocument(applicationID string, params map[string]interface{}) (interface{}, error) {
 	return i.apiClient.UploadApplicationDocument(applicationID, params)
@@ -113,6 +118,11 @@ func (i *IdentityMind) ReevaluateBusinessApplication(applicationID string) (inte
 // SubmitBusinessApplication submits a KYB application
 func (i *IdentityMind) SubmitBusinessApplication(params map[string]interface{}) (interface{}, error) {
 	return i.apiClient.SubmitBusinessApplication(params)
+}
+
+// UndecideBusinessApplication marks the consumer KYC application undecided
+func (i *IdentityMind) UndecideBusinessApplication(applicationID string, params map[string]interface{}) (interface{}, error) {
+	return i.apiClient.UndecideBusinessApplication(applicationID, params)
 }
 
 // UploadBusinessApplicationDocument attaches a document to a KYB application
@@ -172,6 +182,11 @@ func (i *IdentityMind) RejectMerchantApplication(applicationID string, params ma
 // SubmitMerchantApplication submits consumer KYC application
 func (i *IdentityMind) SubmitMerchantApplication(params map[string]interface{}) (interface{}, error) {
 	return i.apiClient.SubmitMerchantApplication(params)
+}
+
+// UndecideMerchantApplication marks the consumer KYC application undecided
+func (i *IdentityMind) UndecideMerchantApplication(applicationID string, params map[string]interface{}) (interface{}, error) {
+	return i.apiClient.UndecideMerchantApplication(applicationID, params)
 }
 
 // UploadMerchantApplicationDocument attaches a document to a KYC application
@@ -249,6 +264,11 @@ func (i *IdentityMind) UploadMerchantBusinessApplicationDocumentVerificationImag
 // ApproveMerchantBusinessApplication see https://edoc.identitymind.com/reference#feedback_1
 func (i *IdentityMind) ApproveMerchantBusinessApplication(applicationID string, params map[string]interface{}) (interface{}, error) {
 	return i.ApproveMerchantBusinessApplication(applicationID, params)
+}
+
+// UndecideMerchantBusinessApplication marks the consumer KYC application undecided
+func (i *IdentityMind) UndecideMerchantBusinessApplication(applicationID string, params map[string]interface{}) (interface{}, error) {
+	return i.apiClient.UndecideMerchantBusinessApplication(applicationID, params)
 }
 
 // ProvideMerchantApplicationResponse provides a response to a merchant KYC application prompt

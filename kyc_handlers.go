@@ -179,10 +179,21 @@ func updateKYCApplicationHandler(c *gin.Context) {
 		return
 	}
 
+	var initialStatus string
+	var newStatus *string
+	if kycApplication.Status != nil {
+		initialStatus = *kycApplication.Status
+	}
+
 	err = json.Unmarshal(buf, &kycApplication)
 	if err != nil {
 		renderError(err.Error(), 422, c)
 		return
+	}
+
+	if kycApplication.Status != nil && *kycApplication.Status != initialStatus {
+		log.Debugf("KYC application status change requested from %s to %s for KYC application %s", initialStatus, *kycApplication.Status, kycApplication.ID)
+		newStatus = stringOrNil(initialStatus)
 	}
 
 	if app != nil {
@@ -213,7 +224,7 @@ func updateKYCApplicationHandler(c *gin.Context) {
 	kycApplication.UserID = bearer.UserID
 
 	log.Debugf("Updating KYC application %s for user %s", kycApplication.ID, bearer.UserID)
-	if kycApplication.Update() {
+	if kycApplication.Update(newStatus) {
 		render(kycApplication, 202, c)
 	} else {
 		obj := map[string]interface{}{}

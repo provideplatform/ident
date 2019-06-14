@@ -57,6 +57,7 @@ type KYCAPI interface {
 	ProvideApplicationResponse(string, map[string]interface{}) (interface{}, error)
 	RejectApplication(string, map[string]interface{}) (interface{}, error)
 	SubmitApplication(map[string]interface{}) (interface{}, error)
+	UndecideApplication(string, map[string]interface{}) (interface{}, error)
 	UploadApplicationDocument(string, map[string]interface{}) (interface{}, error)
 	UploadApplicationDocumentVerificationImage(string, map[string]interface{}) (interface{}, error)
 
@@ -68,6 +69,7 @@ type KYCAPI interface {
 	SubmitBusinessApplication(map[string]interface{}) (interface{}, error)
 	ReevaluateBusinessApplication(string) (interface{}, error)
 	RejectBusinessApplication(string, map[string]interface{}) (interface{}, error)
+	UndecideBusinessApplication(string, map[string]interface{}) (interface{}, error)
 	UploadBusinessApplicationDocument(string, map[string]interface{}) (interface{}, error)
 	UploadBusinessApplicationDocumentVerificationImage(string, map[string]interface{}) (interface{}, error)
 
@@ -84,6 +86,7 @@ type KYCAPI interface {
 	UploadMerchantApplicationDocumentVerificationImage(string, map[string]interface{}) (interface{}, error)
 	ApproveMerchantApplication(string, map[string]interface{}) (interface{}, error)
 	RejectMerchantApplication(string, map[string]interface{}) (interface{}, error)
+	UndecideMerchantApplication(string, map[string]interface{}) (interface{}, error)
 	ProvideMerchantApplicationResponse(string, map[string]interface{}) (interface{}, error)
 
 	// Merchant KYB
@@ -96,6 +99,7 @@ type KYCAPI interface {
 	UploadMerchantBusinessApplicationDocument(string, map[string]interface{}) (interface{}, error)
 	UploadMerchantBusinessApplicationDocumentVerificationImage(string, map[string]interface{}) (interface{}, error)
 	ApproveMerchantBusinessApplication(string, map[string]interface{}) (interface{}, error)
+	UndecideMerchantBusinessApplication(string, map[string]interface{}) (interface{}, error)
 
 	// Merchant Transactions
 	EvaluateMerchantFraud(string, map[string]interface{}) (interface{}, error)
@@ -161,8 +165,9 @@ func (k *KYCApplication) Create(db *gorm.DB) bool {
 	return false
 }
 
-// Update an existing KYC application
-func (k *KYCApplication) Update() bool {
+// Update an existing KYC application; if status is non-nil, the application
+// status will be updated, provided the state change is valid
+func (k *KYCApplication) Update(status *string) bool {
 	db := DatabaseConnection()
 
 	if !k.Validate(db) {
@@ -180,7 +185,12 @@ func (k *KYCApplication) Update() bool {
 			})
 		}
 	} else {
-		k.submit(db)
+		payload, _ := json.Marshal(map[string]interface{}{
+			"kyc_application_id": k.ID.String(),
+			"status":             status,
+		})
+		natsConnection := getNatsStreamingConnection()
+		natsConnection.Publish(natsSubmitKYCApplicationSubject, payload)
 	}
 
 	return len(k.Errors) == 0
@@ -259,19 +269,22 @@ func (k *KYCApplication) submit(db *gorm.DB) error {
 
 		switch *k.Provider {
 		case identitymindKYCProvider:
-			if mtid, mtidOk := apiResponse["mtid"].(string); mtidOk {
-				log.Debugf("Resolved identitymind KYC application identifier '%s' for KYC application: %s", mtid, k.ID)
-				k.Identifier = stringOrNil(mtid)
-			} else {
-				desc, _ := apiResponse["error_message"].(string)
-				k.updateStatus(db, kycApplicationStatusFailed, stringOrNil(desc))
-				return fmt.Errorf("Identitymind KYC application submission failed to return valid identifier: %s; response: %s", k.ID, apiResponse)
+			if k.Identifier == nil {
+				if mtid, mtidOk := apiResponse["mtid"].(string); mtidOk {
+					log.Debugf("Resolved identitymind KYC application identifier '%s' for KYC application: %s", mtid, k.ID)
+					k.Identifier = stringOrNil(mtid)
+					k.updateStatus(db, kycApplicationStatusSubmitted, nil)
+				} else {
+					desc, _ := apiResponse["error_message"].(string)
+					k.updateStatus(db, kycApplicationStatusFailed, stringOrNil(desc))
+					return fmt.Errorf("Identitymind KYC application submission failed to return valid identifier: %s; response: %s", k.ID, apiResponse)
+				}
 			}
 		default:
 			// no-op
 		}
 	}
-	k.updateStatus(db, kycApplicationStatusSubmitted, nil)
+
 	payload, _ := json.Marshal(map[string]interface{}{
 		"kyc_application_id": k.ID.String(),
 	})
@@ -410,6 +423,90 @@ func (k *KYCApplication) updateStatus(db *gorm.DB, status string, description *s
 			})
 		}
 	}
+}
+
+func (k *KYCApplication) accept(db *gorm.DB) error {
+	if k.Status != nil && *k.Status == kycApplicationStatusAccepted {
+		return fmt.Errorf("Failed to accept application: %s; application already accepted", k.ID)
+	}
+
+	apiClient, err := k.KYCAPIClient()
+	if err != nil {
+		log.Warningf("Failed to accept application: %s; %s", k.ID, err.Error())
+		return err
+	}
+
+	if k.Identifier == nil {
+		msg := fmt.Sprintf("Failed to accept application: %s; KYC application identifier not set", k.ID)
+		log.Warning(msg)
+		return errors.New(msg)
+	}
+
+	_, err = apiClient.ApproveApplication(*k.Identifier, map[string]interface{}{})
+	if err != nil {
+		log.Warningf("Failed to accept application: %s; %s", k.ID, err.Error())
+		return err
+	}
+
+	k.updateStatus(db, kycApplicationStatusAccepted, nil)
+
+	return nil
+}
+
+func (k *KYCApplication) reject(db *gorm.DB) error {
+	if k.Status != nil && *k.Status == kycApplicationStatusRejected {
+		return fmt.Errorf("Failed to reject application: %s; application already rejected", k.ID)
+	}
+
+	apiClient, err := k.KYCAPIClient()
+	if err != nil {
+		log.Warningf("Failed to reject application: %s; %s", k.ID, err.Error())
+		return err
+	}
+
+	if k.Identifier == nil {
+		msg := fmt.Sprintf("Failed to reject application: %s; KYC application identifier not set", k.ID)
+		log.Warning(msg)
+		return errors.New(msg)
+	}
+
+	_, err = apiClient.RejectApplication(*k.Identifier, map[string]interface{}{})
+	if err != nil {
+		log.Warningf("Failed to reject application: %s; %s", k.ID, err.Error())
+		return err
+	}
+
+	k.updateStatus(db, kycApplicationStatusRejected, nil)
+
+	return nil
+}
+
+func (k *KYCApplication) undecide(db *gorm.DB) error {
+	if k.Status != nil && *k.Status == kycApplicationStatusUnderReview {
+		return fmt.Errorf("Failed to undecide application: %s; application already under review", k.ID)
+	}
+
+	apiClient, err := k.KYCAPIClient()
+	if err != nil {
+		log.Warningf("Failed to undecide application: %s; %s", k.ID, err.Error())
+		return err
+	}
+
+	if k.Identifier == nil {
+		msg := fmt.Sprintf("Failed to undecide application: %s; KYC application identifier not set", k.ID)
+		log.Warning(msg)
+		return errors.New(msg)
+	}
+
+	_, err = apiClient.UndecideApplication(*k.Identifier, map[string]interface{}{})
+	if err != nil {
+		log.Warningf("Failed to undecide application: %s; %s", k.ID, err.Error())
+		return err
+	}
+
+	k.updateStatus(db, kycApplicationStatusUnderReview, nil)
+
+	return nil
 }
 
 // KYCAPIClient returns an instance of the billing account's underlying KYCAPI

@@ -11,7 +11,7 @@ import (
 	natsutil "github.com/kthomas/go-natsutil"
 	uuid "github.com/kthomas/go.uuid"
 	identitymind "github.com/kthomas/identitymind-golang"
-	stan "github.com/nats-io/go-nats-streaming"
+	stan "github.com/nats-io/stan.go"
 )
 
 const natsCheckKYCApplicationStatusSubject = "ident.kyc.status"
@@ -111,6 +111,20 @@ func consumeSubmitKYCApplicationMsg(msg *stan.Msg) {
 		log.Warningf("Failed to submit KYC application %s during NATS %v message handling; %s", kycApplication.ID, msg.Subject, err.Error())
 		nack(msg)
 		return
+	}
+
+	status, statusOk := params["status"].(string)
+	if statusOk {
+		switch status {
+		case kycApplicationStatusAccepted:
+			kycApplication.accept(db)
+		case kycApplicationStatusRejected:
+			kycApplication.reject(db)
+		case kycApplicationStatusUnderReview:
+			kycApplication.undecide(db)
+		default:
+			// no-op
+		}
 	}
 
 	log.Debugf("KYC application submitted: %s", kycApplication.ID)

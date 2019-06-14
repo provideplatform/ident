@@ -26,8 +26,8 @@ import:
   version: master
 - package: github.com/kthomas/go.uuid
   version: master
-- package: github.com/nats-io/go-nats-streaming
-  version: 82824caf82d8e87d762226c5060006dfbd97107f
+- package: github.com/nats-io/stan.go
+  version: master
 - package: github.com/provideservices/provide-go
   version: master
 - package: github.com/kthomas/go-self-signed-cert
