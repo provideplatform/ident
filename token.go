@@ -106,13 +106,12 @@ func (t *Token) encodeJWT() (*string, error) {
 		return nil, fmt.Errorf("Failed to encode JWT; token has already been issued: %s", *t.Token)
 	}
 
-	claims := &jwt.MapClaims{
+	claims := map[string]interface{}{
 		"jti":  t.ID.String(),
 		"iat":  t.IssuedAt.Unix(),
 		"data": t.ParseData(),
 	}
 
-	var sub string
 	if t.ApplicationID != nil {
 		claims["sub"] = fmt.Sprintf("application:%s", t.ApplicationID.String())
 	} else if t.UserID != nil {
@@ -123,7 +122,7 @@ func (t *Token) encodeJWT() (*string, error) {
 		claims["exp"] = t.ExpiresAt.Unix()
 	}
 
-	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims(claims))
 	token, err := jwtToken.SignedString([]byte(*t.Secret))
 	if err != nil {
 		log.Warningf("Failed to sign JWT token; %s", err.Error())
