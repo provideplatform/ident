@@ -20,39 +20,32 @@ const natsSiaApplicationNotificationSubject = "sia.application.notification"
 const natsSiaUserNotificationSubject = "sia.user.notification"
 
 var (
-	waitGroup sync.WaitGroup
+	waitGroup              sync.WaitGroup
+	consumerNatsConnection stan.Conn
 )
 
-type apiUsageDelegate struct{}
+type apiUsageDelegate struct {
+	natsConnection stan.Conn
+}
+
+func init() {
+	// FIXME -- handle errors
+	consumerNatsConnection, _ = natsutil.GetNatsStreamingConnection(10*time.Second, nil)
+}
 
 func (d *apiUsageDelegate) Track(apiCall *provide.APICall) {
 	payload, _ := json.Marshal(apiCall)
-	natsConnection := getNatsStreamingConnection()
-	natsConnection.Publish(natsAPIUsageEventNotificationSubject, payload)
+	d.natsConnection.Publish(natsAPIUsageEventNotificationSubject, payload)
 }
 
 func runAPIUsageDaemon() {
 	delegate := new(apiUsageDelegate)
+	natsConnection, err := natsutil.GetNatsStreamingConnection(time.Second*30, nil)
+	if err != nil {
+		log.Warningf("Failed to establish NATS connection for API usage delegate; %s", err.Error())
+	}
+	delegate.natsConnection = natsConnection
 	provide.RunAPIUsageDaemon(apiUsageDaemonBufferSize, apiUsageDaemonFlushInterval, delegate)
-}
-
-func getNatsStreamingConnection() stan.Conn {
-	conn := natsutil.GetNatsStreamingConnection(func(_ stan.Conn, reason error) {
-		subscribeNatsStreaming()
-	})
-	if conn == nil {
-		return nil
-	}
-	return *conn
-}
-
-func subscribeNatsStreaming() {
-	natsConnection := getNatsStreamingConnection()
-	if natsConnection == nil {
-		return
-	}
-
-	// no-op
 }
 
 // attemptNack tries to Nack the given message if it meets basic time-based deadlettering
@@ -67,8 +60,7 @@ func attemptNack(msg *stan.Msg, timeout int64) {
 func nack(msg *stan.Msg) {
 	if msg.Redelivered {
 		log.Warningf("Nacking redelivered %d-byte message without checking subject-specific deadletter business logic on subject: %s", msg.Size(), msg.Subject)
-		natsConn := getNatsStreamingConnection()
-		natsutil.Nack(&natsConn, msg)
+		natsutil.Nack(&consumerNatsConnection, msg)
 	} else {
 		log.Debugf("nack() attempted but given NATS message has not yet been redelivered on subject: %s", msg.Subject)
 	}

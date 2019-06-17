@@ -25,24 +25,28 @@ const submitKYCApplicationAckWait = time.Minute * 1
 var instantKYCEnabled = strings.ToLower(os.Getenv("INSTANT_KYC")) == "true"
 
 func init() {
-	natsConnection := getNatsStreamingConnection()
-	if natsConnection == nil {
-		return
-	}
-
 	var waitGroup sync.WaitGroup
 
-	createNatsCheckKYCApplicationStatusSubscriptions(natsConnection, &waitGroup)
-	createNatsSubmitKYCApplicationSubscriptions(natsConnection, &waitGroup)
+	createNatsCheckKYCApplicationStatusSubscriptions(&waitGroup)
+	createNatsSubmitKYCApplicationSubscriptions(&waitGroup)
 }
 
-func createNatsSubmitKYCApplicationSubscriptions(natsConnection stan.Conn, wg *sync.WaitGroup) {
+func createNatsSubmitKYCApplicationSubscriptions(wg *sync.WaitGroup) {
 	for i := uint64(0); i < natsutil.GetNatsConsumerConcurrency(); i++ {
 		wg.Add(1)
 		go func() {
+			natsConnection, _ := natsutil.GetNatsStreamingConnection(30*time.Second, nil)
 			defer natsConnection.Close()
 
-			kycSubscription, err := natsConnection.QueueSubscribe(natsSubmitKYCApplicationSubject, natsSubmitKYCApplicationSubject, consumeSubmitKYCApplicationMsg, stan.SetManualAckMode(), stan.AckWait(submitKYCApplicationAckWait), stan.MaxInflight(natsSubmitKYCApplicationMaxInFlight), stan.DurableName(natsSubmitKYCApplicationSubject))
+			kycSubscription, err := natsConnection.QueueSubscribe(natsSubmitKYCApplicationSubject,
+				natsSubmitKYCApplicationSubject,
+				consumeSubmitKYCApplicationMsg,
+				stan.SetManualAckMode(),
+				stan.AckWait(submitKYCApplicationAckWait),
+				stan.MaxInflight(natsSubmitKYCApplicationMaxInFlight),
+				stan.DurableName(natsSubmitKYCApplicationSubject),
+			)
+
 			if err != nil {
 				log.Warningf("Failed to subscribe to NATS subject: %s", natsSubmitKYCApplicationSubject)
 				wg.Done()
@@ -56,13 +60,21 @@ func createNatsSubmitKYCApplicationSubscriptions(natsConnection stan.Conn, wg *s
 	}
 }
 
-func createNatsCheckKYCApplicationStatusSubscriptions(natsConnection stan.Conn, wg *sync.WaitGroup) {
+func createNatsCheckKYCApplicationStatusSubscriptions(wg *sync.WaitGroup) {
 	for i := uint64(0); i < natsutil.GetNatsConsumerConcurrency(); i++ {
 		wg.Add(1)
 		go func() {
+			natsConnection, _ := natsutil.GetNatsStreamingConnection(30*time.Second, nil)
 			defer natsConnection.Close()
 
-			kycSubscription, err := natsConnection.QueueSubscribe(natsCheckKYCApplicationStatusSubject, natsCheckKYCApplicationStatusSubject, consumeCheckKYCApplicationStatusMsg, stan.SetManualAckMode(), stan.AckWait(checkKYCApplicationStatusAckWait), stan.MaxInflight(natsCheckKYCApplicationStatusMaxInFlight), stan.DurableName(natsCheckKYCApplicationStatusSubject))
+			kycSubscription, err := natsConnection.QueueSubscribe(natsCheckKYCApplicationStatusSubject,
+				natsCheckKYCApplicationStatusSubject,
+				consumeCheckKYCApplicationStatusMsg,
+				stan.SetManualAckMode(),
+				stan.AckWait(checkKYCApplicationStatusAckWait),
+				stan.MaxInflight(natsCheckKYCApplicationStatusMaxInFlight),
+				stan.DurableName(natsCheckKYCApplicationStatusSubject),
+			)
 			if err != nil {
 				log.Warningf("Failed to subscribe to NATS subject: %s", natsCheckKYCApplicationStatusSubject)
 				wg.Done()

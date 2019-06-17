@@ -3,6 +3,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"time"
+
+	"github.com/kthomas/go-natsutil"
 
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
@@ -53,7 +56,7 @@ func (app *Application) Create() bool {
 			success := rowsAffected > 0
 			if success {
 				payload, _ := json.Marshal(app)
-				natsConnection := getNatsStreamingConnection()
+				natsConnection, _ := natsutil.GetNatsStreamingConnection(time.Second*10, nil)
 				natsConnection.Publish(natsSiaApplicationNotificationSubject, payload)
 			}
 			return success
