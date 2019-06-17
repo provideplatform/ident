@@ -158,8 +158,7 @@ func (k *KYCApplication) Create(db *gorm.DB) bool {
 				payload, _ := json.Marshal(map[string]interface{}{
 					"kyc_application_id": k.ID.String(),
 				})
-				natsConnection, _ := natsutil.GetNatsStreamingConnection(time.Second*30, nil)
-				natsConnection.Publish(natsSubmitKYCApplicationSubject, payload)
+				identNatsConnection.Publish(natsSubmitKYCApplicationSubject, payload)
 			}
 			return success
 		}

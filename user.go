@@ -9,7 +9,6 @@ import (
 
 	"github.com/badoux/checkmail"
 	dbconf "github.com/kthomas/go-db-config"
-	natsutil "github.com/kthomas/go-natsutil"
 	"github.com/kthomas/go.uuid"
 	provide "github.com/provideservices/provide-go"
 	"golang.org/x/crypto/bcrypt"
@@ -134,8 +133,7 @@ func (u *User) Create() bool {
 			success := rowsAffected > 0
 			if success && (u.ApplicationID == nil || *u.ApplicationID == uuid.Nil) {
 				payload, _ := json.Marshal(u)
-				natsConnection, _ := natsutil.GetNatsStreamingConnection(10*time.Second, nil)
-				natsConnection.Publish(natsSiaUserNotificationSubject, payload)
+				identNatsConnection.Publish(natsSiaUserNotificationSubject, payload)
 			}
 			return success
 		}

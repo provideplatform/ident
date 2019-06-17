@@ -22,6 +22,7 @@ const natsSiaUserNotificationSubject = "sia.user.notification"
 var (
 	waitGroup              sync.WaitGroup
 	consumerNatsConnection stan.Conn
+	identNatsConnection    stan.Conn
 )
 
 type apiUsageDelegate struct {
@@ -31,6 +32,7 @@ type apiUsageDelegate struct {
 func init() {
 	// FIXME -- handle errors
 	consumerNatsConnection, _ = natsutil.GetNatsStreamingConnection(10*time.Second, nil)
+	identNatsConnection, _ = natsutil.GetNatsStreamingConnection(30*time.Second, nil)
 }
 
 func (d *apiUsageDelegate) Track(apiCall *provide.APICall) {
