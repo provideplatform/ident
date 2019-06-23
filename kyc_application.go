@@ -5,11 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
-	natsutil "github.com/kthomas/go-natsutil"
 	uuid "github.com/kthomas/go.uuid"
 	identitymind "github.com/kthomas/identitymind-golang"
 	provide "github.com/provideservices/provide-go"
@@ -158,7 +156,7 @@ func (k *KYCApplication) Create(db *gorm.DB) bool {
 				payload, _ := json.Marshal(map[string]interface{}{
 					"kyc_application_id": k.ID.String(),
 				})
-				identNatsConnection.Publish(natsSubmitKYCApplicationSubject, payload)
+				NATSPublish(natsSubmitKYCApplicationSubject, payload)
 			}
 			return success
 		}
@@ -190,8 +188,7 @@ func (k *KYCApplication) Update(status *string) bool {
 			"kyc_application_id": k.ID.String(),
 			"status":             status,
 		})
-		natsConnection, _ := natsutil.GetNatsStreamingConnection(time.Second*30, nil)
-		natsConnection.Publish(natsSubmitKYCApplicationSubject, payload)
+		NATSPublish(natsSubmitKYCApplicationSubject, payload)
 	}
 
 	return len(k.Errors) == 0
@@ -289,9 +286,7 @@ func (k *KYCApplication) submit(db *gorm.DB) error {
 	payload, _ := json.Marshal(map[string]interface{}{
 		"kyc_application_id": k.ID.String(),
 	})
-
-	natsConnection, _ := natsutil.GetNatsStreamingConnection(time.Second*30, nil)
-	natsConnection.Publish(natsCheckKYCApplicationStatusSubject, payload)
+	NATSPublish(natsCheckKYCApplicationStatusSubject, payload)
 	return nil
 }
 

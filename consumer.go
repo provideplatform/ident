@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"sync"
 	"time"
 
 	"github.com/kthomas/go-natsutil"
@@ -19,34 +18,41 @@ const natsAPIUsageEventNotificationMaxInFlight = 32
 const natsSiaApplicationNotificationSubject = "sia.application.notification"
 const natsSiaUserNotificationSubject = "sia.user.notification"
 
-var (
-	waitGroup              sync.WaitGroup
-	consumerNatsConnection stan.Conn
-	identNatsConnection    stan.Conn
-)
-
 type apiUsageDelegate struct {
-	natsConnection stan.Conn
+	natsConnection *stan.Conn
 }
 
-func init() {
-	// FIXME -- handle errors
-	consumerNatsConnection, _ = natsutil.GetNatsStreamingConnection(10*time.Second, nil)
-	identNatsConnection, _ = natsutil.GetNatsStreamingConnection(30*time.Second, nil)
-}
-
+// Track receives an API call from the API daemon's underlying buffered channel for local processing
 func (d *apiUsageDelegate) Track(apiCall *provide.APICall) {
 	payload, _ := json.Marshal(apiCall)
-	d.natsConnection.Publish(natsAPIUsageEventNotificationSubject, payload)
+	if d.natsConnection != nil {
+		(*d.natsConnection).PublishAsync(natsAPIUsageEventNotificationSubject, payload, func(_ string, err error) {
+			if err != nil {
+				log.Warningf("Failed to asnychronously publish %s; %s", natsAPIUsageEventNotificationSubject, err.Error())
+				d.initNatsStreamingConnection()
+				defer d.Track(apiCall)
+			}
+		})
+	} else {
+		log.Warningf("Failed to asnychronously publish %s; no NATS streaming connection", natsAPIUsageEventNotificationSubject)
+	}
 }
 
-func runAPIUsageDaemon() {
-	delegate := new(apiUsageDelegate)
-	natsConnection, err := natsutil.GetNatsStreamingConnection(time.Second*30, nil)
+func (d *apiUsageDelegate) initNatsStreamingConnection() {
+	natsConnection, err := natsutil.GetNatsStreamingConnection(time.Second*10, func(_ stan.Conn, err error) {
+		d.initNatsStreamingConnection()
+	})
 	if err != nil {
 		log.Warningf("Failed to establish NATS connection for API usage delegate; %s", err.Error())
+		return
 	}
-	delegate.natsConnection = natsConnection
+	d.natsConnection = natsConnection
+}
+
+// runAPIUsageDaemon runs the usage daemon
+func runAPIUsageDaemon() {
+	delegate := new(apiUsageDelegate)
+	delegate.initNatsStreamingConnection()
 	provide.RunAPIUsageDaemon(apiUsageDaemonBufferSize, apiUsageDaemonFlushInterval, delegate)
 }
 
@@ -62,7 +68,7 @@ func attemptNack(msg *stan.Msg, timeout int64) {
 func nack(msg *stan.Msg) {
 	if msg.Redelivered {
 		log.Warningf("Nacking redelivered %d-byte message without checking subject-specific deadletter business logic on subject: %s", msg.Size(), msg.Subject)
-		natsutil.Nack(&consumerNatsConnection, msg)
+		natsutil.Nack(SharedNatsConnection, msg)
 	} else {
 		log.Debugf("nack() attempted but given NATS message has not yet been redelivered on subject: %s", msg.Subject)
 	}

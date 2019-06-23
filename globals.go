@@ -6,6 +6,7 @@ import (
 
 	logger "github.com/kthomas/go-logger"
 	selfsignedcert "github.com/kthomas/go-self-signed-cert"
+	stan "github.com/nats-io/stan.go"
 )
 
 var (
@@ -19,6 +20,9 @@ var (
 	gpgPublicKey  string
 	gpgPrivateKey string
 	gpgPassword   string
+
+	// SharedNatsConnection is a cached connection used by most NATS Publish calls
+	SharedNatsConnection *stan.Conn
 
 	siaAPIKey string
 )
@@ -140,6 +144,11 @@ eZ0L
 		`
 
 	gpgPassword = "walletencryptionkey"
+
+	err := EstablishNATSStreamingConnection()
+	if err != nil {
+		log.Panicf("Failed to established NATS streaming connection; %s", err.Error())
+	}
 }
 
 func buildListenAddr() string {

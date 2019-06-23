@@ -33,58 +33,27 @@ func init() {
 
 func createNatsSubmitKYCApplicationSubscriptions(wg *sync.WaitGroup) {
 	for i := uint64(0); i < natsutil.GetNatsConsumerConcurrency(); i++ {
-		wg.Add(1)
-		go func() {
-			natsConnection, _ := natsutil.GetNatsStreamingConnection(30*time.Second, nil)
-			defer natsConnection.Close()
-
-			kycSubscription, err := natsConnection.QueueSubscribe(natsSubmitKYCApplicationSubject,
-				natsSubmitKYCApplicationSubject,
-				consumeSubmitKYCApplicationMsg,
-				stan.SetManualAckMode(),
-				stan.AckWait(submitKYCApplicationAckWait),
-				stan.MaxInflight(natsSubmitKYCApplicationMaxInFlight),
-				stan.DurableName(natsSubmitKYCApplicationSubject),
-			)
-
-			if err != nil {
-				log.Warningf("Failed to subscribe to NATS subject: %s", natsSubmitKYCApplicationSubject)
-				wg.Done()
-				return
-			}
-			defer kycSubscription.Unsubscribe()
-			log.Debugf("Subscribed to NATS subject: %s", natsSubmitKYCApplicationSubject)
-
-			wg.Wait()
-		}()
+		natsutil.RequireNatsStreamingSubscription(wg,
+			submitKYCApplicationAckWait,
+			natsSubmitKYCApplicationSubject,
+			natsSubmitKYCApplicationSubject,
+			consumeSubmitKYCApplicationMsg,
+			submitKYCApplicationAckWait,
+			natsSubmitKYCApplicationMaxInFlight,
+		)
 	}
 }
 
 func createNatsCheckKYCApplicationStatusSubscriptions(wg *sync.WaitGroup) {
 	for i := uint64(0); i < natsutil.GetNatsConsumerConcurrency(); i++ {
-		wg.Add(1)
-		go func() {
-			natsConnection, _ := natsutil.GetNatsStreamingConnection(30*time.Second, nil)
-			defer natsConnection.Close()
-
-			kycSubscription, err := natsConnection.QueueSubscribe(natsCheckKYCApplicationStatusSubject,
-				natsCheckKYCApplicationStatusSubject,
-				consumeCheckKYCApplicationStatusMsg,
-				stan.SetManualAckMode(),
-				stan.AckWait(checkKYCApplicationStatusAckWait),
-				stan.MaxInflight(natsCheckKYCApplicationStatusMaxInFlight),
-				stan.DurableName(natsCheckKYCApplicationStatusSubject),
-			)
-			if err != nil {
-				log.Warningf("Failed to subscribe to NATS subject: %s", natsCheckKYCApplicationStatusSubject)
-				wg.Done()
-				return
-			}
-			defer kycSubscription.Unsubscribe()
-			log.Debugf("Subscribed to NATS subject: %s", natsCheckKYCApplicationStatusSubject)
-
-			wg.Wait()
-		}()
+		natsutil.RequireNatsStreamingSubscription(wg,
+			checkKYCApplicationStatusAckWait,
+			natsCheckKYCApplicationStatusSubject,
+			natsCheckKYCApplicationStatusSubject,
+			consumeCheckKYCApplicationStatusMsg,
+			checkKYCApplicationStatusAckWait,
+			natsCheckKYCApplicationStatusMaxInFlight,
+		)
 	}
 }
 

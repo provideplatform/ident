@@ -53,7 +53,7 @@ func (app *Application) Create() bool {
 			success := rowsAffected > 0
 			if success {
 				payload, _ := json.Marshal(app)
-				identNatsConnection.Publish(natsSiaApplicationNotificationSubject, payload)
+				NATSPublish(natsSiaApplicationNotificationSubject, payload)
 			}
 			return success
 		}

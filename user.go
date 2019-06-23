@@ -133,7 +133,7 @@ func (u *User) Create() bool {
 			success := rowsAffected > 0
 			if success && (u.ApplicationID == nil || *u.ApplicationID == uuid.Nil) {
 				payload, _ := json.Marshal(u)
-				identNatsConnection.Publish(natsSiaUserNotificationSubject, payload)
+				NATSPublish(natsSiaUserNotificationSubject, payload)
 			}
 			return success
 		}
