@@ -1,8 +1,8 @@
 FROM golang:1.11
 
 RUN mkdir -p /go/src/github.com/provideapp
-ADD . /go/src/github.com/provideapp/bookie
-WORKDIR /go/src/github.com/provideapp/bookie
+ADD . /go/src/github.com/provideapp/ident
+WORKDIR /go/src/github.com/provideapp/ident
 
 RUN curl https://glide.sh/get | sh
 RUN glide install
