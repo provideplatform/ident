@@ -1,5 +1,5 @@
 hash: a046009166fde1047feed55e0c60ad817a2c314c614d19b27ebd0416d5424a91
-updated: 2019-06-24T06:11:06.686366-04:00
+updated: 2019-06-27T04:01:19.937722-04:00
 imports:
 - name: github.com/allegro/bigcache
   version: e24eb225f15679bbe54f91bfa7da3b00e59b9768
@@ -97,7 +97,7 @@ imports:
 - name: github.com/kthomas/go-logger
   version: 01c36065851341304751234b081327cf58728dba
 - name: github.com/kthomas/go-natsutil
-  version: 3bcdee074f95dab3dce3ca83de2ee3c9cc72b0c5
+  version: 56d7538f4243a3810b3a5b120d097cab8afae2ea
 - name: github.com/kthomas/go-self-signed-cert
   version: a6356df979a5303e6d488550cd7c607a44b66dba
 - name: github.com/kthomas/go.uuid
