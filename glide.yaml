@@ -20,6 +20,8 @@ import:
   version: ~1.9.2
   subpackages:
   - dialects/postgres
+- package: github.com/sdwolfe32/trumail
+  version: master
 - package: github.com/kthomas/go-db-config
 - package: github.com/kthomas/go-logger
 - package: github.com/kthomas/go-natsutil

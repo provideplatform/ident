@@ -1,5 +1,5 @@
-hash: a046009166fde1047feed55e0c60ad817a2c314c614d19b27ebd0416d5424a91
-updated: 2019-06-27T04:01:19.937722-04:00
+hash: ed4c3515b16e9337a740db63a90f74160fb1921d12dc27d47696eb1e37a717b6
+updated: 2019-06-28T09:48:20.382868-04:00
 imports:
 - name: github.com/allegro/bigcache
   version: e24eb225f15679bbe54f91bfa7da3b00e59b9768
@@ -135,6 +135,10 @@ imports:
   version: 33ffc0734c60052d8b609f1e2d8ebbadc6cd80d8
 - name: github.com/satori/go.uuid
   version: b2ce2384e17bbe0c6d34077efa39dbab3e09123b
+- name: github.com/sdwolfe32/trumail
+  version: 5bf27f7ac60a89461dc6c775c78fce14038a29e5
+  subpackages:
+  - verifier
 - name: github.com/syndtr/goleveldb
   version: c3a204f8e96543bb0cc090385c001078f184fc46
   subpackages:
@@ -170,6 +174,7 @@ imports:
 - name: golang.org/x/net
   version: d28f0bde5980168871434b95cfc858db9f2a7a99
   subpackages:
+  - idna
   - websocket
 - name: golang.org/x/sys
   version: 15dcb6c0061f497a3f66e3ea034b629c6dd4d99e
@@ -179,6 +184,13 @@ imports:
   - windows
   - windows/registry
   - windows/svc/eventlog
+- name: golang.org/x/text
+  version: 342b2e1fbaa52c93f31447ad2c6abc048c63e475
+  subpackages:
+  - secure/bidirule
+  - transform
+  - unicode/bidi
+  - unicode/norm
 - name: gopkg.in/go-playground/validator.v8
   version: 5f1438d3fca68893a817e4a66806cea46a9e4ebf
 - name: gopkg.in/natefinch/npipe.v2
