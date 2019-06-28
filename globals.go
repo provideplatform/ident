@@ -17,6 +17,10 @@ var (
 	privateKeyPath  string
 	requireTLS      bool
 
+	emailVerificationFromDomain  string
+	emailVerificationFromAddress string
+	performEmailVerification     bool
+
 	gpgPublicKey  string
 	gpgPrivateKey string
 	gpgPassword   string
@@ -38,6 +42,14 @@ func init() {
 		lvl = "INFO"
 	}
 	log = logger.NewLogger("ident", lvl, true)
+
+	if os.Getenv("EMAIL_VERIFICATION_FROM_DOMAIN") != "" {
+		emailVerificationFromDomain = os.Getenv("EMAIL_VERIFICATION_FROM_DOMAIN")
+	}
+	if os.Getenv("EMAIL_VERIFICATION_FROM_ADDRESS") != "" {
+		emailVerificationFromAddress = os.Getenv("EMAIL_VERIFICATION_FROM_ADDRESS")
+	}
+	performEmailVerification = emailVerificationFromDomain != "" && emailVerificationFromAddress != ""
 
 	if os.Getenv("SIA_API_KEY") != "" {
 		siaAPIKey = os.Getenv("SIA_API_KEY")

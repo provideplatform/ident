@@ -11,6 +11,7 @@ import (
 	dbconf "github.com/kthomas/go-db-config"
 	"github.com/kthomas/go.uuid"
 	provide "github.com/provideservices/provide-go"
+	trumail "github.com/sdwolfe32/trumail/verifier"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -174,6 +175,20 @@ func (u *User) Validate() bool {
 				u.Errors = append(u.Errors, &provide.Error{
 					Message: stringOrNil(fmt.Sprintf("invalid email address: %s; %s", *u.Email, err.Error())),
 				})
+			}
+
+			if performEmailVerification {
+				emailVerifier := trumail.NewVerifier(emailVerificationFromDomain, emailVerificationFromAddress)
+				lookup, err := emailVerifier.Verify(*u.Email)
+				if err != nil {
+					u.Errors = append(u.Errors, &provide.Error{
+						Message: stringOrNil(fmt.Sprintf("email address verification failed: %s; %s", *u.Email, err.Error())),
+					})
+				} else if !lookup.Deliverable {
+					u.Errors = append(u.Errors, &provide.Error{
+						Message: stringOrNil(fmt.Sprintf("email address verification failed: %s; undeliverable", *u.Email)),
+					})
+				}
 			}
 		}
 		u.rehashPassword()
