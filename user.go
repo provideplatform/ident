@@ -163,38 +163,50 @@ func (u *User) Update() bool {
 	return len(u.Errors) == 0
 }
 
+func (u *User) verifyEmailAddress() bool {
+	var validEmailAddress bool
+	if u.Email != nil {
+		u.Email = stringOrNil(strings.ToLower(*u.Email))
+		err := checkmail.ValidateFormat(*u.Email)
+		validEmailAddress = err == nil
+		if err != nil {
+			u.Errors = append(u.Errors, &provide.Error{
+				Message: stringOrNil(fmt.Sprintf("invalid email address: %s; %s", *u.Email, err.Error())),
+			})
+		}
+
+		if performEmailVerification {
+			emailVerifier := trumail.NewVerifier(emailVerificationFromDomain, emailVerificationFromAddress)
+			lookup, err := emailVerifier.Verify(*u.Email)
+			if err != nil {
+				validEmailAddress = false
+				u.Errors = append(u.Errors, &provide.Error{
+					Message: stringOrNil(fmt.Sprintf("email address verification failed: %s; %s", *u.Email, err.Error())),
+				})
+			} else if !lookup.Deliverable && !lookup.CatchAll {
+				validEmailAddress = false
+				u.Errors = append(u.Errors, &provide.Error{
+					Message: stringOrNil(fmt.Sprintf("email address verification failed: %s; undeliverable", *u.Email)),
+				})
+			} else if lookup.CatchAll {
+				validEmailAddress = false
+				u.Errors = append(u.Errors, &provide.Error{
+					Message: stringOrNil(fmt.Sprintf("email address verification failed: %s; mail server exists but inbox is invalid", *u.Email)),
+				})
+			} else {
+				validEmailAddress = lookup.Deliverable
+			}
+		}
+	}
+	return validEmailAddress
+}
+
 // Validate a user for persistence
 func (u *User) Validate() bool {
 	u.Errors = make([]*provide.Error, 0)
 	db := DatabaseConnection()
 	if db.NewRecord(u) {
-		if u.Email != nil {
-			u.Email = stringOrNil(strings.ToLower(*u.Email))
-			err := checkmail.ValidateFormat(*u.Email)
-			if err != nil {
-				u.Errors = append(u.Errors, &provide.Error{
-					Message: stringOrNil(fmt.Sprintf("invalid email address: %s; %s", *u.Email, err.Error())),
-				})
-			}
-
-			if performEmailVerification {
-				emailVerifier := trumail.NewVerifier(emailVerificationFromDomain, emailVerificationFromAddress)
-				lookup, err := emailVerifier.Verify(*u.Email)
-				if err != nil {
-					u.Errors = append(u.Errors, &provide.Error{
-						Message: stringOrNil(fmt.Sprintf("email address verification failed: %s; %s", *u.Email, err.Error())),
-					})
-				} else if !lookup.Deliverable && !lookup.CatchAll {
-					u.Errors = append(u.Errors, &provide.Error{
-						Message: stringOrNil(fmt.Sprintf("email address verification failed: %s; undeliverable", *u.Email)),
-					})
-				} else if lookup.CatchAll {
-					u.Errors = append(u.Errors, &provide.Error{
-						Message: stringOrNil(fmt.Sprintf("email address verification failed: %s; mail server exists but inbox is invalid", *u.Email)),
-					})
-				}
-			}
-		}
+		u.verifyEmailAddress()
 		u.rehashPassword()
 	}
 	return len(u.Errors) == 0
