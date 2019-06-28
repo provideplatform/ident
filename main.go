@@ -20,7 +20,6 @@ const termsOfServiceUpdatedAt = "2018-10-19T00:00:00.000000"
 func main() {
 	migrateSchema()
 	runAPIUsageDaemon()
-	verifyUserEmailAddresses()
 
 	r := gin.Default()
 	r.Use(gin.Recovery())
