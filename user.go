@@ -184,9 +184,13 @@ func (u *User) Validate() bool {
 					u.Errors = append(u.Errors, &provide.Error{
 						Message: stringOrNil(fmt.Sprintf("email address verification failed: %s; %s", *u.Email, err.Error())),
 					})
-				} else if !lookup.Deliverable {
+				} else if !lookup.Deliverable && !lookup.CatchAll {
 					u.Errors = append(u.Errors, &provide.Error{
 						Message: stringOrNil(fmt.Sprintf("email address verification failed: %s; undeliverable", *u.Email)),
+					})
+				} else if !lookup.Deliverable && lookup.CatchAll {
+					u.Errors = append(u.Errors, &provide.Error{
+						Message: stringOrNil(fmt.Sprintf("email address verification failed: %s; mail server exists but inbox is invalid", *u.Email)),
 					})
 				}
 			}
