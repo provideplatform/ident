@@ -30,6 +30,13 @@ func migrateSchema() {
 		db.Model(&Application{}).AddForeignKey("user_id", "users(id)", "SET NULL", "CASCADE")
 		db.Model(&User{}).AddForeignKey("application_id", "applications(id)", "SET NULL", "CASCADE")
 
+		db.AutoMigrate(&KYCApplication{})
+		db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_application_id", "application_id")
+		db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_user_id", "user_id")
+		db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_identifier", "identifier")
+		db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_status", "status")
+		db.Model(&KYCApplication{}).AddForeignKey("user_id", "users(id)", "SET NULL", "CASCADE")
+		
 		db.AutoMigrate(&Token{})
 		db.Model(&Token{}).AddIndex("idx_tokens_token", "token")
 		db.Model(&Token{}).AddForeignKey("application_id", "applications(id)", "SET NULL", "CASCADE")
