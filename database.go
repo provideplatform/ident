@@ -5,7 +5,7 @@ import (
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
-	"github.com/kthomas/go-db-config"
+	dbconf "github.com/kthomas/go-db-config"
 )
 
 var (
@@ -23,6 +23,7 @@ func migrateSchema() {
 		db.Model(&User{}).AddIndex("idx_users_application_id", "application_id")
 		db.Model(&User{}).AddIndex("idx_users_email", "email")
 		db.Model(&User{}).AddUniqueIndex("idx_users_application_id_email", "application_id", "email")
+		db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_null_application_id ON users (application_id, email) WHERE application_id IS NULL;")
 
 		db.AutoMigrate(&Application{})
 		db.Model(&Application{}).AddIndex("idx_applications_hidden", "hidden")
@@ -36,7 +37,7 @@ func migrateSchema() {
 		db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_identifier", "identifier")
 		db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_status", "status")
 		db.Model(&KYCApplication{}).AddForeignKey("user_id", "users(id)", "SET NULL", "CASCADE")
-		
+
 		db.AutoMigrate(&Token{})
 		db.Model(&Token{}).AddIndex("idx_tokens_token", "token")
 		db.Model(&Token{}).AddForeignKey("application_id", "applications(id)", "SET NULL", "CASCADE")
