@@ -25,7 +25,7 @@ type apiUsageDelegate struct {
 // Track receives an API call from the API daemon's underlying buffered channel for local processing
 func (d *apiUsageDelegate) Track(apiCall *provide.APICall) {
 	payload, _ := json.Marshal(apiCall)
-	if d.natsConnection != nil {
+	if d != nil && d.natsConnection != nil {
 		(*d.natsConnection).PublishAsync(natsAPIUsageEventNotificationSubject, payload, func(_ string, err error) {
 			if err != nil {
 				log.Warningf("Failed to asnychronously publish %s; %s", natsAPIUsageEventNotificationSubject, err.Error())
