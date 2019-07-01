@@ -9,7 +9,7 @@ import (
 
 	"github.com/badoux/checkmail"
 	dbconf "github.com/kthomas/go-db-config"
-	"github.com/kthomas/go.uuid"
+	uuid "github.com/kthomas/go.uuid"
 	provide "github.com/provideservices/provide-go"
 	trumail "github.com/sdwolfe32/trumail/verifier"
 	"golang.org/x/crypto/bcrypt"
@@ -176,25 +176,35 @@ func (u *User) verifyEmailAddress() bool {
 		}
 
 		if performEmailVerification {
-			emailVerifier := trumail.NewVerifier(emailVerificationFromDomain, emailVerificationFromAddress)
-			lookup, err := emailVerifier.Verify(*u.Email)
-			if err != nil {
-				validEmailAddress = false
+			i := uint(0)
+			var emailVerificationErr error
+			for i < emailVerificationAttempts {
+				emailVerificationErr = nil
+				emailVerifier := trumail.NewVerifier(emailVerificationFromDomain, emailVerificationFromAddress)
+				lookup, err := emailVerifier.Verify(*u.Email)
+				if err != nil {
+					validEmailAddress = false
+					emailVerificationErr = fmt.Errorf("email address verification failed: %s; %s", *u.Email, err.Error())
+				} else if !lookup.Deliverable && !lookup.CatchAll {
+					validEmailAddress = false
+					emailVerificationErr = fmt.Errorf("email address verification failed: %s; undeliverable", *u.Email)
+				} else if lookup.CatchAll {
+					validEmailAddress = false
+					emailVerificationErr = fmt.Errorf("email address verification failed: %s; mail server exists but inbox is invalid", *u.Email)
+				} else {
+					validEmailAddress = lookup.Deliverable
+				}
+
+				if validEmailAddress {
+					break
+				}
+				i += 1
+			}
+
+			if emailVerificationErr != nil {
 				u.Errors = append(u.Errors, &provide.Error{
-					Message: stringOrNil(fmt.Sprintf("email address verification failed: %s; %s", *u.Email, err.Error())),
+					Message: stringOrNil(emailVerificationErr.Error()),
 				})
-			} else if !lookup.Deliverable && !lookup.CatchAll {
-				validEmailAddress = false
-				u.Errors = append(u.Errors, &provide.Error{
-					Message: stringOrNil(fmt.Sprintf("email address verification failed: %s; undeliverable", *u.Email)),
-				})
-			} else if lookup.CatchAll {
-				validEmailAddress = false
-				u.Errors = append(u.Errors, &provide.Error{
-					Message: stringOrNil(fmt.Sprintf("email address verification failed: %s; mail server exists but inbox is invalid", *u.Email)),
-				})
-			} else {
-				validEmailAddress = lookup.Deliverable
 			}
 		}
 	}

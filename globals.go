@@ -3,11 +3,14 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	logger "github.com/kthomas/go-logger"
 	selfsignedcert "github.com/kthomas/go-self-signed-cert"
 	stan "github.com/nats-io/stan.go"
 )
+
+const defaultEmailVerificationAttempts = uint(3)
 
 var (
 	log        *logger.Logger
@@ -17,6 +20,7 @@ var (
 	privateKeyPath  string
 	requireTLS      bool
 
+	emailVerificationAttempts    uint
 	emailVerificationFromDomain  string
 	emailVerificationFromAddress string
 	performEmailVerification     bool
@@ -43,6 +47,15 @@ func init() {
 	}
 	log = logger.NewLogger("ident", lvl, true)
 
+	if os.Getenv("EMAIL_VERIFICATION_ATTEMPTS") != "" {
+		attempts, err := strconv.Atoi(os.Getenv("EMAIL_VERIFICATION_ATTEMPTS"))
+		if err != nil {
+			log.Panicf("Failed to parse EMAIL_VERIFICATION_ATTEMPTS from environment; %s", err.Error())
+		}
+		emailVerificationAttempts = uint(attempts)
+	} else {
+		emailVerificationAttempts = defaultEmailVerificationAttempts
+	}
 	if os.Getenv("EMAIL_VERIFICATION_FROM_DOMAIN") != "" {
 		emailVerificationFromDomain = os.Getenv("EMAIL_VERIFICATION_FROM_DOMAIN")
 	}
