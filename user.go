@@ -198,7 +198,7 @@ func (u *User) verifyEmailAddress() bool {
 				if validEmailAddress {
 					break
 				}
-				i += 1
+				i++
 			}
 
 			if emailVerificationErr != nil {
