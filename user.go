@@ -181,10 +181,25 @@ func (u *User) verifyEmailAddress() bool {
 			for i < emailVerificationAttempts {
 				emailVerificationErr = nil
 				emailVerifier := trumail.NewVerifier(emailVerificationFromDomain, emailVerificationFromAddress)
-				_, err := emailVerifier.Verify(*u.Email)
-				validEmailAddress = err == nil
+				lookup, err := emailVerifier.Verify(*u.Email)
 				if err != nil {
+					validEmailAddress = false
 					emailVerificationErr = fmt.Errorf("email address verification failed: %s; %s", *u.Email, err.Error())
+				} else if !lookup.Deliverable && !lookup.CatchAll {
+					validEmailAddress = false
+					emailVerificationErr = fmt.Errorf("email address verification failed: %s; undeliverable", *u.Email)
+				} else if lookup.CatchAll {
+					validEmailAddress = false
+					emailVerificationErr = fmt.Errorf("email address verification failed: %s; mail server exists but inbox is invalid", *u.Email)
+				} else {
+					validEmailAddress = lookup.Deliverable
+					if !validEmailAddress {
+						emailVerificationErr = fmt.Errorf("email address verification failed: %s; undeliverable", *u.Email)
+					}
+				}
+
+				if validEmailAddress {
+					break
 				}
 				i++
 			}

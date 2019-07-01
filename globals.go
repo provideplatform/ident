@@ -10,7 +10,7 @@ import (
 	stan "github.com/nats-io/stan.go"
 )
 
-const defaultEmailVerificationAttempts = uint(3)
+const defaultEmailVerificationAttempts = uint(2)
 
 var (
 	log        *logger.Logger
