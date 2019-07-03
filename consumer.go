@@ -39,11 +39,9 @@ func (d *apiUsageDelegate) Track(apiCall *provide.APICall) {
 }
 
 func (d *apiUsageDelegate) initNatsStreamingConnection() {
-	natsConnection, err := natsutil.GetNatsStreamingConnection(time.Second*10, func(_ stan.Conn, err error) {
-		d.initNatsStreamingConnection()
-	})
+	natsConnection, err := GetSharedNatsStreamingConnection()
 	if err != nil {
-		log.Warningf("Failed to establish NATS connection for API usage delegate; %s", err.Error())
+		log.Warningf("Failed to resolve shared NATS connection for API usage delegate; %s", err.Error())
 		return
 	}
 	d.natsConnection = natsConnection
