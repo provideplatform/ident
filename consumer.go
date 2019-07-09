@@ -43,7 +43,7 @@ func (d *apiUsageDelegate) initNatsStreamingConnection() {
 		d.initNatsStreamingConnection()
 	})
 	if err != nil {
-		Log.Warningf("Failed to establish NATS connection for API usage delegate; %s", err.Error())
+		log.Warningf("Failed to establish NATS connection for API usage delegate; %s", err.Error())
 		return
 	}
 	d.natsConnection = natsConnection
