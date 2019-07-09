@@ -14,7 +14,7 @@ const apiUsageDaemonFlushInterval = 30000
 
 const natsDefaultClusterID = "provide"
 const natsAPIUsageEventNotificationSubject = "api.usage.event"
-const natsAPIUsageEventNotificationMaxInFlight = 32
+const natsAPIUsageEventNotificationMaxInFlight = 1024
 const natsSiaApplicationNotificationSubject = "sia.application.notification"
 const natsSiaUserNotificationSubject = "sia.user.notification"
 
@@ -39,9 +39,11 @@ func (d *apiUsageDelegate) Track(apiCall *provide.APICall) {
 }
 
 func (d *apiUsageDelegate) initNatsStreamingConnection() {
-	natsConnection, err := GetSharedNatsStreamingConnection()
+	natsConnection, err := natsutil.GetNatsStreamingConnection(time.Second*10, func(_ stan.Conn, err error) {
+		d.initNatsStreamingConnection()
+	})
 	if err != nil {
-		log.Warningf("Failed to resolve shared NATS connection for API usage delegate; %s", err.Error())
+		Log.Warningf("Failed to establish NATS connection for API usage delegate; %s", err.Error())
 		return
 	}
 	d.natsConnection = natsConnection
