@@ -35,3 +35,5 @@ import:
 - package: github.com/kthomas/go-self-signed-cert
 - package: github.com/kthomas/identitymind-golang
   version: master
+ignore:
+- crypto/ed25519
