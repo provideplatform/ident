@@ -8,12 +8,16 @@ import (
 	"time"
 
 	"github.com/badoux/checkmail"
+	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
 	provide "github.com/provideservices/provide-go"
 	trumail "github.com/sdwolfe32/trumail/verifier"
 	"golang.org/x/crypto/bcrypt"
 )
+
+const defaultResetPasswordTokenTimeout = time.Hour * 1
 
 func init() {
 	db := dbconf.DatabaseConnection()
@@ -30,9 +34,10 @@ type User struct {
 	ApplicationID          *uuid.UUID `sql:"type:uuid" json:"-"`
 	Name                   *string    `sql:"not null" json:"name"`
 	Email                  *string    `sql:"not null" json:"email"`
-	Password               *string    `sql:"not null" json:"password"`
+	Password               *string    `sql:"not null" json:"-"`
 	PrivacyPolicyAgreedAt  *time.Time `json:"privacy_policy_agreed_at"`
 	TermsOfServiceAgreedAt *time.Time `json:"terms_of_service_agreed_at"`
+	ResetPasswordToken     *string    `json:"-"`
 }
 
 // UserResponse is preferred over writing an entire User instance as JSON
@@ -235,6 +240,7 @@ func (u *User) rehashPassword() {
 			})
 		} else {
 			u.Password = stringOrNil(string(hashedPassword))
+			u.ResetPasswordToken = nil
 		}
 	} else {
 		u.Errors = append(u.Errors, &provide.Error{
@@ -265,5 +271,49 @@ func (u *User) AsResponse() *UserResponse {
 		CreatedAt: u.CreatedAt,
 		Name:      *u.Name,
 		Email:     *u.Email,
+	}
+}
+
+// CreateResetPasswordToken creates a reset password token
+func (u *User) CreateResetPasswordToken(db *gorm.DB) bool {
+	issuedAt := time.Now()
+	tokenID, err := uuid.NewV4()
+	if err != nil {
+		log.Warningf("Failed to generate reset password JWT token; %s", err.Error())
+		return false
+	}
+	claims := map[string]interface{}{
+		"jti": tokenID,
+		"exp": issuedAt.Add(defaultResetPasswordTokenTimeout).Unix(),
+		"iat": issuedAt.Unix(),
+		"sub": fmt.Sprintf("user:%s", u.ID.String()),
+	}
+
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims(claims))
+	token, err := jwtToken.SignedString([]byte{})
+	if err != nil {
+		log.Warningf("Failed to sign reset password JWT token; %s", err.Error())
+		return false
+	}
+
+	u.ResetPasswordToken = stringOrNil(token)
+
+	result := db.Save(u)
+	errors := result.GetErrors()
+	if len(errors) > 0 {
+		for _, err := range errors {
+			u.Errors = append(u.Errors, &provide.Error{
+				Message: stringOrNil(err.Error()),
+			})
+		}
+		return false
+	}
+	return true
+}
+
+// ResetPasswordTokenResponse marshals a reset password token response
+func (u *User) ResetPasswordTokenResponse() map[string]interface{} {
+	return map[string]interface{}{
+		"reset_password_token": u.ResetPasswordToken,
 	}
 }
