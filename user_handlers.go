@@ -306,7 +306,8 @@ func userResetPasswordHandler(c *gin.Context) {
 		return
 	}
 
-	jwtToken, err := jwt.Parse(c.Param("token"), func(_jwtToken *jwt.Token) (interface{}, error) {
+	rawToken := c.Param("token")
+	jwtToken, err := jwt.Parse(rawToken, func(_jwtToken *jwt.Token) (interface{}, error) {
 		// if keyfunc != nil {
 		// 	fn := *keyfunc
 		// 	return fn(_jwtToken)
@@ -361,6 +362,11 @@ func userResetPasswordHandler(c *gin.Context) {
 
 	if user == nil || user.ID == uuid.Nil {
 		renderError("user not found", 404, c)
+		return
+	}
+
+	if user.ResetPasswordToken == nil || *user.ResetPasswordToken != rawToken {
+		renderError("invalid reset token", 422, c)
 		return
 	}
 
