@@ -315,8 +315,9 @@ func userResetPasswordHandler(c *gin.Context) {
 		return nil, nil
 	})
 
-	if err != nil {
-		renderError(fmt.Sprintf("invalid jwt token; %s", err.Error()), 422, c)
+	if jwtToken == nil { //err != nil {
+		// renderError(fmt.Sprintf("invalid jwt token; %s", err.Error()), 422, c)
+		renderError("invalid jwt token", 422, c)
 		return
 	}
 
@@ -374,7 +375,7 @@ func userResetPasswordHandler(c *gin.Context) {
 	user.rehashPassword()
 
 	if user.Update() {
-		render(user.ResetPasswordTokenResponse(), 201, c)
+		render(nil, 204, c)
 	} else {
 		obj := map[string]interface{}{}
 		obj["errors"] = user.Errors
