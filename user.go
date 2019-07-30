@@ -287,6 +287,9 @@ func (u *User) CreateResetPasswordToken(db *gorm.DB) bool {
 		"exp": issuedAt.Add(defaultResetPasswordTokenTimeout).Unix(),
 		"iat": issuedAt.Unix(),
 		"sub": fmt.Sprintf("user:%s", u.ID.String()),
+		"data": map[string]interface{}{
+			"name": u.Name,
+		},
 	}
 
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims(claims))
