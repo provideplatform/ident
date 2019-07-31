@@ -1,5 +1,5 @@
 hash: 758f02719e139ac6e69ed8af9dee8272edba3bf706d9a352186710928b8440c7
-updated: 2019-07-31T06:20:38.688362-04:00
+updated: 2019-07-31T06:59:32.923013-04:00
 imports:
 - name: github.com/allegro/bigcache
   version: bbf64ae21fc5555f4e9752825ee9ffe13b1e5fa0
@@ -130,7 +130,7 @@ imports:
   subpackages:
   - pb
 - name: github.com/provideservices/provide-go
-  version: cd7f5f38ba578063db7e8de23cf963b96535c36f
+  version: 5f55b50fbb94fa61a64b5f9c23bb72463b90fcd0
 - name: github.com/rs/cors
   version: 33ffc0734c60052d8b609f1e2d8ebbadc6cd80d8
 - name: github.com/sdwolfe32/trumail
