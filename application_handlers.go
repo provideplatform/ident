@@ -21,7 +21,7 @@ func InstallApplicationAPI(r *gin.Engine) {
 func applicationsListHandler(c *gin.Context) {
 	user := getAuthorizedUser(c)
 	if user == nil || user.ID == uuid.Nil {
-		renderError("unauthorized", 401, c)
+		provide.RenderError("unauthorized", 401, c)
 		return
 	}
 
@@ -40,26 +40,26 @@ func applicationsListHandler(c *gin.Context) {
 	}
 
 	provide.Paginate(c, query, &Application{}).Find(&apps)
-	render(apps, 200, c)
+	provide.Render(apps, 200, c)
 }
 
 func createApplicationHandler(c *gin.Context) {
 	user := getAuthorizedUser(c)
 	if user == nil {
-		renderError("unauthorized", 401, c)
+		provide.RenderError("unauthorized", 401, c)
 		return
 	}
 
 	buf, err := c.GetRawData()
 	if err != nil {
-		renderError(err.Error(), 400, c)
+		provide.RenderError(err.Error(), 400, c)
 		return
 	}
 
 	app := &Application{}
 	err = json.Unmarshal(buf, app)
 	if err != nil {
-		renderError(err.Error(), 422, c)
+		provide.RenderError(err.Error(), 422, c)
 		return
 	}
 	app.UserID = user.ID
@@ -69,7 +69,7 @@ func createApplicationHandler(c *gin.Context) {
 		if networkID, ok := cfg["network_id"].(string); ok {
 			networkUUID, err := uuid.FromString(networkID)
 			if err != nil {
-				renderError(err.Error(), 422, c)
+				provide.RenderError(err.Error(), 422, c)
 				return
 			}
 			app.NetworkID = networkUUID
@@ -77,101 +77,101 @@ func createApplicationHandler(c *gin.Context) {
 	}
 
 	if app.Create() {
-		render(app, 201, c)
+		provide.Render(app, 201, c)
 	} else {
 		obj := map[string]interface{}{}
 		obj["errors"] = app.Errors
-		render(obj, 422, c)
+		provide.Render(obj, 422, c)
 	}
 }
 
 func applicationDetailsHandler(c *gin.Context) {
 	bearer := bearerAuthToken(c)
 	if bearer == nil {
-		renderError("unauthorized", 401, c)
+		provide.RenderError("unauthorized", 401, c)
 		return
 	}
 	if bearer.ApplicationID != nil && bearer.ApplicationID.String() != c.Param("id") {
-		renderError("forbidden", 403, c)
+		provide.RenderError("forbidden", 403, c)
 		return
 	}
 
 	var app = &Application{}
 	DatabaseConnection().Where("id = ?", c.Param("id")).Find(&app)
 	if app.ID == uuid.Nil {
-		renderError("application not found", 404, c)
+		provide.RenderError("application not found", 404, c)
 		return
 	}
 	if bearer.UserID != nil && *bearer.UserID != app.UserID {
-		renderError("forbidden", 403, c)
+		provide.RenderError("forbidden", 403, c)
 		return
 	}
-	render(app, 200, c)
+	provide.Render(app, 200, c)
 }
 
 func updateApplicationHandler(c *gin.Context) {
 	bearer := bearerAuthToken(c)
 	if bearer != nil && bearer.UserID == nil {
-		renderError("unauthorized", 401, c)
+		provide.RenderError("unauthorized", 401, c)
 		return
 	}
 
 	buf, err := c.GetRawData()
 	if err != nil {
-		renderError(err.Error(), 400, c)
+		provide.RenderError(err.Error(), 400, c)
 		return
 	}
 
 	app := &Application{}
 	DatabaseConnection().Where("id = ?", c.Param("id")).Find(&app)
 	if app.ID == uuid.Nil {
-		renderError("app not found", 404, c)
+		provide.RenderError("app not found", 404, c)
 		return
 	}
 
 	if bearer.UserID != nil && *bearer.UserID != app.UserID {
-		renderError("forbidden", 403, c)
+		provide.RenderError("forbidden", 403, c)
 		return
 	}
 
 	err = json.Unmarshal(buf, app)
 	if err != nil {
-		renderError(err.Error(), 422, c)
+		provide.RenderError(err.Error(), 422, c)
 		return
 	}
 
 	if app.Update() {
-		render(nil, 204, c)
+		provide.Render(nil, 204, c)
 	} else {
 		obj := map[string]interface{}{}
 		obj["errors"] = app.Errors
-		render(obj, 422, c)
+		provide.Render(obj, 422, c)
 	}
 }
 
 func deleteApplicationHandler(c *gin.Context) {
-	renderError("not implemented", 501, c)
+	provide.RenderError("not implemented", 501, c)
 }
 
 func applicationTokensListHandler(c *gin.Context) {
 	bearer := bearerAuthToken(c)
 	if bearer == nil {
-		renderError("unauthorized", 401, c)
+		provide.RenderError("unauthorized", 401, c)
 		return
 	}
 	if bearer.ApplicationID != nil && bearer.ApplicationID.String() != c.Param("id") {
-		renderError("forbidden", 403, c)
+		provide.RenderError("forbidden", 403, c)
 		return
 	}
 
 	var app = &Application{}
 	DatabaseConnection().Where("id = ?", c.Param("id")).Find(&app)
 	if app.ID == uuid.Nil {
-		renderError("application not found", 404, c)
+		provide.RenderError("application not found", 404, c)
 		return
 	}
 	if bearer.UserID != nil && *bearer.UserID != app.UserID {
-		renderError("forbidden", 403, c)
+		provide.RenderError("forbidden", 403, c)
 		return
 	}
 
@@ -180,5 +180,5 @@ func applicationTokensListHandler(c *gin.Context) {
 	var tokens []*Token
 	query = query.Where("application_id = ?", app.ID)
 	provide.Paginate(c, query, &Token{}).Find(&tokens)
-	render(app.GetTokens(), 200, c)
+	provide.Render(app.GetTokens(), 200, c)
 }

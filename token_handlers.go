@@ -18,7 +18,7 @@ func InstallTokenAPI(r *gin.Engine) {
 func tokensListHandler(c *gin.Context) {
 	bearer := bearerAuthToken(c)
 	if bearer == nil {
-		renderError("unauthorized", 401, c)
+		provide.RenderError("unauthorized", 401, c)
 		return
 	}
 
@@ -31,7 +31,7 @@ func tokensListHandler(c *gin.Context) {
 		query = query.Where("user_id = ?", bearer.UserID)
 	}
 	provide.Paginate(c, query, &Token{}).Find(&tokens)
-	render(tokens, 200, c)
+	provide.Render(tokens, 200, c)
 }
 
 func createTokenHandler(c *gin.Context) {
@@ -39,14 +39,14 @@ func createTokenHandler(c *gin.Context) {
 
 	buf, err := c.GetRawData()
 	if err != nil {
-		renderError(err.Error(), 400, c)
+		provide.RenderError(err.Error(), 400, c)
 		return
 	}
 
 	params := map[string]interface{}{}
 	err = json.Unmarshal(buf, &params)
 	if err != nil {
-		renderError(err.Error(), 400, c)
+		provide.RenderError(err.Error(), 400, c)
 		return
 	}
 
@@ -64,45 +64,45 @@ func createTokenHandler(c *gin.Context) {
 		var app = &Application{}
 		DatabaseConnection().Where("id = ?", appID).Find(&app)
 		if app != nil && app.ID != uuid.Nil && bearer.UserID != nil && *bearer.UserID != app.UserID {
-			renderError("forbidden", 403, c)
+			provide.RenderError("forbidden", 403, c)
 			return
 		}
 		resp, err := app.CreateToken()
 		if err != nil {
-			renderError(err.Error(), 401, c)
+			provide.RenderError(err.Error(), 401, c)
 			return
 		}
-		render(resp, 201, c)
+		provide.Render(resp, 201, c)
 		return
 	}
 
-	renderError("unauthorized", 401, c)
+	provide.RenderError("unauthorized", 401, c)
 }
 
 func deleteTokenHandler(c *gin.Context) {
 	bearer := bearerAuthToken(c)
 	if bearer == nil {
-		renderError("unauthorized", 401, c)
+		provide.RenderError("unauthorized", 401, c)
 		return
 	}
 
 	var token = &Token{}
 	DatabaseConnection().Where("id = ?", c.Param("id")).Find(&token)
 	if token.ID == uuid.Nil {
-		renderError("token not found", 404, c)
+		provide.RenderError("token not found", 404, c)
 		return
 	}
 	if bearer.UserID != nil && token.UserID != nil && *bearer.UserID != *token.UserID {
-		renderError("forbidden", 403, c)
+		provide.RenderError("forbidden", 403, c)
 		return
 	}
 	if bearer.ApplicationID != nil && token.ApplicationID != nil && *bearer.ApplicationID != *token.ApplicationID {
-		renderError("forbidden", 403, c)
+		provide.RenderError("forbidden", 403, c)
 		return
 	}
 	if !token.Delete() {
-		renderError("token not deleted", 500, c)
+		provide.RenderError("token not deleted", 500, c)
 		return
 	}
-	render(nil, 204, c)
+	provide.Render(nil, 204, c)
 }

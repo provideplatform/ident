@@ -7,7 +7,7 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	dbconf "github.com/kthomas/go-db-config"
-	"github.com/kthomas/go.uuid"
+	uuid "github.com/kthomas/go.uuid"
 	provide "github.com/provideservices/provide-go"
 )
 
@@ -25,7 +25,6 @@ type Token struct {
 	provide.Model
 	IssuedAt      *time.Time       `sql:"not null" json:"issued_at"`
 	ExpiresAt     *time.Time       `json:"expires_at"`
-	Secret        *string          `sql:"secret" json:"-"`
 	Token         *string          `json:"token"` // JWT https://tools.ietf.org/html/rfc7519
 	ApplicationID *uuid.UUID       `sql:"type:uuid" json:"-"`
 	UserID        *uuid.UUID       `sql:"type:uuid" json:"-"`
@@ -34,8 +33,9 @@ type Token struct {
 
 // TokenResponse represents the token portion of the response to a successful authentication request
 type TokenResponse struct {
-	ID    uuid.UUID `json:"id"`
-	Token string    `json:"token"`
+	ID        uuid.UUID `json:"id"`
+	Token     string    `json:"token"`
+	PublicKey string    `json:"public_key"`
 }
 
 // GetApplication - retrieve the application associated with the token (or nil if one does not exist)
@@ -122,8 +122,8 @@ func (t *Token) encodeJWT() (*string, error) {
 		claims["exp"] = t.ExpiresAt.Unix()
 	}
 
-	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims(claims))
-	token, err := jwtToken.SignedString([]byte(*t.Secret))
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims(claims))
+	token, err := jwtToken.SignedString(jwtPrivateKey)
 	if err != nil {
 		log.Warningf("Failed to sign JWT token; %s", err.Error())
 		return nil, err
@@ -151,20 +151,6 @@ func (t *Token) Validate() bool {
 			if t.ExpiresAt != nil && t.ExpiresAt.Before(*t.IssuedAt) {
 				t.Errors = append(t.Errors, &provide.Error{
 					Message: stringOrNil("token expiration must not preceed issuance"),
-				})
-			}
-		}
-		if t.Secret != nil {
-			t.Errors = append(t.Errors, &provide.Error{
-				Message: stringOrNil("token secret must not be supplied; it must be generated at this time"),
-			})
-		} else {
-			uuidV4, err := uuid.NewV4()
-			if err == nil {
-				t.Secret = stringOrNil(uuidV4.String())
-			} else {
-				t.Errors = append(t.Errors, &provide.Error{
-					Message: stringOrNil(fmt.Sprintf("token secret generation failed; %s", err.Error())),
 				})
 			}
 		}
@@ -203,7 +189,8 @@ func (t *Token) ParseData() map[string]interface{} {
 // AsResponse marshals a token into a token response
 func (t *Token) AsResponse() *TokenResponse {
 	return &TokenResponse{
-		ID:    t.ID,
-		Token: string(*t.Token),
+		ID:        t.ID,
+		Token:     string(*t.Token),
+		PublicKey: jwtPublicKeyPEM,
 	}
 }
