@@ -39,8 +39,6 @@ var (
 
 	// SharedNatsConnection is a cached connection used by most NATS Publish calls
 	SharedNatsConnection *stan.Conn
-
-	siaAPIKey string
 )
 
 func init() {
@@ -56,15 +54,10 @@ func init() {
 	log = logger.NewLogger("ident", lvl, true)
 
 	requireEmailVerification()
-
-	if os.Getenv("SIA_API_KEY") != "" {
-		siaAPIKey = os.Getenv("SIA_API_KEY")
-	}
-
-	requireTLS = os.Getenv("REQUIRE_TLS") == "true"
-
 	requireGPG()
 	requireJWT()
+
+	requireTLS = os.Getenv("REQUIRE_TLS") == "true"
 
 	err := EstablishNATSStreamingConnection()
 	if err != nil {
