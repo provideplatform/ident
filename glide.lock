@@ -1,18 +1,18 @@
 hash: 758f02719e139ac6e69ed8af9dee8272edba3bf706d9a352186710928b8440c7
-updated: 2019-07-31T03:56:34.203851-04:00
+updated: 2019-07-31T06:12:14.436585-04:00
 imports:
 - name: github.com/allegro/bigcache
-  version: e24eb225f15679bbe54f91bfa7da3b00e59b9768
+  version: bbf64ae21fc5555f4e9752825ee9ffe13b1e5fa0
   subpackages:
   - queue
 - name: github.com/aristanetworks/goarista
-  version: 52c2a7864a0891eefaed13a457510c7405a7105b
+  version: f44d68189fd70d5ee96bf3ccd56a53224febfc50
   subpackages:
   - monotime
 - name: github.com/badoux/checkmail
   version: 9661bd69e9ad6fce1f7579022bdab0440807722a
 - name: github.com/btcsuite/btcd
-  version: 962a206e94e9151fe41bbd6d6464af4ba7168f50
+  version: c26ffa870fd817666a857af1bf6498fabba1ffe3
   subpackages:
   - btcec
   - btcjson
@@ -75,7 +75,7 @@ imports:
   - proto
   - protoc-gen-gogo/descriptor
 - name: github.com/golang/protobuf
-  version: b285ee9cfc6c881bb20c0d8dc73370ea9b9ec90f
+  version: 6c65a5562fc06764971b7c5d05c76c75e84bdbf7
   subpackages:
   - proto
 - name: github.com/golang/snappy
@@ -91,7 +91,7 @@ imports:
 - name: github.com/jinzhu/inflection
   version: f5c5f50e6090ae76a29240b61ae2a90dd810112e
 - name: github.com/json-iterator/go
-  version: 0039f4ac3d5680243e7d0650c581e7ec0885ef5a
+  version: 27518f6661eba504be5a7a9a9f6d9460d892ade3
 - name: github.com/kthomas/go-db-config
   version: fe566ecb4d7e3e2e1cf39d3a739e1ecfbec912f8
 - name: github.com/kthomas/go-logger
@@ -130,7 +130,7 @@ imports:
   subpackages:
   - pb
 - name: github.com/provideservices/provide-go
-  version: df746bd2227ab748144ef2104ba90abbcb9c5a42
+  version: 3bf42e9596db8f42afe2702132faae7088a2fdf5
 - name: github.com/rs/cors
   version: 33ffc0734c60052d8b609f1e2d8ebbadc6cd80d8
 - name: github.com/sdwolfe32/trumail
@@ -138,7 +138,7 @@ imports:
   subpackages:
   - verifier
 - name: github.com/syndtr/goleveldb
-  version: c3a204f8e96543bb0cc090385c001078f184fc46
+  version: 02440ea7a28525b3079783ad9c27083994a42366
   subpackages:
   - leveldb
   - leveldb/cache
@@ -153,13 +153,13 @@ imports:
   - leveldb/table
   - leveldb/util
 - name: github.com/ugorji/go
-  version: 7865e43e776b01f708871ba4d37a9ed1d3353bfd
+  version: 02994ffebd8e7ef482130d13b570c8be0968b790
   subpackages:
   - codec
 - name: github.com/vincent-petithory/dataurl
   version: 9a301d65acbb728fcc3ace14f45f511a4cfeea9c
 - name: golang.org/x/crypto
-  version: 57b3e21c3d5606066a87e63cfe07ec6b9f0db000
+  version: 4def268fd1a49955bfb3dda92fe3db4f924f2285
   subpackages:
   - bcrypt
   - blowfish
@@ -170,12 +170,12 @@ imports:
   - scrypt
   - sha3
 - name: golang.org/x/net
-  version: d28f0bde5980168871434b95cfc858db9f2a7a99
+  version: da137c7871d730100384dbcf36e6f8fa493aef5b
   subpackages:
   - idna
   - websocket
 - name: golang.org/x/sys
-  version: 15dcb6c0061f497a3f66e3ea034b629c6dd4d99e
+  version: 04f50cda93cbb67f2afa353c52f342100e80e625
   subpackages:
   - cpu
   - unix

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/dgrijalva/jwt-go"
 
@@ -91,13 +92,14 @@ func requireEmailVerification() {
 }
 
 func requireJWT() {
-	jwtPrivateKeyPEM := os.Getenv("JWT_SIGNER_PRIVATE_KEY")
+	jwtPrivateKeyPEM := strings.Replace(os.Getenv("JWT_SIGNER_PRIVATE_KEY"), `\n`, "\n", -1)
 	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(jwtPrivateKeyPEM))
 	if err != nil {
 		log.Panicf("Failed to parse JWT private key; %s", err.Error())
 	}
 
-	jwtPublicKeyPEM = os.Getenv("JWT_SIGNER_PUBLIC_KEY")
+	jwtPublicKeyPEM = strings.Replace(os.Getenv("JWT_SIGNER_PUBLIC_KEY"), `\n`, "\n", -1)
+	log.Debugf("key\n%s", jwtPublicKeyPEM)
 	publicKey, err := jwt.ParseRSAPublicKeyFromPEM([]byte(jwtPublicKeyPEM))
 	if err != nil {
 		log.Panicf("Failed to parse JWT public key; %s", err.Error())
@@ -108,12 +110,12 @@ func requireJWT() {
 }
 
 func requireGPG() {
-	gpgPublicKey = os.Getenv("GPG_PUBLIC_KEY")
+	gpgPublicKey = strings.Replace(os.Getenv("GPG_PUBLIC_KEY"), `\n`, "\n", -1)
 	if gpgPublicKey == "" {
 		log.Panicf("Failed to parse GPG public key")
 	}
 
-	gpgPrivateKey = os.Getenv("GPG_PRIVATE_KEY")
+	gpgPrivateKey = strings.Replace(os.Getenv("GPG_PRIVATE_KEY"), `\n`, "\n", -1)
 	if gpgPrivateKey == "" {
 		log.Panicf("Failed to parse GPG private key")
 	}
