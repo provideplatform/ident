@@ -12,8 +12,8 @@ import (
 
 var natsStreamingConnectionMutex sync.Mutex
 
-// PGPPubDecrypt decrypts data previously encrypted using pgp_pub_encrypt
-func PGPPubDecrypt(encryptedVal, gpgPrivateKey, gpgPassword string) ([]byte, error) {
+// PSQLPGPPubDecrypt decrypts data previously encrypted using pgp_pub_encrypt
+func PSQLPGPPubDecrypt(encryptedVal, gpgPrivateKey, gpgPassword string) ([]byte, error) {
 	results := make([]byte, 1)
 	db := dbconf.DatabaseConnection()
 	rows, err := db.Raw("SELECT pgp_pub_decrypt(?, dearmor(?), ?) as val", encryptedVal, gpgPrivateKey, gpgPassword).Rows()
@@ -29,14 +29,6 @@ func PGPPubDecrypt(encryptedVal, gpgPrivateKey, gpgPassword string) ([]byte, err
 		return results, nil
 	}
 	return nil, errors.New("Failed to decrypt record from encrypted storage")
-}
-
-// PGPPubEncrypt encrypts data using using pgp_pub_encrypt
-func PGPPubEncrypt(unencryptedVal, gpgPublicKey string) (*string, error) {
-	out := []string{}
-	db := dbconf.DatabaseConnection()
-	db.Raw("SELECT pgp_pub_encrypt(?, dearmor(?))", unencryptedVal, gpgPublicKey).Pluck("val", &out)
-	return stringOrNil(out[0]), nil
 }
 
 // EstablishNATSStreamingConnection establishes (if conn is nil) or reestablishes the given NATS streaming connection

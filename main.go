@@ -27,6 +27,8 @@ func main() {
 
 	r.GET("/status", statusHandler)
 
+	MigrateEncryptedKYCApplicationConfigs()
+
 	if shouldServeTLS() {
 		r.RunTLS(listenAddr, certificatePath, privateKeyPath)
 	} else {

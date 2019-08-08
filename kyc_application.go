@@ -8,6 +8,7 @@ import (
 
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
+	pgputil "github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	identitymind "github.com/kthomas/identitymind-golang"
 	provide "github.com/provideservices/provide-go"
@@ -119,6 +120,42 @@ type KYCApplication struct {
 	Params                 map[string]interface{} `sql:"-" json:"params"`
 	EncryptedParams        *string                `sql:"type:bytea" json:"-"`
 	ProviderRepresentation map[string]interface{} `sql:"-" json:"provider_representation"`
+}
+
+func MigrateEncryptedKYCApplicationConfigs() {
+	db := dbconf.DatabaseConnection()
+	var applications []KYCApplication
+	db.Find(&applications)
+	for _, app := range applications {
+		err := app.migrateEncryptedConfig(db)
+		if err != nil {
+			log.Panicf("Failed to migrate load balancer config: %s", err.Error())
+		}
+	}
+	log.Debugf("Migrated encrypted configuration for %d KYC applications...", len(applications))
+}
+
+func (k *KYCApplication) migrateEncryptedConfig(db *gorm.DB) error {
+	decryptedParams := map[string]interface{}{}
+	if k.EncryptedParams != nil {
+		encryptedConfigJSON, err := PSQLPGPPubDecrypt(*k.EncryptedParams, gpgPrivateKey, gpgPassword)
+		if err != nil {
+			return err
+		}
+
+		err = json.Unmarshal(encryptedConfigJSON, &decryptedParams)
+		if err != nil {
+			return err
+		}
+
+		k.setEncryptedParams(decryptedParams)
+		result := db.Save(&k)
+		errors := result.GetErrors()
+		if len(errors) > 0 {
+			return errors[0]
+		}
+	}
+	return nil
 }
 
 // Create and persist a new BillingAccount
@@ -331,7 +368,7 @@ func (k *KYCApplication) enrich() (interface{}, error) {
 func (k *KYCApplication) decryptedParams() (map[string]interface{}, error) {
 	decryptedParams := map[string]interface{}{}
 	if k.EncryptedParams != nil {
-		encryptedParamsJSON, err := PGPPubDecrypt(*k.EncryptedParams, gpgPrivateKey, gpgPassword)
+		encryptedParamsJSON, err := pgputil.PGPPubDecrypt([]byte(*k.EncryptedParams))
 		if err != nil {
 			log.Warningf("Failed to decrypt encrypted KYC application params; %s", err.Error())
 			return decryptedParams, err
@@ -348,7 +385,7 @@ func (k *KYCApplication) decryptedParams() (map[string]interface{}, error) {
 
 func (k *KYCApplication) encryptParams() bool {
 	if k.EncryptedParams != nil {
-		encryptedParams, err := PGPPubEncrypt(*k.EncryptedParams, gpgPublicKey)
+		encryptedParams, err := pgputil.PGPPubEncrypt([]byte(*k.EncryptedParams))
 		if err != nil {
 			log.Warningf("Failed to encrypt KYC application params; %s", err.Error())
 			k.Errors = append(k.Errors, &provide.Error{
@@ -356,7 +393,7 @@ func (k *KYCApplication) encryptParams() bool {
 			})
 			return false
 		}
-		k.EncryptedParams = encryptedParams
+		k.EncryptedParams = stringOrNil(string(encryptedParams))
 	}
 	return true
 }
