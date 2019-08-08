@@ -33,10 +33,6 @@ var (
 	jwtPublicKey    *rsa.PublicKey
 	jwtPrivateKey   *rsa.PrivateKey
 
-	gpgPublicKey  string
-	gpgPrivateKey string
-	gpgPassword   string
-
 	// SharedNatsConnection is a cached connection used by most NATS Publish calls
 	SharedNatsConnection *stan.Conn
 )
@@ -54,7 +50,6 @@ func init() {
 	log = logger.NewLogger("ident", lvl, true)
 
 	requireEmailVerification()
-	requireGPG()
 	requireJWT()
 
 	requireTLS = os.Getenv("REQUIRE_TLS") == "true"
@@ -99,23 +94,6 @@ func requireJWT() {
 
 	jwtPrivateKey = privateKey
 	jwtPublicKey = publicKey
-}
-
-func requireGPG() {
-	gpgPublicKey = strings.Replace(os.Getenv("GPG_PUBLIC_KEY"), `\n`, "\n", -1)
-	if gpgPublicKey == "" {
-		log.Panicf("Failed to parse GPG public key")
-	}
-
-	gpgPrivateKey = strings.Replace(os.Getenv("GPG_PRIVATE_KEY"), `\n`, "\n", -1)
-	if gpgPrivateKey == "" {
-		log.Panicf("Failed to parse GPG private key")
-	}
-
-	gpgPassword = os.Getenv("GPG_PASSWORD")
-	if gpgPassword == "" {
-		log.Panicf("Failed to parse GPG password")
-	}
 }
 
 func buildListenAddr() string {

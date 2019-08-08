@@ -1,35 +1,14 @@
 package main
 
 import (
-	"errors"
 	"sync"
 	"time"
 
-	dbconf "github.com/kthomas/go-db-config"
 	natsutil "github.com/kthomas/go-natsutil"
 	stan "github.com/nats-io/stan.go"
 )
 
 var natsStreamingConnectionMutex sync.Mutex
-
-// PSQLPGPPubDecrypt decrypts data previously encrypted using pgp_pub_encrypt
-func PSQLPGPPubDecrypt(encryptedVal, gpgPrivateKey, gpgPassword string) ([]byte, error) {
-	results := make([]byte, 1)
-	db := dbconf.DatabaseConnection()
-	rows, err := db.Raw("SELECT pgp_pub_decrypt(?, dearmor(?), ?) as val", encryptedVal, gpgPrivateKey, gpgPassword).Rows()
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	if err != nil {
-		return nil, err
-	}
-	if rows.Next() {
-		rows.Scan(&results)
-		return results, nil
-	}
-	return nil, errors.New("Failed to decrypt record from encrypted storage")
-}
 
 // EstablishNATSStreamingConnection establishes (if conn is nil) or reestablishes the given NATS streaming connection
 func EstablishNATSStreamingConnection() error {

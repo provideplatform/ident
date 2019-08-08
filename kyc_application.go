@@ -122,43 +122,6 @@ type KYCApplication struct {
 	ProviderRepresentation map[string]interface{} `sql:"-" json:"provider_representation"`
 }
 
-// MigrateEncryptedKYCApplicationConfigs migrates the KYC app configs...
-func MigrateEncryptedKYCApplicationConfigs() {
-	db := dbconf.DatabaseConnection()
-	var applications []KYCApplication
-	db.Find(&applications)
-	for _, app := range applications {
-		err := app.migrateEncryptedConfig(db)
-		if err != nil {
-			log.Panicf("Failed to migrate load balancer config: %s", err.Error())
-		}
-	}
-	log.Debugf("Migrated encrypted configuration for %d KYC applications...", len(applications))
-}
-
-func (k *KYCApplication) migrateEncryptedConfig(db *gorm.DB) error {
-	decryptedParams := map[string]interface{}{}
-	if k.EncryptedParams != nil {
-		encryptedConfigJSON, err := PSQLPGPPubDecrypt(*k.EncryptedParams, gpgPrivateKey, gpgPassword)
-		if err != nil {
-			return err
-		}
-
-		err = json.Unmarshal(encryptedConfigJSON, &decryptedParams)
-		if err != nil {
-			return err
-		}
-
-		k.setEncryptedParams(decryptedParams)
-		result := db.Save(&k)
-		errors := result.GetErrors()
-		if len(errors) > 0 {
-			return errors[0]
-		}
-	}
-	return nil
-}
-
 // Create and persist a new BillingAccount
 func (k *KYCApplication) Create(db *gorm.DB) bool {
 	if k.Provider == nil {
