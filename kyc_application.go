@@ -122,6 +122,7 @@ type KYCApplication struct {
 	ProviderRepresentation map[string]interface{} `sql:"-" json:"provider_representation"`
 }
 
+// MigrateEncryptedKYCApplicationConfigs migrates the KYC app configs...
 func MigrateEncryptedKYCApplicationConfigs() {
 	db := dbconf.DatabaseConnection()
 	var applications []KYCApplication
