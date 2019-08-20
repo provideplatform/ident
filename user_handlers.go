@@ -179,6 +179,10 @@ func createUserHandler(c *gin.Context) {
 		user.ApplicationID = &appUUID
 	}
 
+	if password, passwordOk := params["password"].(string); passwordOk {
+		user.Password = stringOrNil(password)
+	}
+
 	if user.Create() {
 		provide.Render(user.AsResponse(), 201, c)
 	} else {
@@ -236,6 +240,7 @@ func updateUserHandler(c *gin.Context) {
 	}
 
 	if rehashPassword {
+		user.Password = stringOrNil(params["password"].(string))
 		user.rehashPassword()
 	}
 
