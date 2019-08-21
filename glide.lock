@@ -1,5 +1,5 @@
 hash: 713f7d3162f85bad7c0ad99bfc73622e31cf910000b500b5a3ac572fd21f377b
-updated: 2019-08-08T03:00:59.933964-04:00
+updated: 2019-08-20T23:43:02.562556-04:00
 imports:
 - name: github.com/allegro/bigcache
   version: baaa21686666424b386f282d68fc1d23594ab38d
@@ -97,7 +97,7 @@ imports:
 - name: github.com/kthomas/go-logger
   version: 01c36065851341304751234b081327cf58728dba
 - name: github.com/kthomas/go-natsutil
-  version: 9005877cb785bc3569982bdd79698c37d9e96b89
+  version: c7280d1133430a9ce0e7c406b55fdefc27020b83
 - name: github.com/kthomas/go-pgputil
   version: 747b287b2049fef1ec0fc0b69f5e5dcfd1cdb5d9
 - name: github.com/kthomas/go-self-signed-cert
@@ -128,7 +128,7 @@ imports:
 - name: github.com/nats-io/nuid
   version: 4b96681fa6d28dd0ab5fe79bac63b3a493d9ee94
 - name: github.com/nats-io/stan.go
-  version: 8e4a9131d26a2846cfccedc1a65548d9ace4b104
+  version: b13717edafc47e61e7999c9c8a078b173852655f
   subpackages:
   - pb
 - name: github.com/provideservices/provide-go
@@ -165,8 +165,15 @@ imports:
   subpackages:
   - bcrypt
   - blowfish
+  - cast5
   - ed25519
   - ed25519/internal/edwards25519
+  - openpgp
+  - openpgp/armor
+  - openpgp/elgamal
+  - openpgp/errors
+  - openpgp/packet
+  - openpgp/s2k
   - pbkdf2
   - ripemd160
   - scrypt
@@ -177,7 +184,7 @@ imports:
   - idna
   - websocket
 - name: golang.org/x/sys
-  version: 51ab0e2deafac1f46c46ad59cf0921be2f180c3d
+  version: 04f50cda93cbb67f2afa353c52f342100e80e625
   subpackages:
   - cpu
   - unix
