@@ -7,7 +7,7 @@ import:
 - package: github.com/gorilla/websocket
   version: ~1.4.0
 - package: github.com/ethereum/go-ethereum
-  version: 428eabe28
+  version: 039a9c362
   subpackages:
   - accounts/abi
   - common
