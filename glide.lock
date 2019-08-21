@@ -1,5 +1,5 @@
 hash: 713f7d3162f85bad7c0ad99bfc73622e31cf910000b500b5a3ac572fd21f377b
-updated: 2019-08-21T00:21:06.274545-04:00
+updated: 2019-08-21T03:06:07.691953-04:00
 imports:
 - name: github.com/allegro/bigcache
   version: baaa21686666424b386f282d68fc1d23594ab38d
@@ -97,7 +97,7 @@ imports:
 - name: github.com/kthomas/go-logger
   version: 01c36065851341304751234b081327cf58728dba
 - name: github.com/kthomas/go-natsutil
-  version: e21f3da79ecc78e42d758d7da55b8e6c9fe66c1a
+  version: dc94d858488ace939a8f6aced74eae7c4d791ce9
 - name: github.com/kthomas/go-pgputil
   version: 747b287b2049fef1ec0fc0b69f5e5dcfd1cdb5d9
 - name: github.com/kthomas/go-self-signed-cert
@@ -132,7 +132,7 @@ imports:
   subpackages:
   - pb
 - name: github.com/provideservices/provide-go
-  version: 5ce04ab972df41e666858809f8e86f2167172ba8
+  version: 281078f7477433ad2df5469a64b5588a446d27a7
 - name: github.com/rs/cors
   version: db0fe48135e83b5812a5a31be0eea66984b1b521
 - name: github.com/sdwolfe32/trumail
