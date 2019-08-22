@@ -26,7 +26,6 @@ _cgo_export.*
 
 .gocore-id_rsa
 
-run_local.sh
 ident
 ident_api
 ident_consumer
