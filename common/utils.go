@@ -1,10 +1,11 @@
-package main
+package common
 
 import (
 	"sync"
 	"time"
 
 	natsutil "github.com/kthomas/go-natsutil"
+	selfsignedcert "github.com/kthomas/go-self-signed-cert"
 	stan "github.com/nats-io/stan.go"
 )
 
@@ -19,7 +20,7 @@ func EstablishNATSStreamingConnection() error {
 		EstablishNATSStreamingConnection()
 	})
 	if err != nil {
-		log.Warningf("Failed to establish NATS connection; %s", err.Error())
+		Log.Warningf("Failed to establish NATS connection; %s", err.Error())
 		return err
 	}
 	SharedNatsConnection = natsConnection
@@ -37,7 +38,7 @@ func GetSharedNatsStreamingConnection() (*stan.Conn, error) {
 
 	err := EstablishNATSStreamingConnection()
 	if err != nil {
-		log.Warningf("Failed to establish NATS connection; %s", err.Error())
+		Log.Warningf("Failed to establish NATS connection; %s", err.Error())
 		return SharedNatsConnection, err
 	}
 	return SharedNatsConnection, nil
@@ -47,8 +48,35 @@ func GetSharedNatsStreamingConnection() (*stan.Conn, error) {
 func NATSPublish(subject string, msg []byte) error {
 	natsConnection, err := GetSharedNatsStreamingConnection()
 	if err != nil {
-		log.Warningf("Failed to retrieve shared NATS streaming connection for Publish; %s", err.Error())
+		Log.Warningf("Failed to retrieve shared NATS streaming connection for Publish; %s", err.Error())
 		return err
 	}
 	return (*natsConnection).Publish(subject, msg)
+}
+
+func PanicIfEmpty(val string, msg string) {
+	if val == "" {
+		panic(msg)
+	}
+}
+
+// ShouldServeTLS returns true if the API should be served over TLS
+func ShouldServeTLS() bool {
+	if requireTLS {
+		privKeyPath, certPath, err := selfsignedcert.GenerateToDisk()
+		if err != nil {
+			Log.Panicf("Failed to generate self-signed certificate; %s", err.Error())
+		}
+		PrivateKeyPath = *privKeyPath
+		CertificatePath = *certPath
+		return true
+	}
+	return false
+}
+
+func StringOrNil(str string) *string {
+	if str == "" {
+		return nil
+	}
+	return &str
 }

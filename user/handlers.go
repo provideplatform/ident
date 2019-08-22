@@ -1,4 +1,4 @@
-package main
+package user
 
 import (
 	"encoding/json"
@@ -9,6 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
+	"github.com/provideapp/ident/common"
+	"github.com/provideapp/ident/token"
 	provide "github.com/provideservices/provide-go"
 )
 
@@ -18,7 +20,6 @@ func InstallUserAPI(r *gin.Engine) {
 
 	r.GET("/api/v1/users", usersListHandler)
 	r.GET("/api/v1/users/:id", userDetailsHandler)
-	r.GET("/api/v1/users/:id/kyc_applications", userKYCApplicationsListHandler)
 	r.POST("/api/v1/users/reset_password", userResetPasswordRequestHandler)
 	r.POST("/api/v1/users/reset_password/:token", userResetPasswordHandler)
 	r.POST("/api/v1/users", createUserHandler)
@@ -27,7 +28,7 @@ func InstallUserAPI(r *gin.Engine) {
 }
 
 func authenticationHandler(c *gin.Context) {
-	bearer := bearerAuthToken(c)
+	bearer := token.ParseBearerAuthToken(c)
 
 	buf, err := c.GetRawData()
 	if err != nil {
@@ -74,47 +75,22 @@ func authenticationHandler(c *gin.Context) {
 	provide.RenderError("unauthorized", 401, c)
 }
 
-func userKYCApplicationsListHandler(c *gin.Context) {
-	bearer := bearerAuthToken(c)
-	if bearer == nil || (bearer != nil && bearer.ApplicationID == nil && bearer.UserID == nil) {
-		provide.RenderError("unauthorized", 401, c)
-		return
-	}
-
-	if bearer.UserID == nil {
-		// HACK: only support KYC for user_id
-		provide.RenderError("unauthorized", 401, c)
-		return
-	}
-
-	var kycApplications []KYCApplication
-	query := dbconf.DatabaseConnection().Where("user_id = ?", bearer.UserID)
-
-	if c.Query("status") != "" {
-		query = query.Where("status = ?", c.Query("status"))
-	}
-
-	query = query.Order("created_at DESC")
-	provide.Paginate(c, query, &KYCApplication{}).Find(&kycApplications)
-	provide.Render(kycApplications, 200, c)
-}
-
 func usersListHandler(c *gin.Context) {
-	bearer := bearerAuthToken(c)
+	bearer := token.ParseBearerAuthToken(c)
 	if bearer == nil || bearer.ApplicationID == nil {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
 
 	var users []User
-	query := DatabaseConnection()
+	query := dbconf.DatabaseConnection()
 	query = query.Where("application_id = ?", bearer.ApplicationID.String())
 	provide.Paginate(c, query, &User{}).Find(&users)
 	provide.Render(users, 200, c)
 }
 
 func userDetailsHandler(c *gin.Context) {
-	bearer := bearerAuthToken(c)
+	bearer := token.ParseBearerAuthToken(c)
 	if bearer == nil || (bearer != nil && bearer.ApplicationID == nil && bearer.UserID == nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
@@ -126,7 +102,7 @@ func userDetailsHandler(c *gin.Context) {
 	}
 
 	user := &User{}
-	query := DatabaseConnection().Where("id = ?", c.Param("id"))
+	query := dbconf.DatabaseConnection().Where("id = ?", c.Param("id"))
 	if bearer.ApplicationID != nil {
 		query = query.Where("application_id = ?", bearer.ApplicationID)
 	}
@@ -141,7 +117,7 @@ func userDetailsHandler(c *gin.Context) {
 }
 
 func createUserHandler(c *gin.Context) {
-	bearer := bearerAuthToken(c)
+	bearer := token.ParseBearerAuthToken(c)
 	if bearer != nil && bearer.ApplicationID == nil {
 		provide.RenderError("unauthorized", 401, c)
 		return
@@ -180,7 +156,7 @@ func createUserHandler(c *gin.Context) {
 	}
 
 	if password, passwordOk := params["password"].(string); passwordOk {
-		user.Password = stringOrNil(password)
+		user.Password = common.StringOrNil(password)
 	}
 
 	if user.Create() {
@@ -193,7 +169,7 @@ func createUserHandler(c *gin.Context) {
 }
 
 func updateUserHandler(c *gin.Context) {
-	bearer := bearerAuthToken(c)
+	bearer := token.ParseBearerAuthToken(c)
 	if bearer == nil || (bearer != nil && bearer.ApplicationID == nil && bearer.UserID == nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
@@ -223,7 +199,7 @@ func updateUserHandler(c *gin.Context) {
 	}
 
 	user := &User{}
-	DatabaseConnection().Where("id = ?", c.Param("id")).Find(&user)
+	dbconf.DatabaseConnection().Where("id = ?", c.Param("id")).Find(&user)
 	if user.ID == uuid.Nil {
 		provide.RenderError("user not found", 404, c)
 		return
@@ -240,7 +216,7 @@ func updateUserHandler(c *gin.Context) {
 	}
 
 	if rehashPassword {
-		user.Password = stringOrNil(params["password"].(string))
+		user.Password = common.StringOrNil(params["password"].(string))
 		user.rehashPassword()
 	}
 
@@ -254,7 +230,7 @@ func updateUserHandler(c *gin.Context) {
 }
 
 func userResetPasswordRequestHandler(c *gin.Context) {
-	bearer := bearerAuthToken(c)
+	bearer := token.ParseBearerAuthToken(c)
 	buf, err := c.GetRawData()
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -274,7 +250,7 @@ func userResetPasswordRequestHandler(c *gin.Context) {
 		return
 	}
 
-	db := DatabaseConnection()
+	db := dbconf.DatabaseConnection()
 	user := &User{}
 	query := db.Where("email = ?", email)
 	if bearer != nil && bearer.ApplicationID != nil {
@@ -297,7 +273,7 @@ func userResetPasswordRequestHandler(c *gin.Context) {
 }
 
 func userResetPasswordHandler(c *gin.Context) {
-	bearer := bearerAuthToken(c)
+	bearer := token.ParseBearerAuthToken(c)
 	buf, err := c.GetRawData()
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -358,7 +334,7 @@ func userResetPasswordHandler(c *gin.Context) {
 		return
 	}
 
-	db := DatabaseConnection()
+	db := dbconf.DatabaseConnection()
 	user := &User{}
 	query := db.Where("id = ?", userID.String())
 	if bearer != nil && bearer.ApplicationID != nil {
@@ -376,7 +352,7 @@ func userResetPasswordHandler(c *gin.Context) {
 		return
 	}
 
-	user.Password = stringOrNil(password)
+	user.Password = common.StringOrNil(password)
 	user.rehashPassword()
 
 	if user.Update() {

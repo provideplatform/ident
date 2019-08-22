@@ -1,4 +1,4 @@
-package main
+package providers
 
 import (
 	identitymind "github.com/kthomas/identitymind-golang"

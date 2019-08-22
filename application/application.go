@@ -1,13 +1,15 @@
-package main
+package application
 
 import (
 	"encoding/json"
-	"fmt"
 
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
+	"github.com/provideapp/ident/common"
 	provide "github.com/provideservices/provide-go"
 )
+
+const natsSiaApplicationNotificationSubject = "sia.application.notification"
 
 func init() {
 	db := dbconf.DatabaseConnection()
@@ -16,7 +18,6 @@ func init() {
 	db.Model(&Application{}).AddIndex("idx_applications_hidden", "hidden")
 	db.Model(&Application{}).AddIndex("idx_applications_network_id", "network_id")
 	db.Model(&Application{}).AddForeignKey("user_id", "users(id)", "SET NULL", "CASCADE")
-	db.Model(&User{}).AddForeignKey("application_id", "applications(id)", "SET NULL", "CASCADE")
 }
 
 // Application model which is initially owned by the user who created it
@@ -30,9 +31,18 @@ type Application struct {
 	Hidden      bool             `sql:"not null;default:false" json:"hidden"` // soft-delete mechanism
 }
 
+// ApplicationsByUserID returns a list of applications which have been created
+// by the given user id
+func ApplicationsByUserID(userID *uuid.UUID, hidden bool) []Application {
+	db := dbconf.DatabaseConnection()
+	var apps []Application
+	db.Where("user_id = ? AND hidden = ?", userID.String(), hidden).Find(&apps)
+	return apps
+}
+
 // Create and persist an application
 func (app *Application) Create() bool {
-	db := DatabaseConnection()
+	db := dbconf.DatabaseConnection()
 
 	if !app.Validate() {
 		return false
@@ -45,7 +55,7 @@ func (app *Application) Create() bool {
 		if len(errors) > 0 {
 			for _, err := range errors {
 				app.Errors = append(app.Errors, &provide.Error{
-					Message: stringOrNil(err.Error()),
+					Message: common.StringOrNil(err.Error()),
 				})
 			}
 		}
@@ -53,25 +63,12 @@ func (app *Application) Create() bool {
 			success := rowsAffected > 0
 			if success {
 				payload, _ := json.Marshal(app)
-				NATSPublish(natsSiaApplicationNotificationSubject, payload)
+				common.NATSPublish(natsSiaApplicationNotificationSubject, payload)
 			}
 			return success
 		}
 	}
 	return false
-}
-
-// CreateToken creates a new token on behalf of the application
-func (app *Application) CreateToken() (*Token, error) {
-	token := &Token{
-		ApplicationID: &app.ID,
-	}
-	if !token.Create() {
-		if len(token.Errors) > 0 {
-			return nil, fmt.Errorf("Failed to create token for application: %s; %s", app.ID.String(), *token.Errors[0].Message)
-		}
-	}
-	return token, nil
 }
 
 // Validate an application for persistence
@@ -82,7 +79,7 @@ func (app *Application) Validate() bool {
 
 // Update an existing application
 func (app *Application) Update() bool {
-	db := DatabaseConnection()
+	db := dbconf.DatabaseConnection()
 
 	if !app.Validate() {
 		return false
@@ -93,7 +90,7 @@ func (app *Application) Update() bool {
 	if len(errors) > 0 {
 		for _, err := range errors {
 			app.Errors = append(app.Errors, &provide.Error{
-				Message: stringOrNil(err.Error()),
+				Message: common.StringOrNil(err.Error()),
 			})
 		}
 	}
@@ -103,24 +100,17 @@ func (app *Application) Update() bool {
 
 // Delete an application
 func (app *Application) Delete() bool {
-	db := DatabaseConnection()
+	db := dbconf.DatabaseConnection()
 	result := db.Delete(app)
 	errors := result.GetErrors()
 	if len(errors) > 0 {
 		for _, err := range errors {
 			app.Errors = append(app.Errors, &provide.Error{
-				Message: stringOrNil(err.Error()),
+				Message: common.StringOrNil(err.Error()),
 			})
 		}
 	}
 	return len(app.Errors) == 0
-}
-
-// GetTokens - retrieve the tokens associated with the application
-func (app *Application) GetTokens() []*Token {
-	var tokens []*Token
-	DatabaseConnection().Where("application_id = ?", app.ID).Find(&tokens)
-	return tokens
 }
 
 // ParseConfig - parse the Application JSON configuration
@@ -129,7 +119,7 @@ func (app *Application) ParseConfig() map[string]interface{} {
 	if app.Config != nil {
 		err := json.Unmarshal(*app.Config, &cfg)
 		if err != nil {
-			log.Warningf("Failed to unmarshal application params; %s", err.Error())
+			common.Log.Warningf("Failed to unmarshal application params; %s", err.Error())
 			return nil
 		}
 	}

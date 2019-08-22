@@ -1,9 +1,10 @@
-package main
+package application
 
 import (
 	"encoding/json"
 
 	"github.com/gin-gonic/gin"
+	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
 	provide "github.com/provideservices/provide-go"
 )
@@ -13,14 +14,13 @@ func InstallApplicationAPI(r *gin.Engine) {
 	r.GET("/api/v1/applications", applicationsListHandler)
 	r.POST("/api/v1/applications", createApplicationHandler)
 	r.GET("/api/v1/applications/:id", applicationDetailsHandler)
-	r.GET("/api/v1/applications/:id/tokens", applicationTokensListHandler)
 	r.PUT("/api/v1/applications/:id", updateApplicationHandler)
 	r.DELETE("/api/v1/applications/:id", deleteApplicationHandler)
 }
 
 func applicationsListHandler(c *gin.Context) {
-	user := getAuthorizedUser(c)
-	if user == nil || user.ID == uuid.Nil {
+	userID := provide.AuthorizedSubjectID(c, "user")
+	if userID == nil || *userID == uuid.Nil {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -30,10 +30,10 @@ func applicationsListHandler(c *gin.Context) {
 		hidden = true
 	}
 
-	query := DatabaseConnection()
+	query := dbconf.DatabaseConnection()
 
 	var apps []Application
-	query = query.Where("user_id = ? AND hidden = ?", user.ID, hidden)
+	query = query.Where("user_id = ? AND hidden = ?", userID, hidden)
 
 	if c.Query("network_id") != "" {
 		query = query.Where("network_id = ?", c.Query("network_id"))
@@ -44,8 +44,8 @@ func applicationsListHandler(c *gin.Context) {
 }
 
 func createApplicationHandler(c *gin.Context) {
-	user := getAuthorizedUser(c)
-	if user == nil {
+	userID := provide.AuthorizedSubjectID(c, "user")
+	if userID == nil || *userID == uuid.Nil {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -62,7 +62,7 @@ func createApplicationHandler(c *gin.Context) {
 		provide.RenderError(err.Error(), 422, c)
 		return
 	}
-	app.UserID = user.ID
+	app.UserID = *userID
 
 	if app.NetworkID == uuid.Nil {
 		cfg := app.ParseConfig()
@@ -86,23 +86,25 @@ func createApplicationHandler(c *gin.Context) {
 }
 
 func applicationDetailsHandler(c *gin.Context) {
-	bearer := bearerAuthToken(c)
-	if bearer == nil {
+	userID := provide.AuthorizedSubjectID(c, "user")
+	appID := provide.AuthorizedSubjectID(c, "application")
+	if (userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
-	if bearer.ApplicationID != nil && bearer.ApplicationID.String() != c.Param("id") {
+
+	if appID != nil && (*appID).String() != c.Param("id") {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
 
 	var app = &Application{}
-	DatabaseConnection().Where("id = ?", c.Param("id")).Find(&app)
-	if app.ID == uuid.Nil {
+	dbconf.DatabaseConnection().Where("id = ?", c.Param("id")).Find(&app)
+	if app == nil || app.ID == uuid.Nil {
 		provide.RenderError("application not found", 404, c)
 		return
 	}
-	if bearer.UserID != nil && *bearer.UserID != app.UserID {
+	if userID != nil && *userID != app.UserID {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
@@ -110,8 +112,8 @@ func applicationDetailsHandler(c *gin.Context) {
 }
 
 func updateApplicationHandler(c *gin.Context) {
-	bearer := bearerAuthToken(c)
-	if bearer != nil && bearer.UserID == nil {
+	userID := provide.AuthorizedSubjectID(c, "user")
+	if userID == nil || *userID == uuid.Nil {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -123,13 +125,13 @@ func updateApplicationHandler(c *gin.Context) {
 	}
 
 	app := &Application{}
-	DatabaseConnection().Where("id = ?", c.Param("id")).Find(&app)
+	dbconf.DatabaseConnection().Where("id = ?", c.Param("id")).Find(&app)
 	if app.ID == uuid.Nil {
 		provide.RenderError("app not found", 404, c)
 		return
 	}
 
-	if bearer.UserID != nil && *bearer.UserID != app.UserID {
+	if userID != nil && *userID != app.UserID {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
@@ -151,34 +153,4 @@ func updateApplicationHandler(c *gin.Context) {
 
 func deleteApplicationHandler(c *gin.Context) {
 	provide.RenderError("not implemented", 501, c)
-}
-
-func applicationTokensListHandler(c *gin.Context) {
-	bearer := bearerAuthToken(c)
-	if bearer == nil {
-		provide.RenderError("unauthorized", 401, c)
-		return
-	}
-	if bearer.ApplicationID != nil && bearer.ApplicationID.String() != c.Param("id") {
-		provide.RenderError("forbidden", 403, c)
-		return
-	}
-
-	var app = &Application{}
-	DatabaseConnection().Where("id = ?", c.Param("id")).Find(&app)
-	if app.ID == uuid.Nil {
-		provide.RenderError("application not found", 404, c)
-		return
-	}
-	if bearer.UserID != nil && *bearer.UserID != app.UserID {
-		provide.RenderError("forbidden", 403, c)
-		return
-	}
-
-	query := DatabaseConnection()
-
-	var tokens []*Token
-	query = query.Where("application_id = ?", app.ID)
-	provide.Paginate(c, query, &Token{}).Find(&tokens)
-	provide.Render(app.GetTokens(), 200, c)
 }

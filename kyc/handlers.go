@@ -1,4 +1,4 @@
-package main
+package kyc
 
 import (
 	"encoding/json"
@@ -7,6 +7,9 @@ import (
 	"github.com/gin-gonic/gin"
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
+	"github.com/provideapp/ident/common"
+	"github.com/provideapp/ident/token"
+	"github.com/provideapp/ident/user"
 	provide "github.com/provideservices/provide-go"
 )
 
@@ -20,10 +23,12 @@ func InstallKYCAPI(r *gin.Engine) {
 	r.GET("/api/v1/kyc_applications/:id/documents", kycApplicationDocumentsListHandler)
 	r.POST("/api/v1/kyc_applications/:id/documents", createKYCApplicationDocumentHandler)
 	r.GET("/api/v1/kyc_applications/:id/documents/:docId", kycApplicationDocumentDownloadHandler)
+
+	r.GET("/api/v1/users/:id/kyc_applications", userKYCApplicationsListHandler)
 }
 
 func kycApplicationListHandler(c *gin.Context) {
-	bearer := bearerAuthToken(c)
+	bearer := token.ParseBearerAuthToken(c)
 	if bearer == nil || (bearer != nil && bearer.ApplicationID == nil && bearer.UserID == nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
@@ -50,22 +55,20 @@ func kycApplicationListHandler(c *gin.Context) {
 }
 
 func kycApplicationDetailsHandler(c *gin.Context) {
-	bearer := bearerAuthToken(c)
-	if bearer == nil || (bearer != nil && bearer.ApplicationID == nil && bearer.UserID == nil) {
+	userID := provide.AuthorizedSubjectID(c, "user")
+	appID := provide.AuthorizedSubjectID(c, "application")
+	if (userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
 
-	user := getAuthorizedUser(c)
-	app := getAuthorizedApplication(c)
-
 	kycApplication := &KYCApplication{}
-	query := DatabaseConnection().Where("id = ?", c.Param("id"))
-	if bearer.ApplicationID != nil {
-		query = query.Where("application_id = ?", bearer.ApplicationID)
+	query := dbconf.DatabaseConnection().Where("id = ?", c.Param("id"))
+	if appID != nil {
+		query = query.Where("application_id = ?", appID)
 	}
-	if bearer.UserID != nil {
-		query = query.Where("user_id = ?", bearer.UserID)
+	if userID != nil {
+		query = query.Where("user_id = ?", userID)
 	}
 
 	query.Find(&kycApplication)
@@ -74,10 +77,10 @@ func kycApplicationDetailsHandler(c *gin.Context) {
 		return
 	}
 
-	if user != nil && user.ID.String() != kycApplication.UserID.String() {
+	if userID != nil && kycApplication.UserID != nil && *userID != *kycApplication.UserID {
 		provide.RenderError("forbidden", 403, c)
 		return
-	} else if app != nil && app.ID.String() != kycApplication.ApplicationID.String() {
+	} else if appID != nil && kycApplication.ApplicationID != nil && *appID != *kycApplication.ApplicationID {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
@@ -87,15 +90,9 @@ func kycApplicationDetailsHandler(c *gin.Context) {
 }
 
 func createKYCApplicationHandler(c *gin.Context) {
-	bearer := bearerAuthToken(c)
-	if bearer == nil || (bearer != nil && bearer.ApplicationID == nil && bearer.UserID == nil) {
-		provide.RenderError("unauthorized", 401, c)
-		return
-	}
-
-	user := getAuthorizedUser(c)
-	app := getAuthorizedApplication(c)
-	if user == nil && app == nil {
+	userID := provide.AuthorizedSubjectID(c, "user")
+	appID := provide.AuthorizedSubjectID(c, "application")
+	if (userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -113,30 +110,36 @@ func createKYCApplicationHandler(c *gin.Context) {
 		return
 	}
 
-	db := DatabaseConnection()
+	db := dbconf.DatabaseConnection()
 
-	if app != nil {
-		kycApplication.ApplicationID = &app.ID
+	if appID != nil {
+		kycApplication.ApplicationID = appID
 		if kycApplication.UserID != nil && *kycApplication.UserID != uuid.Nil {
 			// Make sure the authorized application has permission to submit KYC application on behalf of the user
 			kycApplicationUser := kycApplication.User(db)
-			if kycApplicationUser == nil {
+			if kycApplicationUser == nil || kycApplicationUser.ID == uuid.Nil {
 				provide.RenderError("user does not exist", 404, c)
 				return
-			} else if kycApplicationUser.ApplicationID != nil && *kycApplicationUser.ApplicationID != app.ID {
+			} else if kycApplicationUser.ApplicationID != nil && *kycApplicationUser.ApplicationID != *appID {
 				provide.RenderError("unauthorized user kyc application creation", 403, c)
 				return
 			}
 		}
-	} else if user != nil {
+	} else if userID != nil {
+		user := user.Find(userID)
+		if user == nil || user.ID == uuid.Nil {
+			provide.RenderError("user does not exist", 404, c)
+			return
+		}
+
 		kycApplication.ApplicationID = user.ApplicationID
-		kycApplication.UserID = &user.ID
+		kycApplication.UserID = userID
 	}
 
-	log.Debugf("Creating new KYC application for user %s", bearer.UserID)
+	common.Log.Debugf("Creating new KYC application for user %s", kycApplication.UserID)
 	if !kycApplication.Create(db) {
 		err = fmt.Errorf("Failed to create KYC application; %s", *kycApplication.Errors[0].Message)
-		log.Warningf(err.Error())
+		common.Log.Warningf(err.Error())
 		provide.RenderError(err.Error(), 422, c)
 		return
 	}
@@ -144,15 +147,9 @@ func createKYCApplicationHandler(c *gin.Context) {
 }
 
 func updateKYCApplicationHandler(c *gin.Context) {
-	bearer := bearerAuthToken(c)
-	if bearer == nil || (bearer != nil && bearer.ApplicationID == nil && bearer.UserID == nil) {
-		provide.RenderError("unauthorized", 401, c)
-		return
-	}
-
-	user := getAuthorizedUser(c)
-	app := getAuthorizedApplication(c)
-	if user == nil && app == nil {
+	userID := provide.AuthorizedSubjectID(c, "user")
+	appID := provide.AuthorizedSubjectID(c, "application")
+	if (userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -170,7 +167,7 @@ func updateKYCApplicationHandler(c *gin.Context) {
 		return
 	}
 
-	db := DatabaseConnection()
+	db := dbconf.DatabaseConnection()
 
 	kycApplication := &KYCApplication{}
 	db.Where("id = ?", c.Param("id")).Find(&kycApplication)
@@ -192,12 +189,12 @@ func updateKYCApplicationHandler(c *gin.Context) {
 	}
 
 	if kycApplication.Status != nil && *kycApplication.Status != initialStatus {
-		log.Debugf("KYC application status change requested from %s to %s for KYC application %s", initialStatus, *kycApplication.Status, kycApplication.ID)
-		newStatus = stringOrNil(initialStatus)
+		common.Log.Debugf("KYC application status change requested from %s to %s for KYC application %s", initialStatus, *kycApplication.Status, kycApplication.ID)
+		newStatus = common.StringOrNil(initialStatus)
 	}
 
-	if app != nil {
-		if kycApplication.ApplicationID == nil || app.ID != *kycApplication.ApplicationID {
+	if appID != nil {
+		if kycApplication.ApplicationID == nil || *appID != *kycApplication.ApplicationID {
 			provide.RenderError("forbidden", 403, c)
 			return
 		}
@@ -205,36 +202,42 @@ func updateKYCApplicationHandler(c *gin.Context) {
 		if kycApplication.UserID != nil && *kycApplication.UserID != uuid.Nil {
 			// Make sure the authorized application has permission to update the KYC application on behalf of the user
 			kycApplicationUser := kycApplication.User(db)
-			if kycApplicationUser == nil {
+			if kycApplicationUser == nil || kycApplicationUser.ID == uuid.Nil {
 				provide.RenderError("user does not exist", 404, c)
 				return
-			} else if kycApplicationUser.ApplicationID != nil && *kycApplicationUser.ApplicationID != app.ID {
-				provide.RenderError("unauthorized user kyc application update", 403, c)
+			} else if kycApplicationUser.ApplicationID != nil && *kycApplicationUser.ApplicationID != *appID {
+				provide.RenderError("unauthorized user kyc application creation", 403, c)
 				return
 			}
 		}
-	} else if user != nil {
-		if user.ID.String() != kycApplication.UserID.String() {
+	} else if userID != nil {
+		if *userID != *kycApplication.UserID {
 			provide.RenderError("forbidden", 403, c)
+			return
+		}
+
+		user := user.Find(userID)
+		if user == nil || user.ID == uuid.Nil {
+			provide.RenderError("user does not exist", 404, c)
+			return
+		} else if user.ApplicationID != nil && kycApplication.ApplicationID != nil && *user.ApplicationID != *kycApplication.ApplicationID {
+			provide.RenderError("unauthorized user kyc application update", 403, c)
 			return
 		}
 	}
 
-	kycApplication.ApplicationID = user.ApplicationID
-	kycApplication.UserID = bearer.UserID
-
-	log.Debugf("Updating KYC application %s for user %s", kycApplication.ID, bearer.UserID)
+	common.Log.Debugf("Updating KYC application %s for user %s", kycApplication.ID, userID)
 	if kycApplication.Update(newStatus) {
 		provide.Render(kycApplication, 202, c)
 	} else {
 		obj := map[string]interface{}{}
-		obj["errors"] = user.Errors
+		obj["errors"] = kycApplication.Errors
 		provide.Render(obj, 422, c)
 	}
 }
 
 func kycApplicationDocumentsListHandler(c *gin.Context) {
-	bearer := bearerAuthToken(c)
+	bearer := token.ParseBearerAuthToken(c)
 	if bearer == nil || (bearer != nil && bearer.ApplicationID == nil && bearer.UserID == nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
@@ -261,14 +264,14 @@ func kycApplicationDocumentsListHandler(c *gin.Context) {
 }
 
 func createKYCApplicationDocumentHandler(c *gin.Context) {
-	bearer := bearerAuthToken(c)
+	bearer := token.ParseBearerAuthToken(c)
 	if bearer == nil || (bearer != nil && bearer.ApplicationID == nil && bearer.UserID == nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
 
 	kycApplication := &KYCApplication{}
-	query := DatabaseConnection().Where("id = ?", c.Param("id"))
+	query := dbconf.DatabaseConnection().Where("id = ?", c.Param("id"))
 	if bearer.ApplicationID != nil {
 		query = query.Where("application_id = ?", bearer.ApplicationID)
 	}
@@ -306,11 +309,11 @@ func createKYCApplicationDocumentHandler(c *gin.Context) {
 		return
 	}
 
-	log.Debugf("Attempting to upload KYC application document for KYC application: %s", kycApplication.ID)
+	common.Log.Debugf("Attempting to upload KYC application document for KYC application: %s", kycApplication.ID)
 	resp, err := apiClient.UploadApplicationDocument(*kycApplication.Identifier, params)
 	if err != nil {
 		msg := fmt.Sprintf("failed to upload kyc application document; %s", err.Error())
-		log.Warning(msg)
+		common.Log.Warning(msg)
 		provide.RenderError(msg, 500, c)
 		return
 	}
@@ -319,14 +322,14 @@ func createKYCApplicationDocumentHandler(c *gin.Context) {
 }
 
 func kycApplicationDocumentDownloadHandler(c *gin.Context) {
-	bearer := bearerAuthToken(c)
+	bearer := token.ParseBearerAuthToken(c)
 	if bearer == nil || (bearer != nil && bearer.ApplicationID == nil && bearer.UserID == nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
 
 	kycApplication := &KYCApplication{}
-	query := DatabaseConnection().Where("id = ?", c.Param("id"))
+	query := dbconf.DatabaseConnection().Where("id = ?", c.Param("id"))
 	if bearer.ApplicationID != nil {
 		query = query.Where("application_id = ?", bearer.ApplicationID)
 	}
@@ -352,15 +355,40 @@ func kycApplicationDocumentDownloadHandler(c *gin.Context) {
 	}
 
 	docID := c.Param("docId")
-	log.Debugf("Attempting to stream KYC application document for KYC application: %s; document id: %s", kycApplication.ID, docID)
+	common.Log.Debugf("Attempting to stream KYC application document for KYC application: %s; document id: %s", kycApplication.ID, docID)
 
 	resp, err := apiClient.DownloadApplicationDocument(*kycApplication.Identifier, docID)
 	if err != nil {
 		msg := fmt.Sprintf("failed to retrieve KYC application document; %s", err.Error())
-		log.Warning(msg)
+		common.Log.Warning(msg)
 		provide.RenderError(msg, 500, c)
 		return
 	}
 
 	provide.Render(resp, 200, c)
+}
+
+func userKYCApplicationsListHandler(c *gin.Context) {
+	bearer := token.ParseBearerAuthToken(c)
+	if bearer == nil || (bearer != nil && bearer.ApplicationID == nil && bearer.UserID == nil) {
+		provide.RenderError("unauthorized", 401, c)
+		return
+	}
+
+	if bearer.UserID == nil {
+		// HACK: only support KYC for user_id
+		provide.RenderError("unauthorized", 401, c)
+		return
+	}
+
+	var kycApplications []KYCApplication
+	query := dbconf.DatabaseConnection().Where("user_id = ?", bearer.UserID)
+
+	if c.Query("status") != "" {
+		query = query.Where("status = ?", c.Query("status"))
+	}
+
+	query = query.Order("created_at DESC")
+	provide.Paginate(c, query, &KYCApplication{}).Find(&kycApplications)
+	provide.Render(kycApplications, 200, c)
 }

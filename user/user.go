@@ -1,4 +1,4 @@
-package main
+package user
 
 import (
 	"encoding/json"
@@ -12,12 +12,15 @@ import (
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
+	"github.com/provideapp/ident/common"
+	"github.com/provideapp/ident/token"
 	provide "github.com/provideservices/provide-go"
 	trumail "github.com/sdwolfe32/trumail/verifier"
 	"golang.org/x/crypto/bcrypt"
 )
 
 const defaultResetPasswordTokenTimeout = time.Hour * 1
+const natsSiaUserNotificationSubject = "sia.user.notification"
 
 func init() {
 	db := dbconf.DatabaseConnection()
@@ -26,6 +29,7 @@ func init() {
 	db.Model(&User{}).AddIndex("idx_users_application_id", "application_id")
 	db.Model(&User{}).AddIndex("idx_users_email", "email")
 	db.Model(&User{}).AddUniqueIndex("idx_users_application_id_email", "application_id", "email")
+	db.Model(&User{}).AddForeignKey("application_id", "applications(id)", "SET NULL", "CASCADE")
 }
 
 // User model
@@ -50,14 +54,25 @@ type UserResponse struct {
 
 // UserAuthenticationResponse is returned upon successful authentication using an email address
 type UserAuthenticationResponse struct {
-	User  *UserResponse  `json:"user"`
-	Token *TokenResponse `json:"token"`
+	User  *UserResponse        `json:"user"`
+	Token *token.TokenResponse `json:"token"`
+}
+
+// Find returns a user for the given id
+func Find(userID *uuid.UUID) *User {
+	db := dbconf.DatabaseConnection()
+	user := &User{}
+	db.Where("d = ?", userID).Find(&user)
+	if user == nil || user.ID == uuid.Nil {
+		return nil
+	}
+	return user
 }
 
 // AuthenticateUser attempts to authenticate by email address and password
 func AuthenticateUser(email, password string, applicationID *uuid.UUID) (*UserAuthenticationResponse, error) {
 	var user = &User{}
-	db := DatabaseConnection()
+	db := dbconf.DatabaseConnection()
 	query := db.Where("email = ?", strings.ToLower(email))
 	if applicationID != nil && *applicationID != uuid.Nil {
 		query = query.Where("application_id = ?", applicationID)
@@ -72,14 +87,14 @@ func AuthenticateUser(email, password string, applicationID *uuid.UUID) (*UserAu
 	} else {
 		return nil, fmt.Errorf("invalid email")
 	}
-	token := &Token{
+	token := &token.Token{
 		UserID: &user.ID,
 	}
 	if !token.Create() {
 		var err error
 		if len(token.Errors) > 0 {
 			err = fmt.Errorf("Failed to create token for authenticated user: %s; %s", *user.Email, *token.Errors[0].Message)
-			log.Warningf(err.Error())
+			common.Log.Warningf(err.Error())
 		}
 		return &UserAuthenticationResponse{
 			User:  user.AsResponse(),
@@ -96,29 +111,9 @@ func (u *User) authenticate(password string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(*u.Password), []byte(password)) == nil
 }
 
-// Applications returns a list of applications which have been created by the user
-func (u *User) Applications(hidden bool) []Application {
-	db := DatabaseConnection()
-	var apps []Application
-	db.Where("user_id = ? AND hidden = ?", u.ID, hidden).Find(&apps)
-	return apps
-}
-
-// KYCApplications returns a list of KYC applications which have been created by the user
-func (u *User) KYCApplications(status *string) []KYCApplication {
-	db := DatabaseConnection()
-	var kycApplications []KYCApplication
-	query := db.Where("user_id = ?", u.ID)
-	if status != nil {
-		query = query.Where("status = ?", *status)
-	}
-	query.Find(&kycApplications)
-	return kycApplications
-}
-
 // Create and persist a user
 func (u *User) Create() bool {
-	db := DatabaseConnection()
+	db := dbconf.DatabaseConnection()
 
 	if !u.Validate() {
 		return false
@@ -131,7 +126,7 @@ func (u *User) Create() bool {
 		if len(errors) > 0 {
 			for _, err := range errors {
 				u.Errors = append(u.Errors, &provide.Error{
-					Message: stringOrNil(err.Error()),
+					Message: common.StringOrNil(err.Error()),
 				})
 			}
 		}
@@ -139,7 +134,7 @@ func (u *User) Create() bool {
 			success := rowsAffected > 0
 			if success && (u.ApplicationID == nil || *u.ApplicationID == uuid.Nil) {
 				payload, _ := json.Marshal(u)
-				NATSPublish(natsSiaUserNotificationSubject, payload)
+				common.NATSPublish(natsSiaUserNotificationSubject, payload)
 			}
 			return success
 		}
@@ -149,7 +144,7 @@ func (u *User) Create() bool {
 
 // Update an existing user
 func (u *User) Update() bool {
-	db := DatabaseConnection()
+	db := dbconf.DatabaseConnection()
 
 	if !u.Validate() {
 		return false
@@ -160,7 +155,7 @@ func (u *User) Update() bool {
 	if len(errors) > 0 {
 		for _, err := range errors {
 			u.Errors = append(u.Errors, &provide.Error{
-				Message: stringOrNil(err.Error()),
+				Message: common.StringOrNil(err.Error()),
 			})
 		}
 	}
@@ -171,21 +166,21 @@ func (u *User) Update() bool {
 func (u *User) verifyEmailAddress() bool {
 	var validEmailAddress bool
 	if u.Email != nil {
-		u.Email = stringOrNil(strings.ToLower(*u.Email))
+		u.Email = common.StringOrNil(strings.ToLower(*u.Email))
 		err := checkmail.ValidateFormat(*u.Email)
 		validEmailAddress = err == nil
 		if err != nil {
 			u.Errors = append(u.Errors, &provide.Error{
-				Message: stringOrNil(fmt.Sprintf("invalid email address: %s; %s", *u.Email, err.Error())),
+				Message: common.StringOrNil(fmt.Sprintf("invalid email address: %s; %s", *u.Email, err.Error())),
 			})
 		}
 
-		if performEmailVerification {
+		if common.PerformEmailVerification {
 			i := uint(0)
 			var emailVerificationErr error
-			for i < emailVerificationAttempts {
+			for i < common.EmailVerificationAttempts {
 				emailVerificationErr = nil
-				emailVerifier := trumail.NewVerifier(emailVerificationFromDomain, emailVerificationFromAddress)
+				emailVerifier := trumail.NewVerifier(common.EmailVerificationFromDomain, common.EmailVerificationFromAddress)
 				lookup, err := emailVerifier.Verify(*u.Email)
 				if err != nil {
 					validEmailAddress = false
@@ -211,7 +206,7 @@ func (u *User) verifyEmailAddress() bool {
 
 			if emailVerificationErr != nil {
 				u.Errors = append(u.Errors, &provide.Error{
-					Message: stringOrNil(emailVerificationErr.Error()),
+					Message: common.StringOrNil(emailVerificationErr.Error()),
 				})
 			}
 		}
@@ -222,7 +217,7 @@ func (u *User) verifyEmailAddress() bool {
 // Validate a user for persistence
 func (u *User) Validate() bool {
 	u.Errors = make([]*provide.Error, 0)
-	db := DatabaseConnection()
+	db := dbconf.DatabaseConnection()
 	if db.NewRecord(u) {
 		u.verifyEmailAddress()
 		u.rehashPassword()
@@ -236,28 +231,28 @@ func (u *User) rehashPassword() {
 		if err != nil {
 			u.Password = nil
 			u.Errors = append(u.Errors, &provide.Error{
-				Message: stringOrNil(err.Error()),
+				Message: common.StringOrNil(err.Error()),
 			})
 		} else {
-			u.Password = stringOrNil(string(hashedPassword))
+			u.Password = common.StringOrNil(string(hashedPassword))
 			u.ResetPasswordToken = nil
 		}
 	} else {
 		u.Errors = append(u.Errors, &provide.Error{
-			Message: stringOrNil("invalid password"),
+			Message: common.StringOrNil("invalid password"),
 		})
 	}
 }
 
 // Delete a user
 func (u *User) Delete() bool {
-	db := DatabaseConnection()
+	db := dbconf.DatabaseConnection()
 	result := db.Delete(u)
 	errors := result.GetErrors()
 	if len(errors) > 0 {
 		for _, err := range errors {
 			u.Errors = append(u.Errors, &provide.Error{
-				Message: stringOrNil(err.Error()),
+				Message: common.StringOrNil(err.Error()),
 			})
 		}
 	}
@@ -279,7 +274,7 @@ func (u *User) CreateResetPasswordToken(db *gorm.DB) bool {
 	issuedAt := time.Now()
 	tokenID, err := uuid.NewV4()
 	if err != nil {
-		log.Warningf("Failed to generate reset password JWT token; %s", err.Error())
+		common.Log.Warningf("Failed to generate reset password JWT token; %s", err.Error())
 		return false
 	}
 	claims := map[string]interface{}{
@@ -295,18 +290,18 @@ func (u *User) CreateResetPasswordToken(db *gorm.DB) bool {
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims(claims))
 	token, err := jwtToken.SignedString([]byte{})
 	if err != nil {
-		log.Warningf("Failed to sign reset password JWT token; %s", err.Error())
+		common.Log.Warningf("Failed to sign reset password JWT token; %s", err.Error())
 		return false
 	}
 
-	u.ResetPasswordToken = stringOrNil(token)
+	u.ResetPasswordToken = common.StringOrNil(token)
 
 	result := db.Save(u)
 	errors := result.GetErrors()
 	if len(errors) > 0 {
 		for _, err := range errors {
 			u.Errors = append(u.Errors, &provide.Error{
-				Message: stringOrNil(err.Error()),
+				Message: common.StringOrNil(err.Error()),
 			})
 		}
 		return false

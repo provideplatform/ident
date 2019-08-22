@@ -1,4 +1,4 @@
-package main
+package kyc
 
 import (
 	"encoding/json"
@@ -12,6 +12,7 @@ import (
 	uuid "github.com/kthomas/go.uuid"
 	identitymind "github.com/kthomas/identitymind-golang"
 	stan "github.com/nats-io/stan.go"
+	"github.com/provideapp/ident/common"
 )
 
 const natsCheckKYCApplicationStatusSubject = "ident.kyc.status"
@@ -58,21 +59,21 @@ func createNatsCheckKYCApplicationStatusSubscriptions(wg *sync.WaitGroup) {
 }
 
 func consumeSubmitKYCApplicationMsg(msg *stan.Msg) {
-	log.Debugf("Consuming %d-byte NATS KYC application submit message on subject: %s", msg.Size(), msg.Subject)
+	common.Log.Debugf("Consuming %d-byte NATS KYC application submit message on subject: %s", msg.Size(), msg.Subject)
 
 	var params map[string]interface{}
 
 	err := json.Unmarshal(msg.Data, &params)
 	if err != nil {
-		log.Warningf("Failed to umarshal KYC application submit message; %s", err.Error())
-		nack(msg)
+		common.Log.Warningf("Failed to umarshal KYC application submit message; %s", err.Error())
+		natsutil.Nack(common.SharedNatsConnection, msg)
 		return
 	}
 
 	kycApplicationID, kycApplicationIDOk := params["kyc_application_id"].(string)
 	if !kycApplicationIDOk {
-		log.Warningf("Failed to unmarshal kyc_application_id during NATS %v message handling", msg.Subject)
-		nack(msg)
+		common.Log.Warningf("Failed to unmarshal kyc_application_id during NATS %v message handling", msg.Subject)
+		natsutil.Nack(common.SharedNatsConnection, msg)
 		return
 	}
 
@@ -82,15 +83,15 @@ func consumeSubmitKYCApplicationMsg(msg *stan.Msg) {
 	db.Where("id = ?", kycApplicationID).Find(&kycApplication)
 
 	if kycApplication == nil || kycApplication.ID == uuid.Nil {
-		log.Warningf("Failed to find KYC application for id: %s", kycApplicationID)
-		nack(msg)
+		common.Log.Warningf("Failed to find KYC application for id: %s", kycApplicationID)
+		natsutil.Nack(common.SharedNatsConnection, msg)
 		return
 	}
 
 	err = kycApplication.submit(db)
 	if err != nil {
-		log.Warningf("Failed to submit KYC application %s during NATS %v message handling; %s", kycApplication.ID, msg.Subject, err.Error())
-		nack(msg)
+		common.Log.Warningf("Failed to submit KYC application %s during NATS %v message handling; %s", kycApplication.ID, msg.Subject, err.Error())
+		natsutil.Nack(common.SharedNatsConnection, msg)
 		return
 	}
 
@@ -108,26 +109,26 @@ func consumeSubmitKYCApplicationMsg(msg *stan.Msg) {
 		}
 	}
 
-	log.Debugf("KYC application submitted: %s", kycApplication.ID)
+	common.Log.Debugf("KYC application submitted: %s", kycApplication.ID)
 	msg.Ack()
 }
 
 func consumeCheckKYCApplicationStatusMsg(msg *stan.Msg) {
-	log.Debugf("Consuming %d-byte NATS KYC application status message on subject: %s", msg.Size(), msg.Subject)
+	common.Log.Debugf("Consuming %d-byte NATS KYC application status message on subject: %s", msg.Size(), msg.Subject)
 
 	var params map[string]interface{}
 
 	err := json.Unmarshal(msg.Data, &params)
 	if err != nil {
-		log.Warningf("Failed to umarshal KYC application status message; %s", err.Error())
-		nack(msg)
+		common.Log.Warningf("Failed to umarshal KYC application status message; %s", err.Error())
+		natsutil.Nack(common.SharedNatsConnection, msg)
 		return
 	}
 
 	kycApplicationID, kycApplicationIDOk := params["kyc_application_id"].(string)
 	if !kycApplicationIDOk {
-		log.Warningf("Failed to unmarshal kyc_application_id during NATS %v message handling", msg.Subject)
-		nack(msg)
+		common.Log.Warningf("Failed to unmarshal kyc_application_id during NATS %v message handling", msg.Subject)
+		natsutil.Nack(common.SharedNatsConnection, msg)
 		return
 	}
 
@@ -137,15 +138,15 @@ func consumeCheckKYCApplicationStatusMsg(msg *stan.Msg) {
 	db.Where("id = ?", kycApplicationID).Find(&kycApplication)
 
 	if kycApplication == nil || kycApplication.ID == uuid.Nil {
-		log.Warningf("Failed to find KYC application for id: %s", kycApplicationID)
-		nack(msg)
+		common.Log.Warningf("Failed to find KYC application for id: %s", kycApplicationID)
+		natsutil.Nack(common.SharedNatsConnection, msg)
 		return
 	}
 
 	application, err := kycApplication.enrich()
 	if err != nil {
-		log.Warningf("Failed to enrich KYC application with using KYC provider API; %s", err.Error())
-		nack(msg)
+		common.Log.Warningf("Failed to enrich KYC application with using KYC provider API; %s", err.Error())
+		natsutil.Nack(common.SharedNatsConnection, msg)
 		return
 	}
 
@@ -153,7 +154,7 @@ func consumeCheckKYCApplicationStatusMsg(msg *stan.Msg) {
 	case *identitymind.KYCApplication:
 		identitymindApplication := application.(*identitymind.KYCApplication)
 		if identitymindApplication.State != nil {
-			log.Debugf("Resolved identitymind KYC application status to '%s' for KYC application: %s", *identitymindApplication.State, kycApplication.ID)
+			common.Log.Debugf("Resolved identitymind KYC application status to '%s' for KYC application: %s", *identitymindApplication.State, kycApplication.ID)
 			if identitymindApplication.IsAccepted() {
 				kycApplication.updateStatus(db, kycApplicationStatusAccepted, nil)
 			} else if identitymindApplication.IsRejected() {
@@ -162,18 +163,18 @@ func consumeCheckKYCApplicationStatusMsg(msg *stan.Msg) {
 				kycApplication.updateStatus(db, kycApplicationStatusUnderReview, nil)
 			}
 		} else {
-			log.Warningf("Identitymind KYC application does not contain a status for KYC application: %s", kycApplication.ID)
-			nack(msg)
+			common.Log.Warningf("Identitymind KYC application does not contain a status for KYC application: %s", kycApplication.ID)
+			natsutil.Nack(common.SharedNatsConnection, msg)
 			return
 		}
 	default:
-		log.Warningf("Unable to complete status check for KYC application: %s; unsupported KYC provider: %s", kycApplication.ID, *kycApplication.Provider)
-		nack(msg)
+		common.Log.Warningf("Unable to complete status check for KYC application: %s; unsupported KYC provider: %s", kycApplication.ID, *kycApplication.Provider)
+		natsutil.Nack(common.SharedNatsConnection, msg)
 		return
 	}
 
 	if kycApplication.hasReachedDecision() || instantKYCEnabled {
-		log.Debugf("KYC application decision has been reached; status '%s' for KYC application %s", *kycApplication.Status, kycApplication.ID)
+		common.Log.Debugf("KYC application decision has been reached; status '%s' for KYC application %s", *kycApplication.Status, kycApplication.ID)
 		msg.Ack()
 	}
 }
