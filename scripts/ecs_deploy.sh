@@ -67,11 +67,11 @@ docker_build()
     sudo docker build -t provide/ident .
 
     echo 'Docker tag...'
-    sudo docker tag provide/ident:latest "085843810865.dkr.ecr.us-east-1.amazonaws.com/provide/ident:${buildRef}"
+    sudo docker tag provide/ident:latest "${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/provide/ident:${buildRef}"
 
     echo 'Docker push...'
     $(aws ecr get-login --no-include-email --region us-east-1)
-    sudo docker push "085843810865.dkr.ecr.us-east-1.amazonaws.com/provide/ident:${buildRef}"
+    sudo docker push "${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/provide/ident:${buildRef}"
 }
 
 ecs_deploy()
