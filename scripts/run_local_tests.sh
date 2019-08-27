@@ -276,7 +276,7 @@ for d in "${pkgs[@]}" ; do
     NATS_STREAMING_CONCURRENCY=1 \
     GIN_MODE=release \
     DATABASE_HOST=localhost \
-    DATABASE_NAME=goldmine_test \
+    DATABASE_NAME=ident_test \
     DATABASE_USER=${DATABASE_USER} \
     DATABASE_PASSWORD=${DATABASE_PASSWORD} \
     LOG_LEVEL=DEBUG \
@@ -303,7 +303,7 @@ for d in "${pkgs[@]}" ; do
     NATS_STREAMING_CONCURRENCY=1 \
     GIN_MODE=release \
     DATABASE_HOST=localhost \
-    DATABASE_NAME=goldmine_test \
+    DATABASE_NAME=ident_test \
     DATABASE_USER=${DATABASE_USER} \
     DATABASE_PASSWORD=${DATABASE_PASSWORD} \
     LOG_LEVEL=DEBUG \
