@@ -11,6 +11,7 @@ import (
 	pgputil "github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	identitymind "github.com/kthomas/identitymind-golang"
+	"github.com/kthomas/vouched-golang"
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/kyc/providers"
 	"github.com/provideapp/ident/user"
@@ -29,6 +30,7 @@ const defaultKYCApplicationType = consumerKYCApplicationType
 const consumerKYCApplicationType = "kyc"
 const businessKYCApplicationType = "kyb"
 const identitymindKYCProvider = "identitymind"
+const vouchedKYCProvider = "vouched"
 
 func init() {
 	db := dbconf.DatabaseConnection()
@@ -295,6 +297,18 @@ func (k *KYCApplication) submit(db *gorm.DB) error {
 					return fmt.Errorf("Identitymind KYC application submission failed to return valid identifier: %s; response: %s", k.ID, apiResponse)
 				}
 			}
+		case vouchedKYCProvider:
+			if k.Identifier == nil {
+				if id, idOk := apiResponse["id"].(string); idOk {
+					common.Log.Debugf("Resolved vouched KYC application identifier '%s' for KYC application: %s", id, k.ID)
+					k.Identifier = common.StringOrNil(id)
+					k.updateStatus(db, kycApplicationStatusSubmitted, nil)
+				} else {
+					desc, _ := apiResponse["error"].(string)
+					k.updateStatus(db, kycApplicationStatusFailed, common.StringOrNil(desc))
+					return fmt.Errorf("Vouched KYC application submission failed to return valid identifier: %s; response: %s", k.ID, apiResponse)
+				}
+			}
 		default:
 			// no-op
 		}
@@ -336,6 +350,13 @@ func (k *KYCApplication) enrich() (interface{}, error) {
 			err = json.Unmarshal(apiResponseJSON, &marshaledResponse)
 			if err != nil {
 				return nil, fmt.Errorf("Failed to unmarshal identitymind KYC application response to struct; %s", err.Error())
+			}
+		case vouchedKYCProvider:
+			apiResponseJSON, _ := json.Marshal(apiResponse)
+			marshaledResponse = &vouched.KYCApplication{}
+			err = json.Unmarshal(apiResponseJSON, &marshaledResponse)
+			if err != nil {
+				return nil, fmt.Errorf("Failed to unmarshal vouched KYC application response to struct; %s", err.Error())
 			}
 		default:
 			// no-op
@@ -533,6 +554,8 @@ func (k *KYCApplication) KYCAPIClient() (KYCAPI, error) {
 	switch *k.Provider {
 	case identitymindKYCProvider:
 		apiClient = providers.InitIdentityMind()
+	case vouchedKYCProvider:
+		apiClient = providers.InitVouched()
 	default:
 		return nil, fmt.Errorf("Failed to resolve KYC provider for billing account %s", k.ID)
 	}

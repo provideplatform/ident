@@ -1,5 +1,5 @@
-hash: 95a412f1c8584c55d29b8d4d4acb24646a8e380259f339c48d55102a5fef4a9e
-updated: 2019-08-21T12:05:38.593511-04:00
+hash: df51aad33c80988195dcaad538fde735c0760cd02c3ce2d5155797c3db7f190f
+updated: 2019-09-09T13:17:53.664164-04:00
 imports:
 - name: github.com/allegro/bigcache
   version: baaa21686666424b386f282d68fc1d23594ab38d
@@ -85,7 +85,7 @@ imports:
 - name: github.com/google/logger
   version: 03bdf7bcb2c4d98c8fdbf62f1473fb1303ca1c1d
 - name: github.com/gorilla/websocket
-  version: 66b9c49e59c6c48f0ffce28c2d8b8a5678502c6d
+  version: c3e18be99d19e6b3e8f1559eea2c161a665c4b6b
 - name: github.com/jinzhu/gorm
   version: 836fb2c19d84dac7b0272958dfb9af7cf0d0ade4
   subpackages:
@@ -108,12 +108,16 @@ imports:
   version: 28d1fa77e9a4efcba826a2a6c8f5a9ff6cea44a6
 - name: github.com/kthomas/identitymind-golang
   version: 6d2ea7e625e14e72515a2ce3a1d9c62f25f56ba4
+- name: github.com/kthomas/vouched-golang
+  version: 477973a122c4151389ceac3ad23e9a27fd45ef67
 - name: github.com/lib/pq
   version: 3427c32cb71afc948325f299f040e53c1dd78979
   subpackages:
   - hstore
   - oid
   - scram
+- name: github.com/machinebox/graphql
+  version: 3a92531802258604bd12793465c2e28bc4b2fc85
 - name: github.com/mattn/go-isatty
   version: da60ac76bf7019a8b005f8dd1ad9d1a0e6434155
 - name: github.com/modern-go/concurrent
@@ -174,6 +178,9 @@ imports:
 - name: golang.org/x/net
   version: ca1201d0de80cfde86cb01aea620983605dfe99b
   subpackages:
+  - html
+  - html/atom
+  - html/charset
   - idna
 - name: golang.org/x/sys
   version: 04f50cda93cbb67f2afa353c52f342100e80e625
@@ -186,6 +193,22 @@ imports:
 - name: golang.org/x/text
   version: 342b2e1fbaa52c93f31447ad2c6abc048c63e475
   subpackages:
+  - encoding
+  - encoding/charmap
+  - encoding/htmlindex
+  - encoding/internal
+  - encoding/internal/identifier
+  - encoding/japanese
+  - encoding/korean
+  - encoding/simplifiedchinese
+  - encoding/traditionalchinese
+  - encoding/unicode
+  - internal/language
+  - internal/language/compact
+  - internal/tag
+  - internal/utf8internal
+  - language
+  - runes
   - secure/bidirule
   - transform
   - unicode/bidi
@@ -196,4 +219,49 @@ imports:
   version: c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6
 - name: gopkg.in/yaml.v2
   version: 51d6538a90f86fe93ac480b35f37b2be17fef232
-testImports: []
+testImports:
+- name: github.com/hpcloud/tail
+  version: a1dbeea552b7c8df4b542c66073e393de198a800
+  subpackages:
+  - ratelimiter
+  - util
+  - watch
+  - winfile
+- name: github.com/onsi/ginkgo
+  version: 19cca4bf3c3f61523629a8f01ac577fc339503b9
+  subpackages:
+  - config
+  - internal/codelocation
+  - internal/containernode
+  - internal/failer
+  - internal/leafnodes
+  - internal/remote
+  - internal/spec
+  - internal/spec_iterator
+  - internal/specrunner
+  - internal/suite
+  - internal/testingtproxy
+  - internal/writer
+  - reporters
+  - reporters/stenographer
+  - reporters/stenographer/support/go-colorable
+  - reporters/stenographer/support/go-isatty
+  - types
+- name: github.com/onsi/gomega
+  version: 2e3b965217103f3054061bd78cb31bca3e94a0da
+  subpackages:
+  - format
+  - internal/assertion
+  - internal/asyncassertion
+  - internal/oraclematcher
+  - internal/testingtsupport
+  - matchers
+  - matchers/support/goraph/bipartitegraph
+  - matchers/support/goraph/edge
+  - matchers/support/goraph/node
+  - matchers/support/goraph/util
+  - types
+- name: gopkg.in/fsnotify/fsnotify.v1
+  version: c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9
+- name: gopkg.in/tomb.v1
+  version: c131134a1947e9afd9cecfe11f4c6dff0732ae58

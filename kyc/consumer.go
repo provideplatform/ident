@@ -7,10 +7,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kthomas/go-db-config"
+	dbconf "github.com/kthomas/go-db-config"
 	natsutil "github.com/kthomas/go-natsutil"
 	uuid "github.com/kthomas/go.uuid"
 	identitymind "github.com/kthomas/identitymind-golang"
+	"github.com/kthomas/vouched-golang"
 	stan "github.com/nats-io/stan.go"
 	"github.com/provideapp/ident/common"
 )
@@ -164,6 +165,22 @@ func consumeCheckKYCApplicationStatusMsg(msg *stan.Msg) {
 			}
 		} else {
 			common.Log.Warningf("Identitymind KYC application does not contain a status for KYC application: %s", kycApplication.ID)
+			natsutil.Nack(common.SharedNatsConnection, msg)
+			return
+		}
+	case *vouched.KYCApplication:
+		vouchedApplication := application.(*vouched.KYCApplication)
+		if vouchedApplication.Status != nil {
+			common.Log.Debugf("Resolved vouched KYC application status to '%s' for KYC application: %s", *vouchedApplication.Status, kycApplication.ID)
+			if vouchedApplication.IsAccepted() {
+				kycApplication.updateStatus(db, kycApplicationStatusAccepted, nil)
+			} else if vouchedApplication.IsRejected() {
+				kycApplication.updateStatus(db, kycApplicationStatusRejected, nil)
+			} else if vouchedApplication.IsUnderReview() {
+				kycApplication.updateStatus(db, kycApplicationStatusUnderReview, nil)
+			}
+		} else {
+			common.Log.Warningf("Vouched KYC application does not contain a status for KYC application: %s", kycApplication.ID)
 			natsutil.Nack(common.SharedNatsConnection, msg)
 			return
 		}
