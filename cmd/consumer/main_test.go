@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestGoldmineConsumer(t *testing.T) {
+func TestIdentConsumer(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Ident Consumer Suite")
 }

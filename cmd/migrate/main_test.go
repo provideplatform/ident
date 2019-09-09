@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestGoldmineAPI(t *testing.T) {
+func TestIdentMigrations(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Ident Migrations Suite")
 }
