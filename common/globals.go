@@ -31,7 +31,7 @@ var (
 
 	requireTLS bool
 
-	// ConsumeNATSStreamingSubscriptions is a flag the indicates if the goldmine instance is running in API or consumer mode
+	// ConsumeNATSStreamingSubscriptions is a flag the indicates if the ident instance is running in API or consumer mode
 	ConsumeNATSStreamingSubscriptions bool
 
 	// EmailVerificationAttempts is the number of retries to attempt per address validation (i.e., for deliverability)
