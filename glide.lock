@@ -1,5 +1,5 @@
 hash: df51aad33c80988195dcaad538fde735c0760cd02c3ce2d5155797c3db7f190f
-updated: 2019-09-09T13:17:53.664164-04:00
+updated: 2019-09-09T22:59:58.568649-04:00
 imports:
 - name: github.com/allegro/bigcache
   version: baaa21686666424b386f282d68fc1d23594ab38d
@@ -109,15 +109,13 @@ imports:
 - name: github.com/kthomas/identitymind-golang
   version: 6d2ea7e625e14e72515a2ce3a1d9c62f25f56ba4
 - name: github.com/kthomas/vouched-golang
-  version: 477973a122c4151389ceac3ad23e9a27fd45ef67
+  version: d83ef6eacdf1787cf8f1560e5ec40d03cd220802
 - name: github.com/lib/pq
   version: 3427c32cb71afc948325f299f040e53c1dd78979
   subpackages:
   - hstore
   - oid
   - scram
-- name: github.com/machinebox/graphql
-  version: 3a92531802258604bd12793465c2e28bc4b2fc85
 - name: github.com/mattn/go-isatty
   version: da60ac76bf7019a8b005f8dd1ad9d1a0e6434155
 - name: github.com/modern-go/concurrent
