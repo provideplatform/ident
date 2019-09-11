@@ -1,5 +1,5 @@
 hash: df51aad33c80988195dcaad538fde735c0760cd02c3ce2d5155797c3db7f190f
-updated: 2019-09-09T22:59:58.568649-04:00
+updated: 2019-09-10T20:49:11.498958-04:00
 imports:
 - name: github.com/allegro/bigcache
   version: baaa21686666424b386f282d68fc1d23594ab38d
@@ -109,7 +109,7 @@ imports:
 - name: github.com/kthomas/identitymind-golang
   version: 6d2ea7e625e14e72515a2ce3a1d9c62f25f56ba4
 - name: github.com/kthomas/vouched-golang
-  version: d83ef6eacdf1787cf8f1560e5ec40d03cd220802
+  version: 7e334b0e3a0ea931dfce73fd452dd9ad1010435b
 - name: github.com/lib/pq
   version: 3427c32cb71afc948325f299f040e53c1dd78979
   subpackages:
