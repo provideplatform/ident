@@ -96,7 +96,7 @@ func (app *Application) sanitizeConfig() {
 		encryptedConfig = map[string]interface{}{}
 	}
 
-	if webhookURL, webhookURLOk := cfg["webhook_url"].(map[string]interface{}); webhookURLOk {
+	if webhookURL, webhookURLOk := cfg["webhook_url"].(string); webhookURLOk {
 		encryptedConfig["webhook_url"] = webhookURL
 		delete(cfg, "webhook_url")
 	}
