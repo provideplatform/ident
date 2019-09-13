@@ -1,10 +1,15 @@
 package kyc
 
 import (
+	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
@@ -12,11 +17,14 @@ import (
 	uuid "github.com/kthomas/go.uuid"
 	identitymind "github.com/kthomas/identitymind-golang"
 	"github.com/kthomas/vouched-golang"
+	"github.com/provideapp/ident/application"
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/kyc/providers"
 	"github.com/provideapp/ident/user"
 	provide "github.com/provideservices/provide-go"
 )
+
+const defaultKYCWebhookTimeout = time.Second * 5
 
 const kycApplicationStatusAccepted = "accepted"
 const kycApplicationStatusFailed = "failed" // the KYC application API call itself failed
@@ -245,6 +253,19 @@ func (k *KYCApplication) Validate(db *gorm.DB) bool {
 	return len(k.Errors) == 0
 }
 
+// Application retrieves the application related to the KYC application
+func (k *KYCApplication) Application(db *gorm.DB) *application.Application {
+	if k.ApplicationID == nil || *k.ApplicationID == uuid.Nil {
+		return nil
+	}
+	app := &application.Application{}
+	db.Where("id = ?", k.ApplicationID).Find(&app)
+	if app == nil || app.ID == uuid.Nil {
+		return nil
+	}
+	return app
+}
+
 // User retrieves the user related to the KYC application
 func (k *KYCApplication) User(db *gorm.DB) *user.User {
 	if k.UserID == nil || *k.UserID == uuid.Nil {
@@ -406,8 +427,86 @@ func (k *KYCApplication) setEncryptedParams(params map[string]interface{}) {
 	k.Params = params
 }
 
+func (k *KYCApplication) dispatchWebhookRequest(params map[string]interface{}) error {
+	if !k.hasWebhookConfiguration() {
+		return fmt.Errorf("KYC application %s does not have a configured webhook_url and application-configured webhook_secret", k.ID)
+	}
+
+	webhookSecret := k.webhookSecret()
+	webhookURL := k.webhookURL()
+	if webhookURL == nil {
+		return fmt.Errorf("KYC application %s does not have a configured webhook_url", k.ID)
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			DisableKeepAlives: true,
+		},
+		Timeout: defaultKYCWebhookTimeout,
+	}
+
+	// enrich the params
+	params["kyc_application_id"] = k.ID
+	params["status"] = k.Status
+
+	payload, err := json.Marshal(params)
+	if err != nil {
+		common.Log.Warningf("Failed to marshal JSON payload for KYC application webhook notification; kyc application id: %s; %s", k.ID, err.Error())
+		return err
+	}
+
+	signedPayload := []byte(fmt.Sprintf("t=%v,%s", time.Now().Unix(), string(payload)))
+
+	hash := hmac.New(sha256.New, webhookSecret)
+	hash.Write(signedPayload)
+	signature := string(hash.Sum(nil))
+
+	req, _ := http.NewRequest("POST", *webhookURL, bytes.NewReader(payload))
+	req.Header = map[string][]string{
+		"Accept-Encoding":     {"gzip, deflate"},
+		"Accept-Language":     {"en-us"},
+		"Accept":              {"application/json"},
+		"Content-Type":        {"application/json"},
+		"X-Request-Signature": {signature},
+	}
+
+	resp, err := client.Do(req)
+	if resp != nil && resp.Body != nil {
+		defer resp.Body.Close()
+	}
+	if err != nil {
+		common.Log.Warningf("Failed to dispatch KYC application notification to configured webhook url: %s; kyc application id: %s; %s", *webhookURL, k.ID, err.Error())
+		return err
+	} else if resp.StatusCode >= 300 {
+		msg := fmt.Sprintf("Dispatched KYC application notification returned %v response: to configured webhook url %s; kyc application id: %s", resp.StatusCode, *webhookURL, k.ID)
+		common.Log.Warning(msg)
+		return errors.New(msg)
+	}
+
+	common.Log.Debugf("Dispatched KYC application notification to configured webhook url: %s (%v response); kyc application id: %s", *webhookURL, resp.StatusCode, k.ID)
+	return nil
+}
+
 func (k *KYCApplication) hasReachedDecision() bool {
 	return k.isAccepted() || k.isRejected()
+}
+
+func (k *KYCApplication) hasWebhookConfiguration() bool {
+	return k.hasWebhookSecret() && k.hasWebhookURL()
+}
+
+func (k *KYCApplication) hasWebhookSecret() bool {
+	if k.webhookSecret() != nil {
+		return true
+	}
+	return false
+}
+
+func (k *KYCApplication) hasWebhookURL() bool {
+	if k.webhookURL() != nil {
+		return true
+	}
+	return false
 }
 
 func (k *KYCApplication) isAccepted() bool {
@@ -540,6 +639,32 @@ func (k *KYCApplication) undecide(db *gorm.DB) error {
 
 	k.updateStatus(db, kycApplicationStatusUnderReview, nil)
 
+	return nil
+}
+
+func (k *KYCApplication) webhookSecret() []byte {
+	app := k.Application(dbconf.DatabaseConnection())
+	if app == nil {
+		return nil
+	}
+	decryptedAppConfig, err := app.DecryptedConfig()
+	if err != nil {
+		return nil
+	}
+	if webhookSecret, webhookSecretOk := decryptedAppConfig["webhook_secret"].(string); webhookSecretOk {
+		return []byte(webhookSecret)
+	}
+	return nil
+}
+
+func (k *KYCApplication) webhookURL() *string {
+	params, err := k.decryptedParams()
+	if err != nil {
+		return nil
+	}
+	if webhookURL, webhookURLOk := params["webhook_url"].(string); webhookURLOk {
+		return common.StringOrNil(webhookURL)
+	}
 	return nil
 }
 

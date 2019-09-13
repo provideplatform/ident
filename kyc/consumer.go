@@ -23,6 +23,12 @@ const checkKYCApplicationStatusAckWait = time.Minute * 10
 const natsSubmitKYCApplicationSubject = "ident.kyc.submit"
 const natsSubmitKYCApplicationMaxInFlight = 2048
 const submitKYCApplicationAckWait = time.Minute * 1
+const natsSubmitKYCApplicationTimeout = int64(time.Minute * 5)
+
+const natsDispatchKYCApplicationWebhookSubject = "ident.kyc.webhook"
+const natsDispatchKYCApplicationWebhookMaxInFlight = 2048
+const dispatchKYCApplicationWebhookAckWait = time.Second * 5
+const natsDispatchKYCApplicationWebhookTimeout = int64(time.Minute * 10)
 
 var instantKYCEnabled = strings.ToLower(os.Getenv("INSTANT_KYC")) == "true"
 
@@ -30,6 +36,7 @@ func init() {
 	var waitGroup sync.WaitGroup
 
 	createNatsCheckKYCApplicationStatusSubscriptions(&waitGroup)
+	createNatsDispatchKYCApplicationWebhookSubscriptions(&waitGroup)
 	createNatsSubmitKYCApplicationSubscriptions(&waitGroup)
 }
 
@@ -55,6 +62,19 @@ func createNatsCheckKYCApplicationStatusSubscriptions(wg *sync.WaitGroup) {
 			consumeCheckKYCApplicationStatusMsg,
 			checkKYCApplicationStatusAckWait,
 			natsCheckKYCApplicationStatusMaxInFlight,
+		)
+	}
+}
+
+func createNatsDispatchKYCApplicationWebhookSubscriptions(wg *sync.WaitGroup) {
+	for i := uint64(0); i < natsutil.GetNatsConsumerConcurrency(); i++ {
+		natsutil.RequireNatsStreamingSubscription(wg,
+			dispatchKYCApplicationWebhookAckWait,
+			natsDispatchKYCApplicationWebhookSubject,
+			natsDispatchKYCApplicationWebhookSubject,
+			consumeDispatchKYCApplicationWebhookMsg,
+			dispatchKYCApplicationWebhookAckWait,
+			natsDispatchKYCApplicationWebhookMaxInFlight,
 		)
 	}
 }
@@ -92,7 +112,7 @@ func consumeSubmitKYCApplicationMsg(msg *stan.Msg) {
 	err = kycApplication.submit(db)
 	if err != nil {
 		common.Log.Warningf("Failed to submit KYC application %s during NATS %v message handling; %s", kycApplication.ID, msg.Subject, err.Error())
-		natsutil.Nack(common.SharedNatsConnection, msg)
+		natsutil.AttemptNack(common.SharedNatsConnection, msg, natsSubmitKYCApplicationTimeout)
 		return
 	}
 
@@ -194,4 +214,45 @@ func consumeCheckKYCApplicationStatusMsg(msg *stan.Msg) {
 		common.Log.Debugf("KYC application decision has been reached; status '%s' for KYC application %s", *kycApplication.Status, kycApplication.ID)
 		msg.Ack()
 	}
+}
+
+func consumeDispatchKYCApplicationWebhookMsg(msg *stan.Msg) {
+	common.Log.Debugf("Consuming %d-byte NATS KYC application webhook dispatch message on subject: %s", msg.Size(), msg.Subject)
+
+	var params map[string]interface{}
+
+	err := json.Unmarshal(msg.Data, &params)
+	if err != nil {
+		common.Log.Warningf("Failed to umarshal KYC application submit message; %s", err.Error())
+		natsutil.Nack(common.SharedNatsConnection, msg)
+		return
+	}
+
+	kycApplicationID, kycApplicationIDOk := params["kyc_application_id"].(string)
+	if !kycApplicationIDOk {
+		common.Log.Warningf("Failed to unmarshal kyc_application_id during NATS %v message handling", msg.Subject)
+		natsutil.Nack(common.SharedNatsConnection, msg)
+		return
+	}
+
+	db := dbconf.DatabaseConnection()
+
+	kycApplication := &KYCApplication{}
+	db.Where("id = ?", kycApplicationID).Find(&kycApplication)
+
+	if kycApplication == nil || kycApplication.ID == uuid.Nil {
+		common.Log.Warningf("Failed to find KYC application for id: %s", kycApplicationID)
+		natsutil.Nack(common.SharedNatsConnection, msg)
+		return
+	}
+
+	err = kycApplication.dispatchWebhookRequest(params)
+	if err != nil {
+		common.Log.Warningf("Failed to dispatch webhook notification for KYC application %s during NATS %v message handling; %s", kycApplication.ID, msg.Subject, err.Error())
+		natsutil.AttemptNack(common.SharedNatsConnection, msg, natsDispatchKYCApplicationWebhookTimeout)
+		return
+	}
+
+	common.Log.Debugf("KYC application submitted: %s", kycApplication.ID)
+	msg.Ack()
 }
