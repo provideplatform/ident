@@ -253,6 +253,6 @@ func consumeDispatchKYCApplicationWebhookMsg(msg *stan.Msg) {
 		return
 	}
 
-	common.Log.Debugf("KYC application submitted: %s", kycApplication.ID)
+	common.Log.Debugf("Webhook notification dispatched for KYC application: %s", kycApplication.ID)
 	msg.Ack()
 }

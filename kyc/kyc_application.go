@@ -555,6 +555,11 @@ func (k *KYCApplication) updateStatus(db *gorm.DB, status string, description *s
 				Message: common.StringOrNil(err.Error()),
 			})
 		}
+	} else {
+		payload, _ := json.Marshal(map[string]interface{}{
+			"kyc_application_id": k.ID.String(),
+		})
+		common.NATSPublish(natsDispatchKYCApplicationWebhookSubject, payload)
 	}
 }
 
