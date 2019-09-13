@@ -2,6 +2,7 @@ package application
 
 import (
 	"encoding/json"
+	"strings"
 
 	dbconf "github.com/kthomas/go-db-config"
 	"github.com/kthomas/go-pgputil"
@@ -96,9 +97,12 @@ func (app *Application) sanitizeConfig() {
 		encryptedConfig = map[string]interface{}{}
 	}
 
-	if webhookURL, webhookURLOk := cfg["webhook_url"].(string); webhookURLOk {
-		encryptedConfig["webhook_url"] = webhookURL
-		delete(cfg, "webhook_url")
+	if webhookSecret, webhookSecretOk := cfg["webhook_secret"].(string); webhookSecretOk {
+		encryptedConfig["webhook_secret"] = webhookSecret
+		delete(cfg, "webhook_secret")
+	} else {
+		webhookSecretUUID, _ := uuid.NewV4()
+		encryptedConfig["webhook_secret"] = strings.Replace(webhookSecretUUID.String(), "-", "", -1)
 	}
 
 	app.setConfig(cfg)
