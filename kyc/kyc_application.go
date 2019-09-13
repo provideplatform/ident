@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -455,11 +456,13 @@ func (k *KYCApplication) dispatchWebhookRequest(params map[string]interface{}) e
 		return err
 	}
 
-	signedPayload := []byte(fmt.Sprintf("t=%v,%s", time.Now().Unix(), string(payload)))
+	signedTimestamp := time.Now().Unix()
+	signedPayload := []byte(fmt.Sprintf("%v.%s", signedTimestamp, string(payload)))
 
 	hash := hmac.New(sha256.New, webhookSecret)
 	hash.Write(signedPayload)
-	signature := string(hash.Sum(nil))
+	signature := hex.EncodeToString(hash.Sum(nil))
+	signatureHeader := fmt.Sprintf("t=%v,s=%s", signedTimestamp, signature)
 
 	req, _ := http.NewRequest("POST", *webhookURL, bytes.NewReader(payload))
 	req.Header = map[string][]string{
@@ -467,7 +470,7 @@ func (k *KYCApplication) dispatchWebhookRequest(params map[string]interface{}) e
 		"Accept-Language":     {"en-us"},
 		"Accept":              {"application/json"},
 		"Content-Type":        {"application/json"},
-		"X-Request-Signature": {signature},
+		"X-Request-Signature": {signatureHeader},
 	}
 
 	resp, err := client.Do(req)
