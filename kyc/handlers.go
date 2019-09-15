@@ -215,7 +215,7 @@ func updateKYCApplicationHandler(c *gin.Context) {
 			initialStatus = *kycApplication.Status
 		}
 
-		if kycApplication.Status != nil && *kycApplication.Status != initialStatus {
+		if status != initialStatus {
 			common.Log.Debugf("KYC application status change requested from %s to %s for KYC application %s", initialStatus, *kycApplication.Status, kycApplication.ID)
 			if kycApplication.Update(common.StringOrNil(status)) {
 				provide.Render(kycApplication, 202, c)
