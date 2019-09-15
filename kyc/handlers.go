@@ -215,12 +215,6 @@ func updateKYCApplicationHandler(c *gin.Context) {
 			initialStatus = *kycApplication.Status
 		}
 
-		err = json.Unmarshal(buf, &kycApplication)
-		if err != nil {
-			provide.RenderError(err.Error(), 422, c)
-			return
-		}
-
 		if kycApplication.Status != nil && *kycApplication.Status != initialStatus {
 			common.Log.Debugf("KYC application status change requested from %s to %s for KYC application %s", initialStatus, *kycApplication.Status, kycApplication.ID)
 			if kycApplication.Update(common.StringOrNil(status)) {
