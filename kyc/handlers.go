@@ -210,22 +210,13 @@ func updateKYCApplicationHandler(c *gin.Context) {
 	}
 
 	if status, statusOk := params["status"].(string); statusOk {
-		var initialStatus string
-		if kycApplication.Status != nil {
-			initialStatus = *kycApplication.Status
-		}
-
-		if status != initialStatus {
-			common.Log.Debugf("KYC application status change requested from %s to %s for KYC application %s", initialStatus, *kycApplication.Status, kycApplication.ID)
-			if kycApplication.Update(common.StringOrNil(status)) {
-				provide.Render(kycApplication, 202, c)
-			} else {
-				obj := map[string]interface{}{}
-				obj["errors"] = kycApplication.Errors
-				provide.Render(obj, 422, c)
-			}
-		} else {
+		common.Log.Debugf("KYC application status change requested from %s to %s for KYC application %s", initialStatus, *kycApplication.Status, kycApplication.ID)
+		if kycApplication.Update(common.StringOrNil(status)) {
 			provide.Render(kycApplication, 202, c)
+		} else {
+			obj := map[string]interface{}{}
+			obj["errors"] = kycApplication.Errors
+			provide.Render(obj, 422, c)
 		}
 	} else {
 		provide.RenderError("kyc application update must include status", 400, c)
