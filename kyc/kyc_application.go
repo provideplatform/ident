@@ -302,13 +302,15 @@ func (k *KYCApplication) submit(db *gorm.DB) error {
 		common.Log.Warningf("Failed to resolve KYC API client; %s", err.Error())
 		return err
 	}
-	if apiResponse, apiResponseOk := resp.(map[string]interface{}); apiResponseOk {
-		k.Params, _ = k.decryptedParams()
-		k.ProviderRepresentation = apiResponse
 
-		switch *k.Provider {
-		case identitymindKYCProvider:
-			if k.Identifier == nil {
+	k.Params, _ = k.decryptedParams()
+
+	switch *k.Provider {
+	case identitymindKYCProvider:
+		if k.Identifier == nil {
+			if apiResponse, apiResponseOk := resp.(map[string]interface{}); apiResponseOk {
+				k.ProviderRepresentation = apiResponse
+
 				if mtid, mtidOk := apiResponse["mtid"].(string); mtidOk {
 					common.Log.Debugf("Resolved identitymind KYC application identifier '%s' for KYC application: %s", mtid, k.ID)
 					k.Identifier = common.StringOrNil(mtid)
@@ -319,21 +321,28 @@ func (k *KYCApplication) submit(db *gorm.DB) error {
 					return fmt.Errorf("Identitymind KYC application submission failed to return valid identifier: %s; response: %s", k.ID, apiResponse)
 				}
 			}
-		case vouchedKYCProvider:
-			if k.Identifier == nil {
-				if id, idOk := apiResponse["id"].(string); idOk {
-					common.Log.Debugf("Resolved vouched KYC application identifier '%s' for KYC application: %s", id, k.ID)
-					k.Identifier = common.StringOrNil(id)
+		}
+	case vouchedKYCProvider:
+		if k.Identifier == nil {
+			if apiResponse, apiResponseOk := resp.(*vouched.KYCApplicationResponse); apiResponseOk {
+				provideRepresentationJSON, _ := json.Marshal(apiResponse)
+				providerRepresentation := map[string]interface{}{}
+				json.Unmarshal(provideRepresentationJSON, &providerRepresentation)
+				k.ProviderRepresentation = providerRepresentation
+
+				if len(apiResponse.Errors) == 0 {
+					common.Log.Debugf("Resolved vouched KYC application identifier '%s' for KYC application: %s", *apiResponse.Data.Job.ID, k.ID)
+					k.Identifier = apiResponse.Data.Job.ID
 					k.updateStatus(db, kycApplicationStatusSubmitted, nil)
 				} else {
-					desc, _ := apiResponse["error"].(string)
-					k.updateStatus(db, kycApplicationStatusFailed, common.StringOrNil(desc))
-					return fmt.Errorf("Vouched KYC application submission failed to return valid identifier: %s; response: %s", k.ID, apiResponse)
+					desc := apiResponse.Errors[0].Message
+					k.updateStatus(db, kycApplicationStatusFailed, desc)
+					return fmt.Errorf("Vouched KYC application submission failed to return valid identifier: %s; response: %s", k.ID, resp)
 				}
 			}
-		default:
-			// no-op
 		}
+	default:
+		// no-op
 	}
 
 	payload, _ := json.Marshal(map[string]interface{}{
@@ -360,29 +369,34 @@ func (k *KYCApplication) enrich() (interface{}, error) {
 		common.Log.Warningf("Failed to resolve KYC API client; %s", err.Error())
 		return nil, err
 	}
-	var marshaledResponse interface{}
-	if apiResponse, apiResponseOk := resp.(map[string]interface{}); apiResponseOk {
-		k.Params, _ = k.decryptedParams()
-		k.ProviderRepresentation = apiResponse
 
-		switch *k.Provider {
-		case identitymindKYCProvider:
+	k.Params, _ = k.decryptedParams()
+	var marshaledResponse interface{}
+
+	switch *k.Provider {
+	case identitymindKYCProvider:
+		if apiResponse, apiResponseOk := resp.(map[string]interface{}); apiResponseOk {
+			k.ProviderRepresentation = apiResponse
+
 			apiResponseJSON, _ := json.Marshal(apiResponse)
 			marshaledResponse = &identitymind.KYCApplication{}
 			err = json.Unmarshal(apiResponseJSON, &marshaledResponse)
 			if err != nil {
 				return nil, fmt.Errorf("Failed to unmarshal identitymind KYC application response to struct; %s", err.Error())
 			}
-		case vouchedKYCProvider:
-			apiResponseJSON, _ := json.Marshal(apiResponse)
-			marshaledResponse = &vouched.KYCApplication{}
-			err = json.Unmarshal(apiResponseJSON, &marshaledResponse)
-			if err != nil {
-				return nil, fmt.Errorf("Failed to unmarshal vouched KYC application response to struct; %s", err.Error())
-			}
-		default:
-			// no-op
 		}
+	case vouchedKYCProvider:
+		if apiResponse, apiResponseOk := resp.(*vouched.KYCApplication); apiResponseOk {
+			provideRepresentationJSON, _ := json.Marshal(apiResponse)
+			providerRepresentation := map[string]interface{}{}
+			json.Unmarshal(provideRepresentationJSON, &providerRepresentation)
+			k.ProviderRepresentation = providerRepresentation
+
+			marshaledResponse = apiResponse
+		}
+
+	default:
+		// no-op
 	}
 	return marshaledResponse, nil
 }
