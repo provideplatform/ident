@@ -197,11 +197,22 @@ func (k *KYCApplication) Create(db *gorm.DB) bool {
 func (k *KYCApplication) Update(status *string) bool {
 	db := dbconf.DatabaseConnection()
 
+	var initialStatus string
+	if k.Status != nil {
+		initialStatus = *k.Status
+	}
+
+	if status != nil && *status != initialStatus {
+		common.Log.Debugf("KYC application status change requested from %s to %s for KYC application %s", initialStatus, *k.Status, k.ID)
+		k.Status = status
+	} else {
+		common.Log.Debugf("Short-circuiting no-op KYC application status change request from %s to %s for KYC application %s", initialStatus, *k.Status, k.ID)
+		return true
+	}
+
 	if !k.Validate(db) {
 		return false
 	}
-
-	k.setEncryptedParams(k.Params)
 
 	result := db.Save(&k)
 	errors := result.GetErrors()
@@ -216,7 +227,7 @@ func (k *KYCApplication) Update(status *string) bool {
 			"kyc_application_id": k.ID.String(),
 			"status":             status,
 		})
-		common.NATSPublish(natsSubmitKYCApplicationSubject, payload)
+		common.NATSPublish(natsDispatchKYCApplicationWebhookSubject, payload)
 	}
 
 	return len(k.Errors) == 0

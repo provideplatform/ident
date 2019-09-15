@@ -176,23 +176,6 @@ func updateKYCApplicationHandler(c *gin.Context) {
 		return
 	}
 
-	var initialStatus string
-	var newStatus *string
-	if kycApplication.Status != nil {
-		initialStatus = *kycApplication.Status
-	}
-
-	err = json.Unmarshal(buf, &kycApplication)
-	if err != nil {
-		provide.RenderError(err.Error(), 422, c)
-		return
-	}
-
-	if kycApplication.Status != nil && *kycApplication.Status != initialStatus {
-		common.Log.Debugf("KYC application status change requested from %s to %s for KYC application %s", initialStatus, *kycApplication.Status, kycApplication.ID)
-		newStatus = common.StringOrNil(initialStatus)
-	}
-
 	if appID != nil {
 		if kycApplication.ApplicationID == nil || *appID != *kycApplication.ApplicationID {
 			provide.RenderError("forbidden", 403, c)
@@ -226,13 +209,32 @@ func updateKYCApplicationHandler(c *gin.Context) {
 		}
 	}
 
-	common.Log.Debugf("Updating KYC application %s for user %s", kycApplication.ID, userID)
-	if kycApplication.Update(newStatus) {
-		provide.Render(kycApplication, 202, c)
+	if status, statusOk := params["status"].(string); statusOk {
+		var initialStatus string
+		if kycApplication.Status != nil {
+			initialStatus = *kycApplication.Status
+		}
+
+		err = json.Unmarshal(buf, &kycApplication)
+		if err != nil {
+			provide.RenderError(err.Error(), 422, c)
+			return
+		}
+
+		if kycApplication.Status != nil && *kycApplication.Status != initialStatus {
+			common.Log.Debugf("KYC application status change requested from %s to %s for KYC application %s", initialStatus, *kycApplication.Status, kycApplication.ID)
+			if kycApplication.Update(common.StringOrNil(status)) {
+				provide.Render(kycApplication, 202, c)
+			} else {
+				obj := map[string]interface{}{}
+				obj["errors"] = kycApplication.Errors
+				provide.Render(obj, 422, c)
+			}
+		} else {
+			provide.Render(kycApplication, 202, c)
+		}
 	} else {
-		obj := map[string]interface{}{}
-		obj["errors"] = kycApplication.Errors
-		provide.Render(obj, 422, c)
+		provide.RenderError("kyc application update must include status", 400, c)
 	}
 }
 
