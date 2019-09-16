@@ -108,6 +108,9 @@ func AuthenticateUser(email, password string, applicationID *uuid.UUID) (*UserAu
 }
 
 func (u *User) authenticate(password string) bool {
+	if u.Password == nil {
+		return false
+	}
 	return bcrypt.CompareHashAndPassword([]byte(*u.Password), []byte(password)) == nil
 }
 
