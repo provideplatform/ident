@@ -27,8 +27,8 @@ const natsSubmitKYCApplicationTimeout = int64(time.Minute * 5)
 
 const natsDispatchKYCApplicationWebhookSubject = "ident.kyc.webhook"
 const natsDispatchKYCApplicationWebhookMaxInFlight = 2048
-const dispatchKYCApplicationWebhookAckWait = time.Second * 5
-const natsDispatchKYCApplicationWebhookTimeout = int64(time.Minute * 10)
+const dispatchKYCApplicationWebhookAckWait = time.Second * 30
+const natsDispatchKYCApplicationWebhookTimeout = int64(time.Minute * 5)
 
 var instantKYCEnabled = strings.ToLower(os.Getenv("INSTANT_KYC")) == "true"
 
