@@ -223,7 +223,9 @@ func (u *User) Validate() bool {
 	db := dbconf.DatabaseConnection()
 	if db.NewRecord(u) {
 		u.verifyEmailAddress()
-		u.rehashPassword()
+		if u.Password != nil {
+			u.rehashPassword()
+		}
 	}
 	return len(u.Errors) == 0
 }
