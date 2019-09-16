@@ -43,6 +43,7 @@ func ApplicationsByUserID(userID *uuid.UUID, hidden bool) []Application {
 	return apps
 }
 
+// DecryptedConfig returns the decrypted application config
 func (app *Application) DecryptedConfig() (map[string]interface{}, error) {
 	decryptedParams := map[string]interface{}{}
 	if app.EncryptedConfig != nil {
@@ -95,10 +96,10 @@ func (app *Application) setConfig(cfg map[string]interface{}) {
 	app.Config = &_cfgJSON
 }
 
-func (app *Application) setEncryptedConfig(params map[string]interface{}) {
-	paramsJSON, _ := json.Marshal(params)
-	_paramsJSON := string(json.RawMessage(paramsJSON))
-	app.EncryptedConfig = &_paramsJSON
+func (app *Application) setEncryptedConfig(cfg map[string]interface{}) {
+	cfgJSON, _ := json.Marshal(cfg)
+	_cfgJSON := string(json.RawMessage(cfgJSON))
+	app.EncryptedConfig = &_cfgJSON
 	app.encryptConfig()
 }
 
