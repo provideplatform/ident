@@ -38,7 +38,7 @@ type User struct {
 	ApplicationID          *uuid.UUID `sql:"type:uuid" json:"-"`
 	Name                   *string    `sql:"not null" json:"name"`
 	Email                  *string    `sql:"not null" json:"email"`
-	Password               *string    `sql:"not null" json:"-"`
+	Password               *string    `json:"-"`
 	PrivacyPolicyAgreedAt  *time.Time `json:"privacy_policy_agreed_at"`
 	TermsOfServiceAgreedAt *time.Time `json:"terms_of_service_agreed_at"`
 	ResetPasswordToken     *string    `json:"-"`
