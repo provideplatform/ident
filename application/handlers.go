@@ -44,7 +44,7 @@ func applicationsListHandler(c *gin.Context) {
 		mergedConfig := app.mergedConfig()
 		mergedConfigJSON, _ := json.Marshal(mergedConfig)
 		_mergedConfigJSON := json.RawMessage(mergedConfigJSON)
-		app.Config = &_mergedConfigJSON
+		*app.Config = _mergedConfigJSON
 	}
 	provide.Render(apps, 200, c)
 }
