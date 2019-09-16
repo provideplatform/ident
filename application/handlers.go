@@ -40,6 +40,12 @@ func applicationsListHandler(c *gin.Context) {
 	}
 
 	provide.Paginate(c, query, &Application{}).Find(&apps)
+	for _, app := range apps {
+		mergedConfig := app.mergedConfig()
+		mergedConfigJSON, _ := json.Marshal(mergedConfig)
+		_mergedConfigJSON := json.RawMessage(mergedConfigJSON)
+		app.Config = &_mergedConfigJSON
+	}
 	provide.Render(apps, 200, c)
 }
 
@@ -108,6 +114,12 @@ func applicationDetailsHandler(c *gin.Context) {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
+
+	mergedConfig := app.mergedConfig()
+	mergedConfigJSON, _ := json.Marshal(mergedConfig)
+	_mergedConfigJSON := json.RawMessage(mergedConfigJSON)
+	app.Config = &_mergedConfigJSON
+
 	provide.Render(app, 200, c)
 }
 

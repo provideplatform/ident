@@ -76,6 +76,19 @@ func (app *Application) encryptConfig() bool {
 	return true
 }
 
+func (app *Application) mergedConfig() map[string]interface{} {
+	cfg := app.ParseConfig()
+	encryptedConfig, err := app.DecryptedConfig()
+	if err != nil {
+		encryptedConfig = map[string]interface{}{}
+	}
+
+	for k := range encryptedConfig {
+		cfg[k] = encryptedConfig[k]
+	}
+	return cfg
+}
+
 func (app *Application) setConfig(cfg map[string]interface{}) {
 	cfgJSON, _ := json.Marshal(cfg)
 	_cfgJSON := json.RawMessage(cfgJSON)
