@@ -107,6 +107,39 @@ func AuthenticateUser(email, password string, applicationID *uuid.UUID) (*UserAu
 	}, nil
 }
 
+// AuthenticateApplicationUser creates a user token on behalf of the owning application
+func AuthenticateApplicationUser(email string, applicationID uuid.UUID) (*UserAuthenticationResponse, error) {
+	var user = &User{}
+	db := dbconf.DatabaseConnection()
+	query := db.Where("application_id = ? AND email = ?", applicationID, strings.ToLower(email))
+	query.First(&user)
+	if user != nil && user.ID != uuid.Nil {
+		if user.Password != nil {
+			return nil, errors.New("application user authentication not currently supported if user password is set")
+		}
+	} else {
+		return nil, errors.New("application user authentication failed with given credentials")
+	}
+	token := &token.Token{
+		UserID: &user.ID,
+	}
+	if !token.Create() {
+		var err error
+		if len(token.Errors) > 0 {
+			err = fmt.Errorf("Failed to create token for application-authenticated user: %s; %s", *user.Email, *token.Errors[0].Message)
+			common.Log.Warningf(err.Error())
+		}
+		return &UserAuthenticationResponse{
+			User:  user.AsResponse(),
+			Token: nil,
+		}, err
+	}
+	return &UserAuthenticationResponse{
+		User:  user.AsResponse(),
+		Token: token.AsResponse(),
+	}, nil
+}
+
 func (u *User) authenticate(password string) bool {
 	if u.Password == nil {
 		return false

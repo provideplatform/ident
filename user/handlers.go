@@ -65,6 +65,14 @@ func authenticationHandler(c *gin.Context) {
 				}
 				provide.Render(resp, 201, c)
 				return
+			} else if bearer.ApplicationID != nil {
+				resp, err := AuthenticateApplicationUser(email, *bearer.ApplicationID)
+				if err != nil {
+					provide.RenderError(err.Error(), 401, c)
+					return
+				}
+				provide.Render(resp, 201, c)
+				return
 			}
 			msg := fmt.Sprintf("password required to attempt user authentication; email address: %s", email)
 			provide.RenderError(msg, 422, c)
