@@ -62,7 +62,7 @@ type UserAuthenticationResponse struct {
 func Find(userID *uuid.UUID) *User {
 	db := dbconf.DatabaseConnection()
 	user := &User{}
-	db.Where("d = ?", userID).Find(&user)
+	db.Where("id = ?", userID).Find(&user)
 	if user == nil || user.ID == uuid.Nil {
 		return nil
 	}
