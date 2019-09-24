@@ -210,6 +210,11 @@ func updateKYCApplicationHandler(c *gin.Context) {
 	}
 
 	if status, statusOk := params["status"].(string); statusOk {
+		if appID == nil {
+			provide.RenderError("unauthorized user kyc application status update", 403, c)
+			return
+		}
+
 		if kycApplication.Update(common.StringOrNil(status)) {
 			provide.Render(kycApplication, 202, c)
 		} else {
