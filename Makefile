@@ -11,6 +11,7 @@ build: clean
 	go build -v -o ./.bin/ident_api ./cmd/api
 	go build -v -o ./.bin/ident_consumer ./cmd/consumer
 	go build -v -o ./.bin/ident_migrate ./cmd/migrate
+	go build -v -o ./.bin/sia_consumer ./cmd/sia_consumer
 
 ecs_deploy:
 	./scripts/ecs_deploy.sh
