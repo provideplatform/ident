@@ -12,10 +12,10 @@ import (
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
+	trumail "github.com/kthomas/trumail/verifier"
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/token"
 	provide "github.com/provideservices/provide-go"
-	trumail "github.com/sdwolfe32/trumail/verifier"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -212,32 +212,25 @@ func (u *User) verifyEmailAddress() bool {
 		}
 
 		if common.PerformEmailVerification {
-			i := uint(0)
-			var emailVerificationErr error
-			for i < common.EmailVerificationAttempts {
-				emailVerificationErr = nil
-				emailVerifier := trumail.NewVerifier(common.EmailVerificationFromDomain, common.EmailVerificationFromAddress)
-				lookup, err := emailVerifier.Verify(*u.Email)
-				if err != nil {
-					validEmailAddress = false
-					emailVerificationErr = fmt.Errorf("email address verification failed: %s; %s", *u.Email, err.Error())
-				} else if !lookup.Deliverable && !lookup.CatchAll {
-					validEmailAddress = false
-					emailVerificationErr = fmt.Errorf("email address verification failed: %s; undeliverable", *u.Email)
-				} else if lookup.CatchAll {
-					validEmailAddress = false
-					emailVerificationErr = fmt.Errorf("email address verification failed: %s; mail server exists but inbox is invalid", *u.Email)
-				} else {
-					validEmailAddress = lookup.Deliverable
-					if !validEmailAddress {
-						emailVerificationErr = fmt.Errorf("email address verification failed: %s; undeliverable", *u.Email)
-					}
-				}
+			common.Log.Debugf("Attempting to verify deliverability for email address: %s", *u.Email)
 
-				if validEmailAddress {
-					break
+			var emailVerificationErr error
+			emailVerifier := trumail.NewVerifier(common.EmailVerificationFromDomain, common.EmailVerificationFromAddress, common.EmailVerificationTimeout, common.EmailVerificationAttempts)
+			lookup, err := emailVerifier.Verify(*u.Email)
+			if err != nil {
+				validEmailAddress = false
+				emailVerificationErr = fmt.Errorf("email address verification failed: %s; %s", *u.Email, err.Error())
+			} else if !lookup.Deliverable && !lookup.CatchAll {
+				validEmailAddress = false
+				emailVerificationErr = fmt.Errorf("email address verification failed: %s; undeliverable", *u.Email)
+			} else if lookup.CatchAll {
+				validEmailAddress = false
+				emailVerificationErr = fmt.Errorf("email address verification failed: %s; mail server exists but inbox is invalid", *u.Email)
+			} else {
+				validEmailAddress = lookup.Deliverable
+				if !validEmailAddress {
+					emailVerificationErr = fmt.Errorf("email address verification failed: %s; undeliverable", *u.Email)
 				}
-				i++
 			}
 
 			if emailVerificationErr != nil {

@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/dgrijalva/jwt-go"
 
@@ -15,7 +16,8 @@ import (
 	stan "github.com/nats-io/stan.go"
 )
 
-const defaultEmailVerificationAttempts = uint(2)
+const defaultEmailVerificationAttempts = int(4)
+const defaultEmailVerificationTimeout = time.Millisecond * time.Duration(2500)
 
 var (
 	// Log is the configured logger
@@ -35,13 +37,16 @@ var (
 	ConsumeNATSStreamingSubscriptions bool
 
 	// EmailVerificationAttempts is the number of retries to attempt per address validation (i.e., for deliverability)
-	EmailVerificationAttempts uint
+	EmailVerificationAttempts int
 
 	// EmailVerificationFromDomain is the from domain used for email verification
 	EmailVerificationFromDomain string
 
-	// EmailVerificationFromAddress is the full email address used for connecting to verify deliverability of email addresses
+	// EmailVerificationFromAddress is the full email address used for connecting to verify deliverability of an email addresses
 	EmailVerificationFromAddress string
+
+	// EmailVerificationTimeout is the timeout upon which deliverability verification will fail
+	EmailVerificationTimeout time.Duration
 
 	// PerformEmailVerification flag indicates if email deliverability should be verified when creating new users
 	PerformEmailVerification bool
@@ -90,9 +95,18 @@ func requireEmailVerification() {
 		if err != nil {
 			log.Panicf("Failed to parse EMAIL_VERIFICATION_ATTEMPTS from environment; %s", err.Error())
 		}
-		EmailVerificationAttempts = uint(attempts)
+		EmailVerificationAttempts = attempts
 	} else {
 		EmailVerificationAttempts = defaultEmailVerificationAttempts
+	}
+	if os.Getenv("EMAIL_VERIFICATION_TIMEOUT_MILLIS") != "" {
+		timeoutMillis, err := strconv.Atoi(os.Getenv("EMAIL_VERIFICATION_TIMEOUT_MILLIS"))
+		if err != nil {
+			log.Panicf("Failed to parse EMAIL_VERIFICATION_TIMEOUT_MILLIS from environment; %s", err.Error())
+		}
+		EmailVerificationTimeout = time.Millisecond * time.Duration(timeoutMillis)
+	} else {
+		EmailVerificationTimeout = defaultEmailVerificationTimeout
 	}
 	if os.Getenv("EMAIL_VERIFICATION_FROM_DOMAIN") != "" {
 		EmailVerificationFromDomain = os.Getenv("EMAIL_VERIFICATION_FROM_DOMAIN")

@@ -1,5 +1,5 @@
-hash: df51aad33c80988195dcaad538fde735c0760cd02c3ce2d5155797c3db7f190f
-updated: 2019-09-16T01:44:23.525575-04:00
+hash: 6f141b77aec3d16568b810993d475edc9a5493d529580a4ba20e96c6377e499d
+updated: 2019-09-25T14:59:22.687563-04:00
 imports:
 - name: github.com/allegro/bigcache
   version: baaa21686666424b386f282d68fc1d23594ab38d
@@ -108,6 +108,8 @@ imports:
   version: 28d1fa77e9a4efcba826a2a6c8f5a9ff6cea44a6
 - name: github.com/kthomas/identitymind-golang
   version: 6d2ea7e625e14e72515a2ce3a1d9c62f25f56ba4
+- name: github.com/kthomas/trumail
+  version: ab3de2e834a37142d86f7d23587bffc94b6856f1
 - name: github.com/kthomas/vouched-golang
   version: 1d546b52009350c12f083fd9839dc85a627645ea
 - name: github.com/lib/pq

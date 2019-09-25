@@ -20,7 +20,7 @@ import:
   version: ~1.9.2
   subpackages:
   - dialects/postgres
-- package: github.com/sdwolfe32/trumail
+- package: github.com/kthomas/trumail
   version: master
 - package: github.com/kthomas/go-db-config
 - package: github.com/kthomas/go-logger
