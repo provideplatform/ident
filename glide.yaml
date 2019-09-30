@@ -23,6 +23,7 @@ import:
 - package: github.com/kthomas/trumail
   version: master
 - package: github.com/kthomas/go-db-config
+  version: master
 - package: github.com/kthomas/go-logger
 - package: github.com/kthomas/go-natsutil
   version: master

@@ -1,5 +1,5 @@
-hash: 6f141b77aec3d16568b810993d475edc9a5493d529580a4ba20e96c6377e499d
-updated: 2019-09-25T14:59:22.687563-04:00
+hash: 942596610937cde74bb26e68af070d4013fc10506e902d9f986eb3434aa56d72
+updated: 2019-09-30T09:41:00.379329-04:00
 imports:
 - name: github.com/allegro/bigcache
   version: baaa21686666424b386f282d68fc1d23594ab38d
@@ -87,7 +87,7 @@ imports:
 - name: github.com/gorilla/websocket
   version: c3e18be99d19e6b3e8f1559eea2c161a665c4b6b
 - name: github.com/jinzhu/gorm
-  version: 836fb2c19d84dac7b0272958dfb9af7cf0d0ade4
+  version: 81c17a7e2529c59efc4e74c5b32c1fb71fb12fa2
   subpackages:
   - dialects/postgres
 - name: github.com/jinzhu/inflection
@@ -95,7 +95,7 @@ imports:
 - name: github.com/json-iterator/go
   version: 27518f6661eba504be5a7a9a9f6d9460d892ade3
 - name: github.com/kthomas/go-db-config
-  version: fe566ecb4d7e3e2e1cf39d3a739e1ecfbec912f8
+  version: 6f8768ecee4cbe269d12ebac16b3e918541fe5cc
 - name: github.com/kthomas/go-logger
   version: 01c36065851341304751234b081327cf58728dba
 - name: github.com/kthomas/go-natsutil
@@ -110,6 +110,8 @@ imports:
   version: 6d2ea7e625e14e72515a2ce3a1d9c62f25f56ba4
 - name: github.com/kthomas/trumail
   version: ab3de2e834a37142d86f7d23587bffc94b6856f1
+  subpackages:
+  - verifier
 - name: github.com/kthomas/vouched-golang
   version: 1d546b52009350c12f083fd9839dc85a627645ea
 - name: github.com/lib/pq
@@ -143,10 +145,6 @@ imports:
   version: 281078f7477433ad2df5469a64b5588a446d27a7
 - name: github.com/rs/cors
   version: db0fe48135e83b5812a5a31be0eea66984b1b521
-- name: github.com/sdwolfe32/trumail
-  version: 5bf27f7ac60a89461dc6c775c78fce14038a29e5
-  subpackages:
-  - verifier
 - name: github.com/steakknife/bloomfilter
   version: 6819c0d2a57025e1700378ee59b7382d71987f14
 - name: github.com/steakknife/hamming
