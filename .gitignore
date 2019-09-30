@@ -30,6 +30,7 @@ ident
 ident_api
 ident_consumer
 ident_migrate
+sia_consumer
 
 # Miscellaneous
 .DS_Store
