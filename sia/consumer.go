@@ -8,10 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jinzhu/gorm"
-
-	"github.com/kthomas/go-db-config"
-
 	natsutil "github.com/kthomas/go-natsutil"
 	uuid "github.com/kthomas/go.uuid"
 	stan "github.com/nats-io/stan.go"
@@ -22,10 +18,12 @@ import (
 const natsSiaUserNotificationSubject = "sia.user.notification"
 const natsSiaUserNotificationMaxInFlight = 1024
 const siaUserNotificationAckWait = time.Second * 15
+const siaUserNotificationTimeout = int64(time.Minute * 5)
 
 const natsSiaApplicationNotificationSubject = "sia.user.notification"
 const natsSiaApplicationNotificationMaxInFlight = 1024
 const siaApplicationNotificationAckWait = time.Second * 15
+const siaApplicationNotificationTimeout = int64(time.Minute * 5)
 
 const natsSiaAPIUsageEventSubject = "api.usage.event"
 const natsSiaAPIUsageEventMaxInFlight = 2048
@@ -33,11 +31,11 @@ const siaAPIUsageEventAckWait = time.Second * 30
 const natsSiaAPIUsageEventTimeout = int64(time.Minute * 5)
 
 var instantKYCEnabled = strings.ToLower(os.Getenv("INSTANT_KYC")) == "true"
-var identDB *gorm.DB
-var siaDB *gorm.DB
 
-type apiCall struct {
-	provide.Model
+// db.Exec("CREATE EXTENSION IF NOT EXISTS \"pgcrypto\";")
+
+type siaAPICall struct {
+	siaModel
 	provide.APICall
 
 	Hash          *string
@@ -46,15 +44,44 @@ type apiCall struct {
 	UserID        *uuid.UUID
 }
 
+func (siaAPICall) TableName() string {
+	return "api_calls"
+}
+
+type siaAccount struct {
+	siaModel
+	Name   *string    `json:"name"`
+	Email  *string    `json:"email"`
+	UserID *uuid.UUID `json:"prvd_user_id"`
+}
+
+func (siaAccount) TableName() string {
+	return "accounts"
+}
+
+type siaApplication struct {
+	siaModel
+	Name          *string    `json:"name"`
+	ApplicationID *uuid.UUID `json:"prvd_application_id"`
+	UserID        *uuid.UUID `json:"prvd_user_id"`
+}
+
+func (siaApplication) TableName() string {
+	return "applications"
+}
+
+type siaModel struct {
+	ID        uuid.UUID        `json:"id"`
+	CreatedAt time.Time        `json:"created_at,omitempty"`
+	Errors    []*provide.Error `sql:"-" json:"-"`
+}
+
 func init() {
 	var waitGroup sync.WaitGroup
 
 	createNatsSiaUserNotificationSubscriptions(&waitGroup)
 	createNatsSiaApplicationNotificationSubscriptions(&waitGroup)
 	createNatsSiaAPIUsageEventsSubscriptions(&waitGroup)
-
-	identDB = dbconf.DatabaseConnection()
-	siaDB = dbconf.DatabaseConnection() // FIXME-- use Sia db conn
 }
 
 func createNatsSiaUserNotificationSubscriptions(wg *sync.WaitGroup) {
@@ -97,7 +124,7 @@ func createNatsSiaAPIUsageEventsSubscriptions(wg *sync.WaitGroup) {
 }
 
 func consumeSiaUserNotificationMsg(msg *stan.Msg) {
-	common.Log.Debugf("Consuming %d-byte NATS Sia applicauserrtion notification message on subject: %s", msg.Size(), msg.Subject)
+	common.Log.Debugf("Consuming %d-byte NATS Sia user notification message on subject: %s", msg.Size(), msg.Subject)
 
 	var params map[string]interface{}
 
@@ -108,12 +135,34 @@ func consumeSiaUserNotificationMsg(msg *stan.Msg) {
 		return
 	}
 
-	//               params = JSON.parse(msg.data) rescue nil
-	//               next unless params
-	//               account = Account.create(name: params['name'], prvd_user_id: params['id'], contact_attributes: { name: params['name'], email: params['email'] }) rescue nil
-	//               sc.ack(msg) if account && account.valid?
+	siaDB := siaDatabaseConnection()
 
-	// common.Log.Debugf("Sia user notification message handled for user: %s", user.ID)
+	account := &siaAccount{
+		Name:  common.StringOrNil(params["name"].(string)),
+		Email: common.StringOrNil(params["email"].(string)),
+	}
+
+	userUUID, err := uuid.FromString(params["id"].(string))
+	if err == nil {
+		account.UserID = &userUUID
+	}
+
+	result := siaDB.Save(&account)
+	//rowsAffected := result.RowsAffected
+	errors := result.GetErrors()
+	if len(errors) > 0 {
+		for _, err := range errors {
+			common.Log.Warningf("Failed to insert sia account; %s", err.Error())
+		}
+	}
+	if !siaDB.NewRecord(&account) {
+		common.Log.Warningf("Failed to persist sia account; %s", err.Error())
+		natsConnection, _ := common.GetSharedNatsStreamingConnection()
+		natsutil.AttemptNack(natsConnection, msg, siaApplicationNotificationTimeout)
+		return
+	}
+
+	common.Log.Debugf("Sia user notification message handled for user: %s", account.UserID)
 	msg.Ack()
 }
 
@@ -129,12 +178,38 @@ func consumeSiaApplicationNotificationMsg(msg *stan.Msg) {
 		return
 	}
 
-	//               params = JSON.parse(msg.data) rescue nil
-	//               next unless params
-	//               account = Application.create(name: params['name'], prvd_application_id: params['id'], prvd_user_id: params['user_id']) rescue nil
-	//               sc.ack(msg) if account && account.valid?
+	siaDB := siaDatabaseConnection()
 
-	// common.Log.Debugf("Sia application notification message handled for user: %s", app.ID)
+	application := &siaApplication{
+		Name: common.StringOrNil(params["name"].(string)),
+	}
+
+	applicationUUID, err := uuid.FromString(params["id"].(string))
+	if err == nil {
+		application.ApplicationID = &applicationUUID
+	}
+
+	userUUID, err := uuid.FromString(params["user_id"].(string))
+	if err == nil {
+		application.UserID = &userUUID
+	}
+
+	result := siaDB.Save(&application)
+	//rowsAffected := result.RowsAffected
+	errors := result.GetErrors()
+	if len(errors) > 0 {
+		for _, err := range errors {
+			common.Log.Warningf("Failed to insert sia application; %s", err.Error())
+		}
+	}
+	if !siaDB.NewRecord(&application) {
+		common.Log.Warningf("Failed to persist sia application; %s", err.Error())
+		natsConnection, _ := common.GetSharedNatsStreamingConnection()
+		natsutil.AttemptNack(natsConnection, msg, siaApplicationNotificationTimeout)
+		return
+	}
+
+	common.Log.Debugf("Sia application notification message handled for application: %s", application.ID)
 	msg.Ack()
 }
 
@@ -150,11 +225,13 @@ func consumeSiaAPIUsageEventsMsg(msg *stan.Msg) {
 		return
 	}
 
+	siaDB := siaDatabaseConnection()
+
 	apiCallDigest := sha256.New()
 	apiCallDigest.Write(msg.Data)
 	hash := apiCallDigest.Sum(nil)
 
-	apiCall := &apiCall{}
+	apiCall := &siaAPICall{}
 	siaDB.Where("sha256 = ?", hash).Find(&apiCall)
 	if apiCall != nil && apiCall.ID != uuid.Nil { // FIXME- use int?
 		common.Log.Warningf("API call event exists for hash: %s", string(hash))
