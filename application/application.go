@@ -11,7 +11,7 @@ import (
 	provide "github.com/provideservices/provide-go"
 )
 
-const natsSiaApplicationNotificationSubject = "siapp.application.notification"
+const natsSiaApplicationNotificationSubject = "sia.application.notification"
 
 func init() {
 	db := dbconf.DatabaseConnection()
