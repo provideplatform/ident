@@ -290,5 +290,6 @@ func consumeSiaAPIUsageEventsMsg(msg *stan.Msg) {
 		return
 	}
 
+	common.Log.Debugf("Sia API call event persisted: %s", string(hash))
 	msg.Ack()
 }
