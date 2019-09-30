@@ -20,7 +20,7 @@ const natsSiaUserNotificationMaxInFlight = 1024
 const siaUserNotificationAckWait = time.Second * 15
 const siaUserNotificationTimeout = int64(time.Minute * 5)
 
-const natsSiaApplicationNotificationSubject = "sia.user.notification"
+const natsSiaApplicationNotificationSubject = "sia.application.notification"
 const natsSiaApplicationNotificationMaxInFlight = 1024
 const siaApplicationNotificationAckWait = time.Second * 15
 const siaApplicationNotificationTimeout = int64(time.Minute * 5)
@@ -38,10 +38,10 @@ type siaAPICall struct {
 	siaModel
 	provide.APICall
 
-	Hash          *string
-	Raw           []byte
-	ApplicationID *uuid.UUID
-	UserID        *uuid.UUID
+	Hash          *string    `gorm:"column:sha256" json:"sha256"`
+	Raw           []byte     `json:"raw"`
+	ApplicationID *uuid.UUID `gorm:"column:prvd_application_id" json:"prvd_application_id"`
+	UserID        *uuid.UUID `gorm:"column:prvd_user_id" json:"prvd_user_id"`
 }
 
 func (siaAPICall) TableName() string {
@@ -52,7 +52,7 @@ type siaAccount struct {
 	siaModel
 	Name   *string    `json:"name"`
 	Email  *string    `json:"email"`
-	UserID *uuid.UUID `json:"prvd_user_id"`
+	UserID *uuid.UUID `gorm:"column:prvd_user_id" json:"prvd_user_id"`
 }
 
 func (siaAccount) TableName() string {
@@ -234,7 +234,7 @@ func consumeSiaAPIUsageEventsMsg(msg *stan.Msg) {
 	apiCall := &siaAPICall{}
 	siaDB.Where("sha256 = ?", hash).Find(&apiCall)
 	if apiCall != nil && apiCall.ID != uuid.Nil { // FIXME- use int?
-		common.Log.Warningf("API call event exists for hash: %s", string(hash))
+		common.Log.Warningf("API call event exists for hash: %s", hash)
 		msg.Ack()
 		return
 	}
@@ -280,7 +280,7 @@ func consumeSiaAPIUsageEventsMsg(msg *stan.Msg) {
 	errors := result.GetErrors()
 	if len(errors) > 0 {
 		for _, err := range errors {
-			common.Log.Warningf("Failed to insert API call event: %s; %s", string(hash), err.Error())
+			common.Log.Warningf("Failed to insert API call event: %s; %s", hash, err.Error())
 		}
 	}
 	if !siaDB.NewRecord(&apiCall) {
@@ -290,6 +290,6 @@ func consumeSiaAPIUsageEventsMsg(msg *stan.Msg) {
 		return
 	}
 
-	common.Log.Debugf("Sia API call event persisted: %s", string(hash))
+	common.Log.Debugf("Sia API call event persisted: %s", hash)
 	msg.Ack()
 }

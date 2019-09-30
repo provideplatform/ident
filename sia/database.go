@@ -24,7 +24,7 @@ func init() {
 // DatabaseConnection returns a leased database connection from the underlying
 // pool configured from the environment-configured database connection
 func siaDatabaseConnection() *gorm.DB {
-	siaConfigOnce.Do(func() {
+	siaDBOnce.Do(func() {
 		db, err := dbconf.DatabaseConnectionFactory(getSiaDBConfig())
 		if err != nil {
 			msg := fmt.Sprintf("Sia database connection failed; %s", err.Error())
