@@ -151,6 +151,11 @@ func createUserHandler(c *gin.Context) {
 		return
 	}
 
+	if user.Email == nil {
+		provide.RenderError("email address required", 422, c)
+		return
+	}
+
 	if bearer != nil {
 		user.ApplicationID = bearer.ApplicationID
 	} else if appID, appIDOk := params["application_id"].(string); appIDOk {
@@ -165,6 +170,12 @@ func createUserHandler(c *gin.Context) {
 
 	if password, passwordOk := params["password"].(string); passwordOk {
 		user.Password = common.StringOrNil(password)
+	}
+
+	if UserExists(*user.Email, user.ApplicationID) {
+		msg := fmt.Sprintf("user exists: %s", *user.Email)
+		provide.RenderError(msg, 409, c)
+		return
 	}
 
 	if user.Create() {
