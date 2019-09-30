@@ -36,7 +36,7 @@ var instantKYCEnabled = strings.ToLower(os.Getenv("INSTANT_KYC")) == "true"
 // db.Exec("CREATE EXTENSION IF NOT EXISTS \"pgcrypto\";")
 
 type siaAPICall struct {
-	provide.AutoIncrementingModel
+	SiaModel
 	provide.APICall
 
 	AccountID *uint   `json:"account_id"`
@@ -54,7 +54,7 @@ func (siaAPICall) TableName() string {
 }
 
 type siaAccount struct {
-	provide.AutoIncrementingModel
+	SiaModel
 	Name   *string    `json:"name"`
 	Email  *string    `gorm:"-" json:"email"`
 	UserID *uuid.UUID `gorm:"column:prvd_user_id" json:"prvd_user_id"`
@@ -65,7 +65,7 @@ func (siaAccount) TableName() string {
 }
 
 type siaContact struct {
-	provide.AutoIncrementingModel
+	SiaModel
 	Name            *string `json:"name"`
 	Email           *string `json:"email"`
 	ContactableID   *uint   `json:"contactable_id"`
@@ -78,7 +78,7 @@ func (siaContact) TableName() string {
 }
 
 type siaApplication struct {
-	provide.AutoIncrementingModel
+	SiaModel
 	Name          *string    `json:"name"`
 	ApplicationID *uuid.UUID `gorm:"column:prvd_application_id" json:"prvd_application_id"`
 	UserID        *uuid.UUID `gorm:"column:prvd_user_id" json:"prvd_user_id"`
@@ -88,11 +88,10 @@ func (siaApplication) TableName() string {
 	return "applications"
 }
 
-// type SiaModel struct {
-// 	ID        uint             `gorm:"primary_key"`
-// 	CreatedAt time.Time        `json:"created_at,omitempty"`
-// 	Errors    []*provide.Error `sql:"-" json:"-"`
-// }
+type SiaModel struct {
+	ID     uint             `gorm:"primary_key"`
+	Errors []*provide.Error `sql:"-" json:"-"`
+}
 
 func init() {
 	var waitGroup sync.WaitGroup
