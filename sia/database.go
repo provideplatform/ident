@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/user"
 	"strconv"
 	"sync"
 
@@ -12,6 +11,7 @@ import (
 	dbconf "github.com/kthomas/go-db-config"
 	"github.com/provideapp/ident/application"
 	"github.com/provideapp/ident/common"
+	"github.com/provideapp/ident/user"
 )
 
 var siaDB *gorm.DB
