@@ -23,6 +23,7 @@ func main() {
 
 	common.Log.Debugf("Running dedicated API instance main()")
 
+	common.RequireJWT()
 	consumer.RunAPIUsageDaemon()
 
 	r := gin.Default()

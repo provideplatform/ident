@@ -28,6 +28,7 @@ var (
 
 	// CertificatePath is the SSL certificate path used by HTTPS listener
 	CertificatePath string
+
 	// PrivateKeyPath is the private key used by HTTPS listener
 	PrivateKeyPath string
 
@@ -77,7 +78,6 @@ func init() {
 	Log = logger.NewLogger("ident", lvl, true)
 
 	requireEmailVerification()
-	requireJWT()
 
 	requireTLS = os.Getenv("REQUIRE_TLS") == "true"
 
@@ -117,17 +117,21 @@ func requireEmailVerification() {
 	PerformEmailVerification = EmailVerificationFromDomain != "" && EmailVerificationFromAddress != ""
 }
 
-func requireJWT() {
+// RequireJWT allows a package to conditionally require an RS256 keypair configured
+// in the ident environment via JWT_SIGNER_PRIVATE_KEY and JWT_SIGNER_PUBLIC_KEY
+func RequireJWT() {
+	Log.Debug("Attempting to read required RS256 keypair from environment for signing JWT tokens")
+
 	jwtPrivateKeyPEM := strings.Replace(os.Getenv("JWT_SIGNER_PRIVATE_KEY"), `\n`, "\n", -1)
 	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(jwtPrivateKeyPEM))
 	if err != nil {
-		log.Panicf("Failed to parse JWT private key; %s", err.Error())
+		Log.Panicf("Failed to parse JWT private key; %s", err.Error())
 	}
 
 	JWTPublicKeyPEM = strings.Replace(os.Getenv("JWT_SIGNER_PUBLIC_KEY"), `\n`, "\n", -1)
 	publicKey, err := jwt.ParseRSAPublicKeyFromPEM([]byte(JWTPublicKeyPEM))
 	if err != nil {
-		log.Panicf("Failed to parse JWT public key; %s", err.Error())
+		Log.Panicf("Failed to parse JWT public key; %s", err.Error())
 	}
 
 	JWTPrivateKey = privateKey

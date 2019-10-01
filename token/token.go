@@ -36,7 +36,7 @@ type Token struct {
 type TokenResponse struct {
 	ID        uuid.UUID `json:"id"`
 	Token     string    `json:"token"`
-	PublicKey string    `json:"public_key"`
+	PublicKey string    `json:"public_key,omitempty"`
 }
 
 // // GetApplication - retrieve the application associated with the token (or nil if one does not exist)
