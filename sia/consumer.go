@@ -16,6 +16,8 @@ import (
 	"github.com/provideservices/provide-go"
 )
 
+const defaultTimeZoneID = "Etc/UTC"
+
 const natsSiaUserNotificationSubject = "sia.user.notification"
 const natsSiaUserNotificationMaxInFlight = 1024
 const siaUserNotificationAckWait = time.Second * 15
@@ -135,28 +137,43 @@ func createNatsSiaAPIUsageEventsSubscriptions(wg *sync.WaitGroup) {
 }
 
 func consumeSiaUserNotificationMsg(msg *stan.Msg) {
-	common.Log.Debugf("Consuming %d-byte NATS Sia user notification message on subject: %s", msg.Size(), msg.Subject)
+	common.Log.Debugf("Consuming %d-byte NATS sia user notification message on subject: %s", msg.Size(), msg.Subject)
 
 	var params map[string]interface{}
 
 	err := json.Unmarshal(msg.Data, &params)
 	if err != nil {
-		common.Log.Warningf("Failed to umarshal Sia user notification event message; %s", err.Error())
+		common.Log.Warningf("Failed to umarshal sia user notification event message; %s", err.Error())
 		natsutil.Nack(common.SharedNatsConnection, msg)
 		return
 	}
+
+	name, nameOk := params["name"].(string)
+	email, emailOk := params["email"].(string)
+	userID, userIDOk := params["id"].(string)
+
+	common.Log.Debugf("Handling sia user notification for %s: %s (%s)", userID, name, email)
 
 	siaDB := siaDatabaseConnection()
 	tx := siaDB.Begin()
 	defer tx.RollbackUnlessCommitted()
 
-	account := &siaAccount{
-		Name:  common.StringOrNil(params["name"].(string)),
-		Email: common.StringOrNil(params["email"].(string)),
+	account := &siaAccount{}
+
+	if nameOk {
+		account.Name = common.StringOrNil(name)
 	}
 
-	userUUID, err := uuid.FromString(params["id"].(string))
-	account.UserID = &userUUID
+	if emailOk {
+		account.Email = common.StringOrNil(email)
+	}
+
+	if userIDOk {
+		userUUID, err := uuid.FromString(params["id"].(string))
+		if err != nil {
+			account.UserID = &userUUID
+		}
+	}
 
 	// save account
 	result := tx.Create(&account)
@@ -179,7 +196,7 @@ func consumeSiaUserNotificationMsg(msg *stan.Msg) {
 	contact := &siaContact{
 		Name:            account.Name,
 		Email:           account.Email,
-		TimeZoneID:      common.StringOrNil("Etc/UTC"),
+		TimeZoneID:      common.StringOrNil(defaultTimeZoneID),
 		ContactableID:   &account.ID,
 		ContactableType: common.StringOrNil("Account"),
 	}
@@ -206,13 +223,13 @@ func consumeSiaUserNotificationMsg(msg *stan.Msg) {
 }
 
 func consumeSiaApplicationNotificationMsg(msg *stan.Msg) {
-	common.Log.Debugf("Consuming %d-byte NATS Sia application notification message on subject: %s", msg.Size(), msg.Subject)
+	common.Log.Debugf("Consuming %d-byte NATS sia application notification message on subject: %s", msg.Size(), msg.Subject)
 
 	var params map[string]interface{}
 
 	err := json.Unmarshal(msg.Data, &params)
 	if err != nil {
-		common.Log.Warningf("Failed to umarshal Sia application notification event message; %s", err.Error())
+		common.Log.Warningf("Failed to umarshal sia application notification event message; %s", err.Error())
 		natsutil.Nack(common.SharedNatsConnection, msg)
 		return
 	}
@@ -249,13 +266,13 @@ func consumeSiaApplicationNotificationMsg(msg *stan.Msg) {
 }
 
 func consumeSiaAPIUsageEventsMsg(msg *stan.Msg) {
-	common.Log.Debugf("Consuming %d-byte NATS Sia API usage event message on subject: %s", msg.Size(), msg.Subject)
+	common.Log.Debugf("Consuming %d-byte NATS sia API usage event message on subject: %s", msg.Size(), msg.Subject)
 
 	var params map[string]interface{}
 
 	err := json.Unmarshal(msg.Data, &params)
 	if err != nil {
-		common.Log.Warningf("Failed to umarshal Sia API usage event message; %s", err.Error())
+		common.Log.Warningf("Failed to umarshal sia API usage event message; %s", err.Error())
 		natsutil.Nack(common.SharedNatsConnection, msg)
 		return
 	}
@@ -349,6 +366,6 @@ func consumeSiaAPIUsageEventsMsg(msg *stan.Msg) {
 		return
 	}
 
-	common.Log.Debugf("Sia API call event persisted: %s", hash)
+	common.Log.Debugf("sia API call event persisted: %s", hash)
 	msg.Ack()
 }
