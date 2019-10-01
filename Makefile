@@ -1,4 +1,4 @@
-.PHONY: build clean ecs_deploy install integration lint migrations run_local run_local_api run_local_consumer run_local_dependencies stop_local_dependencies stop_local test
+.PHONY: build build_sia_consumer clean ecs_deploy install integration lint migrations run_local run_local_api run_local_consumer run_local_dependencies stop_local_dependencies stop_local test
 
 clean:
 	rm -rf ./.bin 2>/dev/null || true
@@ -11,7 +11,10 @@ build: clean
 	go build -v -o ./.bin/ident_api ./cmd/api
 	go build -v -o ./.bin/ident_consumer ./cmd/consumer
 	go build -v -o ./.bin/ident_migrate ./cmd/migrate
-	go build -v -o ./.bin/sia_consumer ./cmd/sia_consumer
+
+build_sia_consumer: clean
+	GOOS=darwin GOARCH=amd64 go build -v -o ./.bin/sia_consumer.darwin-amd64 ./cmd/sia_consumer
+	GOOS=linux GOARCH=amd64 go build -v -o ./.bin/sia_consumer.linux-amd64 ./cmd/sia_consumer
 
 ecs_deploy:
 	./scripts/ecs_deploy.sh
