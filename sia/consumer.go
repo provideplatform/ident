@@ -148,31 +148,15 @@ func consumeSiaUserNotificationMsg(msg *stan.Msg) {
 		return
 	}
 
-	name, nameOk := params["name"].(string)
-	email, emailOk := params["email"].(string)
-	userID, userIDOk := params["id"].(string)
-
-	common.Log.Debugf("Handling sia user notification for %s: %s (%s)", userID, name, email)
-
 	siaDB := siaDatabaseConnection()
 	tx := siaDB.Begin()
 	defer tx.RollbackUnlessCommitted()
 
-	account := &siaAccount{}
-
-	if nameOk {
-		account.Name = common.StringOrNil(name)
-	}
-
-	if emailOk {
-		account.Email = common.StringOrNil(email)
-	}
-
-	if userIDOk {
-		userUUID, err := uuid.FromString(params["id"].(string))
-		if err != nil {
-			account.UserID = &userUUID
-		}
+	userUUID, err := uuid.FromString(params["id"].(string))
+	account := &siaAccount{
+		Name:   common.StringOrNil(params["name"].(string)),
+		Email:  common.StringOrNil(params["email"].(string)),
+		UserID: &userUUID,
 	}
 
 	// save account
