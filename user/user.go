@@ -58,38 +58,6 @@ type UserAuthenticationResponse struct {
 	Token *token.TokenResponse `json:"token"`
 }
 
-// Find returns a user for the given id
-func Find(userID *uuid.UUID) *User {
-	db := dbconf.DatabaseConnection()
-	user := &User{}
-	db.Where("id = ?", userID).Find(&user)
-	if user == nil || user.ID == uuid.Nil {
-		return nil
-	}
-	return user
-}
-
-// FindByEmail returns a user for the given email address and application id
-func FindByEmail(email string, applicationID *uuid.UUID) *User {
-	db := dbconf.DatabaseConnection()
-	user := &User{}
-	query := db.Where("email = ?", email).Find(&user)
-	if applicationID != nil && *applicationID != uuid.Nil {
-		query = query.Where("application_id = ?", applicationID)
-	} else {
-		query = query.Where("application_id IS NULL")
-	}
-	if user == nil || user.ID == uuid.Nil {
-		return nil
-	}
-	return user
-}
-
-// UserExists returns true if a user exists for the given email address and app id
-func UserExists(email string, applicationID *uuid.UUID) bool {
-	return FindByEmail(email, applicationID) != nil
-}
-
 // AuthenticateUser attempts to authenticate by email address and password
 func AuthenticateUser(email, password string, applicationID *uuid.UUID) (*UserAuthenticationResponse, error) {
 	var user = &User{}
@@ -159,6 +127,38 @@ func AuthenticateApplicationUser(email string, applicationID uuid.UUID) (*UserAu
 		User:  user.AsResponse(),
 		Token: token.AsResponse(),
 	}, nil
+}
+
+// Find returns a user for the given id
+func Find(userID *uuid.UUID) *User {
+	db := dbconf.DatabaseConnection()
+	user := &User{}
+	db.Where("id = ?", userID).Find(&user)
+	if user == nil || user.ID == uuid.Nil {
+		return nil
+	}
+	return user
+}
+
+// FindByEmail returns a user for the given email address and application id
+func FindByEmail(email string, applicationID *uuid.UUID) *User {
+	db := dbconf.DatabaseConnection()
+	user := &User{}
+	query := db.Where("email = ?", email).Find(&user)
+	if applicationID != nil && *applicationID != uuid.Nil {
+		query = query.Where("application_id = ?", applicationID)
+	} else {
+		query = query.Where("application_id IS NULL")
+	}
+	if user == nil || user.ID == uuid.Nil {
+		return nil
+	}
+	return user
+}
+
+// UserExists returns true if a user exists for the given email address and app id
+func UserExists(email string, applicationID *uuid.UUID) bool {
+	return FindByEmail(email, applicationID) != nil
 }
 
 func (u *User) authenticate(password string) bool {
