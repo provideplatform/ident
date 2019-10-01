@@ -50,9 +50,10 @@ func (siaAPICall) TableName() string {
 
 type siaAccount struct {
 	SiaModel
-	Name   *string    `json:"name"`
-	Email  *string    `gorm:"-" json:"email"`
-	UserID *uuid.UUID `gorm:"column:prvd_user_id" json:"prvd_user_id"`
+	Name          *string    `json:"name"`
+	Email         *string    `gorm:"-" json:"email"`
+	ApplicationID *uuid.UUID `gorm:"column:prvd_application_id" json:"prvd_application_id"`
+	UserID        *uuid.UUID `gorm:"column:prvd_user_id" json:"prvd_user_id"`
 }
 
 func (siaAccount) TableName() string {
@@ -158,6 +159,11 @@ func consumeSiaUserNotificationMsg(msg *stan.Msg) {
 		Name:   common.StringOrNil(params["name"].(string)),
 		Email:  common.StringOrNil(params["email"].(string)),
 		UserID: &userUUID,
+	}
+
+	applicationUUID, err := uuid.FromString(params["application_id"].(string))
+	if err == nil {
+		account.ApplicationID = &applicationUUID
 	}
 
 	// save account
