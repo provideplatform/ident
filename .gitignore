@@ -32,8 +32,7 @@ ident_consumer
 ident_migrate
 
 sia_consumer
-sia_consumer.darwin-amd64
-sia_consumer.linux-amd64
+sia_consumer.*
 
 # Miscellaneous
 .DS_Store

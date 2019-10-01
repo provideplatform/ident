@@ -13,8 +13,7 @@ build: clean
 	go build -v -o ./.bin/ident_migrate ./cmd/migrate
 
 build_sia_consumer: clean
-	GOOS=darwin GOARCH=amd64 go build -v -o ./.bin/sia_consumer.darwin-amd64 ./cmd/sia_consumer
-	GOOS=linux GOARCH=amd64 go build -v -o ./.bin/sia_consumer.linux-amd64 ./cmd/sia_consumer
+	./scripts/build_sia_consumer.sh
 
 ecs_deploy:
 	./scripts/ecs_deploy.sh
