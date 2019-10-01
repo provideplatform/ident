@@ -1,13 +1,17 @@
 package sia
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"os/user"
 	"strconv"
 	"sync"
 
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
+	"github.com/provideapp/ident/application"
+	"github.com/provideapp/ident/common"
 )
 
 var siaDB *gorm.DB
@@ -17,6 +21,7 @@ var siaDBOnce sync.Once
 
 func init() {
 	siaDatabaseConnection()
+	dispatchSiaNotifications()
 }
 
 // siaDatabaseConnection returns a leased database connection from the underlying
@@ -87,4 +92,42 @@ func getSiaDBConfig() *dbconf.DBConfig {
 		}
 	})
 	return siaDBConfig
+}
+
+// dispatchSiaNotifications is currently a very naive way to publish a message
+// about each record in ident that sia cares about and listens for in the
+// embedded sia_consumer binary. as the number of users and applications grows
+// this method could become very noisy...
+func dispatchSiaNotifications() {
+	identDB := dbconf.DatabaseConnection()
+
+	if os.Getenv("SIA_DISPATCH_USER_NOTIFICATIONS") == "true" {
+		dispatchUserNotifications(identDB)
+	}
+
+	if os.Getenv("SIA_DISPATCH_APPLICATION_NOTIFICATIONS") == "true" {
+		dispatchApplicationNotifications(identDB)
+	}
+}
+
+func dispatchUserNotifications(db *gorm.DB) {
+	users := make([]*user.User, 0)
+	db.Where("application_id IS NULL").Find(&users)
+
+	common.Log.Debugf("Dispatching %d sia user notifications...", len(users))
+	for _, usr := range users {
+		payload, _ := json.Marshal(usr)
+		common.NATSPublish(natsSiaUserNotificationSubject, payload)
+	}
+}
+
+func dispatchApplicationNotifications(db *gorm.DB) {
+	apps := make([]*application.Application, 0)
+	db.Find(&apps)
+
+	common.Log.Debugf("Dispatching %d sia application notifications...", len(apps))
+	for _, app := range apps {
+		payload, _ := json.Marshal(app)
+		common.NATSPublish(natsSiaApplicationNotificationSubject, payload)
+	}
 }

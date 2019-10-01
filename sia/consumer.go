@@ -325,14 +325,14 @@ func consumeSiaAPIUsageEventsMsg(msg *stan.Msg) {
 	}
 
 	if resolverErr != nil {
-		common.Log.Warningf("Failed to persist API call event; %s", resolverErr.Error())
+		common.Log.Warningf("Failed to persist API call event: %s; %s", *apiCall.Hash, resolverErr.Error())
 		natsConnection, _ := common.GetSharedNatsStreamingConnection()
 		natsutil.AttemptNack(natsConnection, msg, natsSiaAPIUsageEventTimeout)
 		return
 	}
 
 	apiCall.AccountID = &account.ID
-	common.Log.Debugf("Resolved responsible account %d for API call event: %s", apiCall.AccountID, *apiCall.Hash)
+	common.Log.Debugf("Resolved responsible account %d for API call event: %s", *apiCall.AccountID, *apiCall.Hash)
 
 	result := siaDB.Create(&apiCall)
 	rowsAffected := result.RowsAffected
