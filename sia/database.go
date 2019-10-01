@@ -10,14 +10,12 @@ import (
 	dbconf "github.com/kthomas/go-db-config"
 )
 
-var identDB *gorm.DB
 var siaDB *gorm.DB
 var siaDBConfig *dbconf.DBConfig
 var siaConfigOnce sync.Once
 var siaDBOnce sync.Once
 
 func init() {
-	identDB = dbconf.DatabaseConnection()
 	siaDatabaseConnection()
 }
 
