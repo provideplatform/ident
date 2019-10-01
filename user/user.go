@@ -35,7 +35,7 @@ func init() {
 // User model
 type User struct {
 	provide.Model
-	ApplicationID          *uuid.UUID `sql:"type:uuid" json:"-"`
+	ApplicationID          *uuid.UUID `sql:"type:uuid" json:"application_id,omitempty"`
 	Name                   *string    `sql:"not null" json:"name"`
 	Email                  *string    `sql:"not null" json:"email"`
 	Password               *string    `json:"-"`
