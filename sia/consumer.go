@@ -75,6 +75,7 @@ func (siaContact) TableName() string {
 type siaApplication struct {
 	SiaModel
 	Name          *string    `json:"name"`
+	AccountID     *uint      `json:"account_id"`
 	ApplicationID *uuid.UUID `gorm:"column:prvd_application_id" json:"prvd_application_id"`
 	UserID        *uuid.UUID `gorm:"column:prvd_user_id" json:"prvd_user_id"`
 }
@@ -229,6 +230,17 @@ func consumeSiaApplicationNotificationMsg(msg *stan.Msg) {
 
 	userUUID, err := uuid.FromString(params["user_id"].(string))
 	application.UserID = &userUUID
+
+	account := &siaAccount{}
+	common.Log.Debugf("Resolving application owner's account from sia db for user: %s; application id: %s", application.UserID, application.ApplicationID)
+	siaDB.Where("prvd_user_id = ?", application.UserID).Find(&account)
+	if account == nil || account.ID == 0 {
+		common.Log.Warningf("Failed to resolve application owner's account from sia db for user: %s; application id: %s", application.UserID, application.ApplicationID)
+		natsConnection, _ := common.GetSharedNatsStreamingConnection()
+		natsutil.AttemptNack(natsConnection, msg, siaApplicationNotificationTimeout)
+		return
+	}
+	application.AccountID = &account.ID
 
 	result := siaDB.Create(&application)
 	rowsAffected := result.RowsAffected
