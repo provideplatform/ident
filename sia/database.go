@@ -19,8 +19,8 @@ func init() {
 	siaDatabaseConnection()
 }
 
-// DatabaseConnection returns a leased database connection from the underlying
-// pool configured from the environment-configured database connection
+// siaDatabaseConnection returns a leased database connection from the underlying
+// pool configured from the environment-configured sia database connection
 func siaDatabaseConnection() *gorm.DB {
 	siaDBOnce.Do(func() {
 		db, err := dbconf.DatabaseConnectionFactory(getSiaDBConfig())

@@ -4,7 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"os"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -31,22 +31,15 @@ const natsSiaAPIUsageEventMaxInFlight = 2048
 const siaAPIUsageEventAckWait = time.Second * 30
 const natsSiaAPIUsageEventTimeout = int64(time.Minute * 5)
 
-var instantKYCEnabled = strings.ToLower(os.Getenv("INSTANT_KYC")) == "true"
-
-// db.Exec("CREATE EXTENSION IF NOT EXISTS \"pgcrypto\";")
-
 type siaAPICall struct {
 	SiaModel
 	provide.APICall
 
-	AccountID *uint   `json:"account_id"`
-	Hash      *string `gorm:"column:sha256" json:"sha256"`
-	Raw       []byte  `json:"raw"`
+	AccountID     *uint `json:"account_id"`
+	ApplicationID *uint `json:"application_id"`
 
-	// FIXME? application and user id columns are not named like their
-	// prvd_application_id and prvd_user_id counterparts in other tables...
-	ApplicationID *uuid.UUID `gorm:"column:application_id" json:"prvd_application_id"`
-	UserID        *uuid.UUID `gorm:"-" json:"prvd_user_id"`
+	Hash *string `gorm:"column:sha256" json:"sha256"`
+	Raw  []byte  `json:"raw"`
 }
 
 func (siaAPICall) TableName() string {
@@ -88,6 +81,7 @@ func (siaApplication) TableName() string {
 	return "applications"
 }
 
+// SiaModel is only exported to workaround a bug in the gorm library
 type SiaModel struct {
 	ID     uint             `gorm:"primary_key"`
 	Errors []*provide.Error `sql:"-" json:"-"`
@@ -266,8 +260,6 @@ func consumeSiaAPIUsageEventsMsg(msg *stan.Msg) {
 		return
 	}
 
-	account := &siaAccount{}
-
 	siaDB := siaDatabaseConnection()
 
 	apiCallDigest := sha256.New()
@@ -297,37 +289,51 @@ func consumeSiaAPIUsageEventsMsg(msg *stan.Msg) {
 	isApplicationSub := subjectParts[0] == "application"
 	isUserSub := subjectParts[0] == "user"
 
+	account := &siaAccount{} // responsible billing account
+	var resolverErr error
+
 	if isApplicationSub {
 		applicationID := subjectParts[1]
 		applicationUUID, err := uuid.FromString(applicationID)
 		if err == nil {
-			apiCall.ApplicationID = &applicationUUID
-			common.Log.Debugf("Fetching application from sia db: %s", applicationID)
-
+			common.Log.Debugf("Resolving responsible account from sia db for application: %s", applicationUUID)
 			application := &siaApplication{}
-			siaDB.Where("prvd_application_id = ?", applicationID).Find(&application)
-			common.Log.Debugf("Resolved user id %s for app: %s", application.UserID, application.ApplicationID)
+			siaDB.Where("prvd_application_id = ?", applicationUUID).Find(&application)
 			if application != nil && application.ID != 0 && application.UserID != nil && *application.UserID != uuid.Nil {
+				apiCall.ApplicationID = &application.ID
+				common.Log.Debugf("Resolving responsible application owner's account from sia db for user: %s; application id: %s", application.UserID, application.ApplicationID)
 				siaDB.Where("prvd_user_id = ?", application.UserID).Find(&account)
+			} else if application != nil && application.ID != 0 {
+				resolverErr = fmt.Errorf("Failed to resolve responsible application owner's account from sia db for user: %s; application id: %s", application.UserID, application.ApplicationID)
+			} else {
+				resolverErr = fmt.Errorf("Failed to resolve responsible application: %s", applicationUUID)
 			}
+		} else {
+			resolverErr = fmt.Errorf("Failed to resolve responsible application: %s", err.Error())
 		}
-	}
-
-	if isUserSub {
+	} else if isUserSub {
 		userID := subjectParts[1]
 		userUUID, err := uuid.FromString(userID)
 		if err == nil {
-			apiCall.UserID = &userUUID
-			common.Log.Debugf("Fetching account from sia db: %s", userID)
+			common.Log.Debugf("Resolving responsible account from sia db for user: %s", userUUID)
 			siaDB.Where("prvd_user_id = ?", userUUID).Find(&account)
 		}
 	}
 
-	common.Log.Debugf("Resolved account: %d", account.ID)
-
-	if account != nil && account.ID != 0 {
-		apiCall.AccountID = &account.ID
+	if account == nil || account.ID == 0 {
+		resolverErr = fmt.Errorf("Failed to resolve responsible account for API call event: %s", *apiCall.Hash)
 	}
+
+	if resolverErr != nil {
+		common.Log.Warningf("Failed to persist API call event; %s", resolverErr.Error())
+		natsConnection, _ := common.GetSharedNatsStreamingConnection()
+		natsutil.AttemptNack(natsConnection, msg, natsSiaAPIUsageEventTimeout)
+		return
+	}
+
+	apiCall.AccountID = &account.ID
+	common.Log.Debugf("Resolved responsible account %d for API call event: %s", apiCall.AccountID, *apiCall.Hash)
+
 	result := siaDB.Create(&apiCall)
 	rowsAffected := result.RowsAffected
 	errors := result.GetErrors()
