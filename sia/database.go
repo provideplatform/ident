@@ -111,7 +111,7 @@ func dispatchSiaNotifications() {
 }
 
 func dispatchUserNotifications(db *gorm.DB) {
-	users := make([]*user.User, 0)
+	var users []user.User
 	db.Where("application_id IS NULL").Find(&users)
 
 	common.Log.Debugf("Dispatching %d sia user notifications...", len(users))
@@ -122,7 +122,7 @@ func dispatchUserNotifications(db *gorm.DB) {
 }
 
 func dispatchApplicationNotifications(db *gorm.DB) {
-	apps := make([]*application.Application, 0)
+	var apps []application.Application
 	db.Find(&apps)
 
 	common.Log.Debugf("Dispatching %d sia application notifications...", len(apps))
