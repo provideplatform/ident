@@ -311,24 +311,30 @@ func consumeSiaAPIUsageEventsMsg(msg *stan.Msg) {
 	account := &siaAccount{} // responsible billing account
 	var resolverErr error
 
+	resolveApplication := func(applicationUUID uuid.UUID) error {
+		var resolveApplicationErr error
+		common.Log.Debugf("Resolving responsible account from sia db for application: %s", applicationUUID)
+		application := &siaApplication{}
+		siaDB.Where("prvd_application_id = ?", applicationUUID).Find(&application)
+		if application != nil && application.ID != 0 && application.UserID != nil && *application.UserID != uuid.Nil {
+			apiCall.ApplicationID = &application.ID
+			common.Log.Debugf("Resolving responsible application owner's account from sia db for user: %s; application id: %s", application.UserID, application.ApplicationID)
+			siaDB.Where("prvd_user_id = ?", application.UserID).Find(&account)
+		} else if application != nil && application.ID != 0 {
+			resolveApplicationErr = fmt.Errorf("Failed to resolve responsible application owner's account from sia db for user: %s; application id: %s", application.UserID, application.ApplicationID)
+		} else {
+			resolveApplicationErr = fmt.Errorf("Failed to resolve responsible application: %s", applicationUUID)
+		}
+		return resolveApplicationErr
+	}
+
 	if isApplicationSub {
 		applicationID := subjectParts[1]
 		applicationUUID, err := uuid.FromString(applicationID)
-		if err == nil {
-			common.Log.Debugf("Resolving responsible account from sia db for application: %s", applicationUUID)
-			application := &siaApplication{}
-			siaDB.Where("prvd_application_id = ?", applicationUUID).Find(&application)
-			if application != nil && application.ID != 0 && application.UserID != nil && *application.UserID != uuid.Nil {
-				apiCall.ApplicationID = &application.ID
-				common.Log.Debugf("Resolving responsible application owner's account from sia db for user: %s; application id: %s", application.UserID, application.ApplicationID)
-				siaDB.Where("prvd_user_id = ?", application.UserID).Find(&account)
-			} else if application != nil && application.ID != 0 {
-				resolverErr = fmt.Errorf("Failed to resolve responsible application owner's account from sia db for user: %s; application id: %s", application.UserID, application.ApplicationID)
-			} else {
-				resolverErr = fmt.Errorf("Failed to resolve responsible application: %s", applicationUUID)
-			}
+		if err != nil {
+			resolverErr = fmt.Errorf("Failed to resolve responsible application; %s", err.Error())
 		} else {
-			resolverErr = fmt.Errorf("Failed to resolve responsible application: %s", err.Error())
+			resolverErr = resolveApplication(applicationUUID)
 		}
 	} else if isUserSub {
 		userID := subjectParts[1]
@@ -336,6 +342,10 @@ func consumeSiaAPIUsageEventsMsg(msg *stan.Msg) {
 		if err == nil {
 			common.Log.Debugf("Resolving responsible account from sia db for user: %s", userUUID)
 			siaDB.Where("prvd_user_id = ?", userUUID).Find(&account)
+
+			if account != nil && account.ApplicationID != nil && *account.ApplicationID != uuid.Nil {
+				resolverErr = resolveApplication(*account.ApplicationID)
+			}
 		}
 	}
 
