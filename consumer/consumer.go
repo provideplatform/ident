@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/kthomas/go-natsutil"
-	"github.com/labstack/gommon/log"
 	"github.com/nats-io/stan.go"
 	"github.com/provideapp/ident/common"
 	provide "github.com/provideservices/provide-go"
@@ -25,7 +24,7 @@ type apiUsageDelegate struct {
 func (d *apiUsageDelegate) Track(apiCall *provide.APICall) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Debug("Recovered from failed API call tracking attempt; reattempting...")
+			common.Log.Debug("Recovered from failed API call tracking attempt; reattempting...")
 			d.Track(apiCall)
 		}
 	}()
