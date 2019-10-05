@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	dbconf "github.com/kthomas/go-db-config"
+	natsutil "github.com/kthomas/go-natsutil"
 	"github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/ident/common"
@@ -148,7 +149,7 @@ func (app *Application) Create() bool {
 			success := rowsAffected > 0
 			if success {
 				payload, _ := json.Marshal(app)
-				common.NATSPublish(natsSiaApplicationNotificationSubject, payload)
+				natsutil.NatsPublish(natsSiaApplicationNotificationSubject, payload)
 			}
 			return success
 		}

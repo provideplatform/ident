@@ -12,8 +12,8 @@ import (
 	"github.com/dgrijalva/jwt-go"
 
 	logger "github.com/kthomas/go-logger"
+	natsutil "github.com/kthomas/go-natsutil"
 	selfsignedcert "github.com/kthomas/go-self-signed-cert"
-	stan "github.com/nats-io/stan.go"
 )
 
 const defaultEmailVerificationAttempts = int(4)
@@ -60,9 +60,6 @@ var (
 
 	// JWTPrivateKey is the parsed RSA JWT private key instance
 	JWTPrivateKey *rsa.PrivateKey
-
-	// SharedNatsConnection is a cached connection used by most NATS Publish calls
-	SharedNatsConnection *stan.Conn
 )
 
 func init() {
@@ -81,7 +78,7 @@ func init() {
 
 	requireTLS = os.Getenv("REQUIRE_TLS") == "true"
 
-	err := EstablishNATSStreamingConnection()
+	err := natsutil.EstablishSharedNatsStreamingConnection()
 	if err != nil {
 		log.Panicf("Failed to established NATS streaming connection; %s", err.Error())
 	}

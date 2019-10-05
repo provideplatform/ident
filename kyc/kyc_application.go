@@ -14,6 +14,7 @@ import (
 
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
+	natsutil "github.com/kthomas/go-natsutil"
 	pgputil "github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	identitymind "github.com/kthomas/identitymind-golang"
@@ -184,7 +185,7 @@ func (k *KYCApplication) Create(db *gorm.DB) bool {
 				payload, _ := json.Marshal(map[string]interface{}{
 					"kyc_application_id": k.ID.String(),
 				})
-				common.NATSPublish(natsSubmitKYCApplicationSubject, payload)
+				natsutil.NatsPublish(natsSubmitKYCApplicationSubject, payload)
 			}
 			return success
 		}
@@ -227,7 +228,7 @@ func (k *KYCApplication) Update(status *string) bool {
 			"kyc_application_id": k.ID.String(),
 			"status":             status,
 		})
-		common.NATSPublish(natsDispatchKYCApplicationWebhookSubject, payload)
+		natsutil.NatsPublish(natsDispatchKYCApplicationWebhookSubject, payload)
 	}
 
 	return len(k.Errors) == 0
@@ -359,7 +360,7 @@ func (k *KYCApplication) submit(db *gorm.DB) error {
 	payload, _ := json.Marshal(map[string]interface{}{
 		"kyc_application_id": k.ID.String(),
 	})
-	common.NATSPublish(natsCheckKYCApplicationStatusSubject, payload)
+	natsutil.NatsPublish(natsCheckKYCApplicationStatusSubject, payload)
 	return nil
 }
 
@@ -587,7 +588,7 @@ func (k *KYCApplication) updateStatus(db *gorm.DB, status string, description *s
 		payload, _ := json.Marshal(map[string]interface{}{
 			"kyc_application_id": k.ID.String(),
 		})
-		common.NATSPublish(natsDispatchKYCApplicationWebhookSubject, payload)
+		natsutil.NatsPublish(natsDispatchKYCApplicationWebhookSubject, payload)
 	}
 }
 

@@ -87,14 +87,14 @@ func consumeSubmitKYCApplicationMsg(msg *stan.Msg) {
 	err := json.Unmarshal(msg.Data, &params)
 	if err != nil {
 		common.Log.Warningf("Failed to umarshal KYC application submit message; %s", err.Error())
-		natsutil.Nack(common.SharedNatsConnection, msg)
+		natsutil.Nack(msg)
 		return
 	}
 
 	kycApplicationID, kycApplicationIDOk := params["kyc_application_id"].(string)
 	if !kycApplicationIDOk {
 		common.Log.Warningf("Failed to unmarshal kyc_application_id during NATS %v message handling", msg.Subject)
-		natsutil.Nack(common.SharedNatsConnection, msg)
+		natsutil.Nack(msg)
 		return
 	}
 
@@ -105,14 +105,14 @@ func consumeSubmitKYCApplicationMsg(msg *stan.Msg) {
 
 	if kycApplication == nil || kycApplication.ID == uuid.Nil {
 		common.Log.Warningf("Failed to find KYC application for id: %s", kycApplicationID)
-		natsutil.Nack(common.SharedNatsConnection, msg)
+		natsutil.Nack(msg)
 		return
 	}
 
 	err = kycApplication.submit(db)
 	if err != nil {
 		common.Log.Warningf("Failed to submit KYC application %s during NATS %v message handling; %s", kycApplication.ID, msg.Subject, err.Error())
-		natsutil.AttemptNack(common.SharedNatsConnection, msg, natsSubmitKYCApplicationTimeout)
+		natsutil.AttemptNack(msg, natsSubmitKYCApplicationTimeout)
 		return
 	}
 
@@ -142,14 +142,14 @@ func consumeCheckKYCApplicationStatusMsg(msg *stan.Msg) {
 	err := json.Unmarshal(msg.Data, &params)
 	if err != nil {
 		common.Log.Warningf("Failed to umarshal KYC application status message; %s", err.Error())
-		natsutil.Nack(common.SharedNatsConnection, msg)
+		natsutil.Nack(msg)
 		return
 	}
 
 	kycApplicationID, kycApplicationIDOk := params["kyc_application_id"].(string)
 	if !kycApplicationIDOk {
 		common.Log.Warningf("Failed to unmarshal kyc_application_id during NATS %v message handling", msg.Subject)
-		natsutil.Nack(common.SharedNatsConnection, msg)
+		natsutil.Nack(msg)
 		return
 	}
 
@@ -160,14 +160,14 @@ func consumeCheckKYCApplicationStatusMsg(msg *stan.Msg) {
 
 	if kycApplication == nil || kycApplication.ID == uuid.Nil {
 		common.Log.Warningf("Failed to find KYC application for id: %s", kycApplicationID)
-		natsutil.Nack(common.SharedNatsConnection, msg)
+		natsutil.Nack(msg)
 		return
 	}
 
 	application, err := kycApplication.enrich()
 	if err != nil {
 		common.Log.Warningf("Failed to enrich KYC application with using KYC provider API; %s", err.Error())
-		natsutil.Nack(common.SharedNatsConnection, msg)
+		natsutil.Nack(msg)
 		return
 	}
 
@@ -185,7 +185,7 @@ func consumeCheckKYCApplicationStatusMsg(msg *stan.Msg) {
 			}
 		} else {
 			common.Log.Warningf("Identitymind KYC application does not contain a status for KYC application: %s", kycApplication.ID)
-			natsutil.Nack(common.SharedNatsConnection, msg)
+			natsutil.Nack(msg)
 			return
 		}
 	case *vouched.KYCApplication:
@@ -201,12 +201,12 @@ func consumeCheckKYCApplicationStatusMsg(msg *stan.Msg) {
 			}
 		} else {
 			common.Log.Warningf("Vouched KYC application does not contain a status for KYC application: %s", kycApplication.ID)
-			natsutil.Nack(common.SharedNatsConnection, msg)
+			natsutil.Nack(msg)
 			return
 		}
 	default:
 		common.Log.Warningf("Unable to complete status check for KYC application: %s; unsupported KYC provider: %s", kycApplication.ID, *kycApplication.Provider)
-		natsutil.Nack(common.SharedNatsConnection, msg)
+		natsutil.Nack(msg)
 		return
 	}
 
@@ -224,14 +224,14 @@ func consumeDispatchKYCApplicationWebhookMsg(msg *stan.Msg) {
 	err := json.Unmarshal(msg.Data, &params)
 	if err != nil {
 		common.Log.Warningf("Failed to umarshal KYC application submit message; %s", err.Error())
-		natsutil.Nack(common.SharedNatsConnection, msg)
+		natsutil.Nack(msg)
 		return
 	}
 
 	kycApplicationID, kycApplicationIDOk := params["kyc_application_id"].(string)
 	if !kycApplicationIDOk {
 		common.Log.Warningf("Failed to unmarshal kyc_application_id during NATS %v message handling", msg.Subject)
-		natsutil.Nack(common.SharedNatsConnection, msg)
+		natsutil.Nack(msg)
 		return
 	}
 
@@ -242,14 +242,14 @@ func consumeDispatchKYCApplicationWebhookMsg(msg *stan.Msg) {
 
 	if kycApplication == nil || kycApplication.ID == uuid.Nil {
 		common.Log.Warningf("Failed to find KYC application for id: %s", kycApplicationID)
-		natsutil.Nack(common.SharedNatsConnection, msg)
+		natsutil.Nack(msg)
 		return
 	}
 
 	err = kycApplication.dispatchWebhookRequest(params)
 	if err != nil {
 		common.Log.Warningf("Failed to dispatch webhook notification for KYC application %s during NATS %v message handling; %s", kycApplication.ID, msg.Subject, err.Error())
-		natsutil.AttemptNack(common.SharedNatsConnection, msg, natsDispatchKYCApplicationWebhookTimeout)
+		natsutil.AttemptNack(msg, natsDispatchKYCApplicationWebhookTimeout)
 		return
 	}
 

@@ -11,6 +11,7 @@ import (
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
+	natsutil "github.com/kthomas/go-natsutil"
 	uuid "github.com/kthomas/go.uuid"
 	trumail "github.com/kthomas/trumail/verifier"
 	"github.com/provideapp/ident/common"
@@ -191,7 +192,7 @@ func (u *User) Create() bool {
 			success := rowsAffected > 0
 			if success && (u.ApplicationID == nil || *u.ApplicationID == uuid.Nil) {
 				payload, _ := json.Marshal(u)
-				common.NATSPublish(natsSiaUserNotificationSubject, payload)
+				natsutil.NatsPublish(natsSiaUserNotificationSubject, payload)
 			}
 			return success
 		}
