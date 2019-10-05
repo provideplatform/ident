@@ -1,5 +1,5 @@
 hash: 942596610937cde74bb26e68af070d4013fc10506e902d9f986eb3434aa56d72
-updated: 2019-09-30T15:32:06.151407-04:00
+updated: 2019-10-04T20:44:17.12838-04:00
 imports:
 - name: github.com/allegro/bigcache
   version: baaa21686666424b386f282d68fc1d23594ab38d
@@ -142,7 +142,7 @@ imports:
 - name: github.com/pkg/errors
   version: 27936f6d90f9c8e1145f11ed52ffffbfdb9e0af7
 - name: github.com/provideservices/provide-go
-  version: 2f602bbdc64019552884a828ae2bf5555d8817dd
+  version: ae0c48bdc2c5400b36dc1d291dcea42ecff22606
 - name: github.com/rs/cors
   version: db0fe48135e83b5812a5a31be0eea66984b1b521
 - name: github.com/steakknife/bloomfilter
