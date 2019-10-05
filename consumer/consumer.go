@@ -5,17 +5,17 @@ import (
 	"time"
 
 	"github.com/kthomas/go-natsutil"
+	"github.com/labstack/gommon/log"
 	"github.com/nats-io/stan.go"
 	"github.com/provideapp/ident/common"
 	provide "github.com/provideservices/provide-go"
 )
 
 const apiUsageDaemonBufferSize = 256
-const apiUsageDaemonFlushInterval = 30000
+const apiUsageDaemonFlushInterval = 10000
 
-const natsDefaultClusterID = "provide"
 const natsAPIUsageEventNotificationSubject = "api.usage.event"
-const natsAPIUsageEventNotificationMaxInFlight = 1024
+const natsAPIUsageEventNotificationFlushTimeout = time.Second * 10
 
 type apiUsageDelegate struct {
 	natsConnection *stan.Conn
@@ -23,6 +23,13 @@ type apiUsageDelegate struct {
 
 // Track receives an API call from the API daemon's underlying buffered channel for local processing
 func (d *apiUsageDelegate) Track(apiCall *provide.APICall) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Debug("Recovered from failed API call tracking attempt; reattempting...")
+			d.Track(apiCall)
+		}
+	}()
+
 	payload, _ := json.Marshal(apiCall)
 	if d != nil && d.natsConnection != nil {
 		(*d.natsConnection).PublishAsync(natsAPIUsageEventNotificationSubject, payload, func(_ string, err error) {
@@ -38,7 +45,7 @@ func (d *apiUsageDelegate) Track(apiCall *provide.APICall) {
 }
 
 func (d *apiUsageDelegate) initNatsStreamingConnection() {
-	natsConnection, err := natsutil.GetNatsStreamingConnection(time.Second*10, func(_ stan.Conn, err error) {
+	natsConnection, err := natsutil.GetNatsStreamingConnection(natsAPIUsageEventNotificationFlushTimeout, func(_ stan.Conn, err error) {
 		d.initNatsStreamingConnection()
 	})
 	if err != nil {
