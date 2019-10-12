@@ -161,9 +161,11 @@ func consumeSiaUserNotificationMsg(msg *stan.Msg) {
 		UserID: &userUUID,
 	}
 
-	applicationUUID, err := uuid.FromString(params["application_id"].(string))
-	if err == nil {
-		account.ApplicationID = &applicationUUID
+	if applicationID, applicationIDOk := params["application_id"].(string); applicationIDOk {
+		applicationUUID, err := uuid.FromString(applicationID)
+		if err == nil {
+			account.ApplicationID = &applicationUUID
+		}
 	}
 
 	// save account
