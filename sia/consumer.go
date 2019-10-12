@@ -146,7 +146,7 @@ func consumeSiaUserNotificationMsg(msg *stan.Msg) {
 	err := json.Unmarshal(msg.Data, &params)
 	if err != nil {
 		common.Log.Warningf("Failed to umarshal sia user notification event message; %s", err.Error())
-		natsutil.Nack(&common.SharedNatsConnection, msg)
+		natsutil.Nack(msg)
 		return
 	}
 
@@ -177,8 +177,7 @@ func consumeSiaUserNotificationMsg(msg *stan.Msg) {
 	}
 	if rowsAffected == 0 {
 		common.Log.Warning("Failed to persist sia account")
-		natsConnection, _ := common.GetSharedNatsStreamingConnection()
-		natsutil.AttemptNack(&natsConnection, msg, siaApplicationNotificationTimeout)
+		natsutil.AttemptNack(msg, siaApplicationNotificationTimeout)
 		return
 	}
 	// end save account
@@ -201,8 +200,7 @@ func consumeSiaUserNotificationMsg(msg *stan.Msg) {
 	}
 	if rowsAffected == 0 {
 		common.Log.Warning("Failed to persist sia account contact")
-		natsConnection, _ := common.GetSharedNatsStreamingConnection()
-		natsutil.AttemptNack(&natsConnection, msg, siaApplicationNotificationTimeout)
+		natsutil.AttemptNack(msg, siaApplicationNotificationTimeout)
 		return
 	}
 	// end save contact
@@ -221,7 +219,7 @@ func consumeSiaApplicationNotificationMsg(msg *stan.Msg) {
 	err := json.Unmarshal(msg.Data, &params)
 	if err != nil {
 		common.Log.Warningf("Failed to umarshal sia application notification event message; %s", err.Error())
-		natsutil.Nack(&common.SharedNatsConnection, msg)
+		natsutil.Nack(msg)
 		return
 	}
 
@@ -242,8 +240,7 @@ func consumeSiaApplicationNotificationMsg(msg *stan.Msg) {
 	siaDB.Where("prvd_user_id = ?", application.UserID).Find(&account)
 	if account == nil || account.ID == 0 {
 		common.Log.Warningf("Failed to resolve application owner's account from sia db for user: %s; application id: %s", application.UserID, application.ApplicationID)
-		natsConnection, _ := common.GetSharedNatsStreamingConnection()
-		natsutil.AttemptNack(&natsConnection, msg, siaApplicationNotificationTimeout)
+		natsutil.AttemptNack(msg, siaApplicationNotificationTimeout)
 		return
 	}
 	application.AccountID = &account.ID
@@ -258,8 +255,7 @@ func consumeSiaApplicationNotificationMsg(msg *stan.Msg) {
 	}
 	if rowsAffected == 0 {
 		common.Log.Warning("Failed to persist sia application")
-		natsConnection, _ := common.GetSharedNatsStreamingConnection()
-		natsutil.AttemptNack(&natsConnection, msg, siaApplicationNotificationTimeout)
+		natsutil.AttemptNack(msg, siaApplicationNotificationTimeout)
 		return
 	}
 
@@ -275,7 +271,7 @@ func consumeSiaAPIUsageEventsMsg(msg *stan.Msg) {
 	err := json.Unmarshal(msg.Data, &params)
 	if err != nil {
 		common.Log.Warningf("Failed to umarshal sia API usage event message; %s", err.Error())
-		natsutil.Nack(&common.SharedNatsConnection, msg)
+		natsutil.Nack(msg)
 		return
 	}
 
@@ -296,8 +292,7 @@ func consumeSiaAPIUsageEventsMsg(msg *stan.Msg) {
 	err = json.Unmarshal(msg.Data, &apiCall)
 	if err != nil {
 		common.Log.Warningf("Failed to unmarshal API call event; %s", err.Error())
-		natsConnection, _ := common.GetSharedNatsStreamingConnection()
-		natsutil.AttemptNack(&natsConnection, msg, natsSiaAPIUsageEventTimeout)
+		natsutil.AttemptNack(msg, natsSiaAPIUsageEventTimeout)
 		return
 	}
 
@@ -355,8 +350,7 @@ func consumeSiaAPIUsageEventsMsg(msg *stan.Msg) {
 
 	if resolverErr != nil {
 		common.Log.Warningf("Failed to persist API call event: %s; %s", *apiCall.Hash, resolverErr.Error())
-		natsConnection, _ := common.GetSharedNatsStreamingConnection()
-		natsutil.AttemptNack(&natsConnection, msg, natsSiaAPIUsageEventTimeout)
+		natsutil.AttemptNack(msg, natsSiaAPIUsageEventTimeout)
 		return
 	}
 
@@ -373,8 +367,7 @@ func consumeSiaAPIUsageEventsMsg(msg *stan.Msg) {
 	}
 	if rowsAffected == 0 {
 		common.Log.Warning("Failed to persist API call event")
-		natsConnection, _ := common.GetSharedNatsStreamingConnection()
-		natsutil.AttemptNack(&natsConnection, msg, natsSiaAPIUsageEventTimeout)
+		natsutil.AttemptNack(msg, natsSiaAPIUsageEventTimeout)
 		return
 	}
 

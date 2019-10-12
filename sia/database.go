@@ -9,6 +9,7 @@ import (
 
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
+	natsutil "github.com/kthomas/go-natsutil"
 	"github.com/provideapp/ident/application"
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/user"
