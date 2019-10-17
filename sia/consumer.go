@@ -154,6 +154,8 @@ func consumeSiaUserNotificationMsg(msg *stan.Msg) {
 	tx := siaDB.Begin()
 	defer tx.RollbackUnlessCommitted()
 
+	common.Log.Debugf("Processing sia user notification with params: %s", params)
+
 	userUUID, err := uuid.FromString(params["id"].(string))
 	account := &siaAccount{
 		Name:   common.StringOrNil(params["name"].(string)),
