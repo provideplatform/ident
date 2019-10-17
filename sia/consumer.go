@@ -139,6 +139,13 @@ func createNatsSiaAPIUsageEventsSubscriptions(wg *sync.WaitGroup) {
 }
 
 func consumeSiaUserNotificationMsg(msg *stan.Msg) {
+	defer func() {
+		if r := recover(); r != nil {
+			common.Log.Warningf("Recovered from failed %d-byte sia user notification message on subject: %s; payload: %s", msg.Size(), msg.Subject, string(msg.Data))
+			natsutil.AttemptNack(msg, siaApplicationNotificationTimeout)
+		}
+	}()
+
 	common.Log.Debugf("Consuming %d-byte NATS sia user notification message on subject: %s", msg.Size(), msg.Subject)
 
 	var params map[string]interface{}
@@ -153,8 +160,6 @@ func consumeSiaUserNotificationMsg(msg *stan.Msg) {
 	siaDB := siaDatabaseConnection()
 	tx := siaDB.Begin()
 	defer tx.RollbackUnlessCommitted()
-
-	common.Log.Debugf("Processing sia user notification with params: %s", params)
 
 	userUUID, err := uuid.FromString(params["id"].(string))
 	account := &siaAccount{
