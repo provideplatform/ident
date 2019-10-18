@@ -574,6 +574,16 @@ func (k *KYCApplication) isUnderReview() bool {
 }
 
 func (k *KYCApplication) updateStatus(db *gorm.DB, status string, description *string) {
+	var initialStatus string
+	if k.Status != nil {
+		initialStatus = *k.Status
+	}
+
+	if status == initialStatus {
+		common.Log.Debugf("Short-circuiting no-op KYC application status change request from %s to %s for KYC application %s", initialStatus, *k.Status, k.ID)
+		return
+	}
+
 	k.Status = common.StringOrNil(status)
 	k.Description = description
 	result := db.Save(&k)
