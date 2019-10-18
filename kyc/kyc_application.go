@@ -134,7 +134,7 @@ type KYCApplication struct {
 	Description            *string                `json:"description"`
 	Params                 map[string]interface{} `sql:"-" json:"params"`
 	EncryptedParams        *string                `sql:"type:bytea" json:"-"`
-	ProviderRepresentation map[string]interface{} `sql:"-" json:"provider_representation"`
+	ProviderRepresentation map[string]interface{} `sql:"-" json:"provider_representation,omitempty"`
 }
 
 // KYCApplicationsByUserID returns a list of KYC applications which have been
