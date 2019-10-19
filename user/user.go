@@ -145,12 +145,13 @@ func Find(userID *uuid.UUID) *User {
 func FindByEmail(email string, applicationID *uuid.UUID) *User {
 	db := dbconf.DatabaseConnection()
 	user := &User{}
-	query := db.Where("email = ?", email).Find(&user)
+	query := db.Where("email = ?", email)
 	if applicationID != nil && *applicationID != uuid.Nil {
 		query = query.Where("application_id = ?", applicationID)
 	} else {
 		query = query.Where("application_id IS NULL")
 	}
+	query.Find(&user)
 	if user == nil || user.ID == uuid.Nil {
 		return nil
 	}
