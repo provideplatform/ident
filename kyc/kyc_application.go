@@ -135,6 +135,7 @@ type KYCApplication struct {
 	Identifier             *string                `json:"identifier"`
 	Type                   *string                `sql:"not null" json:"type"`
 	Status                 *string                `sql:"not null;default:'pending'" json:"status"`
+	Name                   *string                `json:"name"`
 	Description            *string                `json:"description"`
 	Params                 *KYCApplicationParams  `sql:"-" json:"params,omitempty"`
 	EncryptedParams        *string                `sql:"type:bytea" json:"-"`
@@ -197,6 +198,15 @@ func (k *KYCApplication) Create(db *gorm.DB) bool {
 		k.Type = common.StringOrNil(defaultKYCApplicationType)
 	} else {
 		k.Type = common.StringOrNil(strings.ToLower(*k.Type))
+	}
+
+	if k.Name == nil {
+		user := k.User(db)
+		if user != nil && user.ID != uuid.Nil {
+			k.Name = user.Name
+		} else if k.Params != nil && k.Params.Name != nil {
+			k.Name = k.Params.Name
+		}
 	}
 
 	if !k.Validate(db) {
