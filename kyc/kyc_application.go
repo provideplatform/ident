@@ -142,6 +142,8 @@ type KYCApplication struct {
 
 // KYCApplicationParams represents a vendor-agnostic KYC application parameter object
 type KYCApplicationParams struct {
+	Params map[string]interface{} `json:"params,omitempty"`
+
 	DateOfBirth *string `json:"date_of_birth,omitempty"`
 	FirstName   *string `json:"first_name,omitempty"`
 	LastName    *string `json:"last_name,omitempty"`

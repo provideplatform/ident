@@ -33,6 +33,11 @@ func (v *Vouched) MarshalKYCApplicationParams(params map[string]interface{}) map
 	if selfie, selfieOk := params["selfie"]; selfieOk {
 		vouchedParams["userPhoto"] = selfie
 	}
+	if nestedParams, nestedParamsOk := params["params"].(map[string]interface{}); nestedParamsOk {
+		for k, v := range nestedParams {
+			vouchedParams[k] = v
+		}
+	}
 	return map[string]interface{}{
 		"params":      vouchedParams,
 		"type":        params["type"],
