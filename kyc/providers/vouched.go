@@ -17,6 +17,29 @@ func InitVouched() *Vouched {
 	}
 }
 
+// MarshalKYCApplicationParams transforms the given map representation to the Vouched equivalent
+func (v *Vouched) MarshalKYCApplicationParams(params map[string]interface{}) map[string]interface{} {
+	vouchedParams := map[string]interface{}{
+		"dob":       params["date_of_birth"],
+		"firstName": params["first_name"],
+		"lastName":  params["last_name"],
+	}
+	if idPhoto, idPhotoOk := params["id_photo"]; idPhotoOk {
+		vouchedParams["idPhoto"] = idPhoto
+	}
+	if idPhotoBack, idPhotoBackOk := params["id_photo_back"]; idPhotoBackOk {
+		vouchedParams["idPhotoBack"] = idPhotoBack
+	}
+	if selfie, selfieOk := params["selfie"]; selfieOk {
+		vouchedParams["userPhoto"] = selfie
+	}
+	return map[string]interface{}{
+		"params":      vouchedParams,
+		"type":        params["type"],
+		"callbackURL": params["webhook_url"],
+	}
+}
+
 // Cases
 
 // GetCase retrieves an existing case

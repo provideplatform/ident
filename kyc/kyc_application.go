@@ -55,6 +55,9 @@ func init() {
 
 // KYCAPI is implemented by BillingAccount KYC clients such as identitymind.go
 type KYCAPI interface {
+	// KYCApplicationParams
+	MarshalKYCApplicationParams(map[string]interface{}) map[string]interface{}
+
 	// Cases
 	GetCase(string) (interface{}, error)
 	CreateCase(map[string]interface{}) (interface{}, error)
@@ -132,9 +135,39 @@ type KYCApplication struct {
 	Type                   *string                `sql:"not null" json:"type"`
 	Status                 *string                `sql:"not null;default:'pending'" json:"status"`
 	Description            *string                `json:"description"`
-	Params                 map[string]interface{} `sql:"-" json:"params"`
+	Params                 *KYCApplicationParams  `sql:"-" json:"params"`
 	EncryptedParams        *string                `sql:"type:bytea" json:"-"`
 	ProviderRepresentation map[string]interface{} `sql:"-" json:"provider_representation,omitempty"`
+}
+
+// KYCApplicationParams represents a vendor-agnostic KYC application parameter object
+type KYCApplicationParams struct {
+	DateOfBirth *string `json:"date_of_birth,omitempty"`
+	FirstName   *string `json:"first_name,omitempty"`
+	LastName    *string `json:"last_name,omitempty"`
+	Name        *string `json:"name,omitempty"`
+	IDPhoto     *string `json:"id_photo,omitempty"`
+	IDPhotoBack *string `json:"id_photo_back,omitempty"`
+	Selfie      *string `json:"selfie,omitempty"`
+	SelfieVideo *string `json:"selfie_video,omitempty"`
+	Type        *string `json:"type,omitempty"`
+	WebhookURL  *string `json:"webhook_url,omitempty"`
+}
+
+func (p *KYCApplicationParams) goMap() (map[string]interface{}, error) {
+	var params map[string]interface{}
+	paramsJSON, err := json.Marshal(p)
+	if err != nil {
+		common.Log.Warningf("Failed to marshal KYC application params to JSON; %s", err.Error())
+		return nil, err
+	}
+
+	err = json.Unmarshal(paramsJSON, &params)
+	if err != nil {
+		common.Log.Warningf("Failed to unmarshal KYC application params; %s", err.Error())
+		return nil, err
+	}
+	return params, nil
 }
 
 // KYCApplicationsByUserID returns a list of KYC applications which have been
@@ -299,16 +332,28 @@ func (k *KYCApplication) submit(db *gorm.DB) error {
 		common.Log.Warningf("Failed to submit KYC application; no KYC API client resolved for provider: %s; %s", *k.Provider, err.Error())
 		return err
 	}
-	var params map[string]interface{}
+
+	var decryptedParams *KYCApplicationParams
 	if k.Params != nil {
-		params = k.Params
+		decryptedParams = k.Params
 	} else {
-		params, err = k.decryptedParams()
+		decryptedParams, err = k.decryptedParams()
 		if err != nil {
 			common.Log.Warningf("Failed to submit KYC application; failed to decrypt params; %s", err.Error())
 			return err
 		}
 	}
+
+	var params map[string]interface{}
+	if decryptedParams != nil {
+		params, err = decryptedParams.goMap()
+		if err != nil {
+			common.Log.Warningf("Failed to submit KYC application; failed to marshal decrypted params to go map; %s", err.Error())
+			return err
+		}
+		params = apiClient.MarshalKYCApplicationParams(params)
+	}
+
 	resp, err := apiClient.SubmitApplication(params)
 	if err != nil {
 		common.Log.Warningf("Failed to resolve KYC API client; %s", err.Error())
@@ -402,6 +447,7 @@ func (k *KYCApplication) enrich() (interface{}, error) {
 			provideRepresentationJSON, _ := json.Marshal(apiResponse)
 			providerRepresentation := map[string]interface{}{}
 			json.Unmarshal(provideRepresentationJSON, &providerRepresentation)
+			delete(providerRepresentation, "request")
 			k.ProviderRepresentation = providerRepresentation
 
 			marshaledResponse = apiResponse
@@ -413,8 +459,8 @@ func (k *KYCApplication) enrich() (interface{}, error) {
 	return marshaledResponse, nil
 }
 
-func (k *KYCApplication) decryptedParams() (map[string]interface{}, error) {
-	decryptedParams := map[string]interface{}{}
+func (k *KYCApplication) decryptedParams() (*KYCApplicationParams, error) {
+	decryptedParams := &KYCApplicationParams{}
 	if k.EncryptedParams != nil {
 		encryptedParamsJSON, err := pgputil.PGPPubDecrypt([]byte(*k.EncryptedParams))
 		if err != nil {
@@ -446,7 +492,7 @@ func (k *KYCApplication) encryptParams() bool {
 	return true
 }
 
-func (k *KYCApplication) setEncryptedParams(params map[string]interface{}) {
+func (k *KYCApplication) setEncryptedParams(params *KYCApplicationParams) {
 	paramsJSON, _ := json.Marshal(params)
 	_paramsJSON := string(json.RawMessage(paramsJSON))
 	k.EncryptedParams = &_paramsJSON
@@ -706,8 +752,8 @@ func (k *KYCApplication) webhookURL() *string {
 	if err != nil {
 		return nil
 	}
-	if webhookURL, webhookURLOk := params["webhook_url"].(string); webhookURLOk {
-		return common.StringOrNil(webhookURL)
+	if params.WebhookURL != nil {
+		return params.WebhookURL
 	}
 	return nil
 }

@@ -17,6 +17,11 @@ func InitIdentityMind() *IdentityMind {
 	}
 }
 
+// MarshalKYCApplicationParams transforms the given map representation to the IdentityMind equivalent
+func (i *IdentityMind) MarshalKYCApplicationParams(params map[string]interface{}) map[string]interface{} {
+	return map[string]interface{}{}
+}
+
 // Cases
 
 // GetCase retrieves an existing case
