@@ -17,8 +17,8 @@ func InitVouched() *Vouched {
 	}
 }
 
-// MarshalKYCApplicationParams transforms the given map representation to the Vouched equivalent
-func (v *Vouched) MarshalKYCApplicationParams(params map[string]interface{}) map[string]interface{} {
+// MarshalKYCApplication transforms the given map representation of KYCApplicationParams to the Vouched equivalent
+func (v *Vouched) MarshalKYCApplication(params map[string]interface{}) map[string]interface{} {
 	vouchedParams := map[string]interface{}{
 		"dob":       params["date_of_birth"],
 		"firstName": params["first_name"],
@@ -43,6 +43,25 @@ func (v *Vouched) MarshalKYCApplicationParams(params map[string]interface{}) map
 		"type":        params["type"],
 		"callbackURL": params["webhook_url"],
 	}
+}
+
+// MarshalKYCApplicationParams transforms the given Vouched KYC application map representation to the KYCApplicationParams
+func (v *Vouched) MarshalKYCApplicationParams(vouchedParams map[string]interface{}) map[string]interface{} {
+	params := map[string]interface{}{
+		"date_of_birth": vouchedParams["date_of_birth"],
+		"first_name":    vouchedParams["firstName"],
+		"last_name":     vouchedParams["lastName"],
+	}
+	if idPhoto, idPhotoOk := vouchedParams["idPhoto"]; idPhotoOk {
+		params["id_photo"] = idPhoto
+	}
+	if idPhotoBack, idPhotoBackOk := vouchedParams["idPhotoBack"]; idPhotoBackOk {
+		params["id_photo_back"] = idPhotoBack
+	}
+	if selfie, selfieOk := vouchedParams["userPhoto"]; selfieOk {
+		params["selfie"] = selfie
+	}
+	return params
 }
 
 // Cases

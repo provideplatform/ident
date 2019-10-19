@@ -56,6 +56,7 @@ func init() {
 // KYCAPI is implemented by BillingAccount KYC clients such as identitymind.go
 type KYCAPI interface {
 	// KYCApplicationParams
+	MarshalKYCApplication(map[string]interface{}) map[string]interface{}
 	MarshalKYCApplicationParams(map[string]interface{}) map[string]interface{}
 
 	// Cases
@@ -135,13 +136,14 @@ type KYCApplication struct {
 	Type                   *string                `sql:"not null" json:"type"`
 	Status                 *string                `sql:"not null;default:'pending'" json:"status"`
 	Description            *string                `json:"description"`
-	Params                 *KYCApplicationParams  `sql:"-" json:"params"`
+	Params                 *KYCApplicationParams  `sql:"-" json:"params,omitempty"`
 	EncryptedParams        *string                `sql:"type:bytea" json:"-"`
 	ProviderRepresentation map[string]interface{} `sql:"-" json:"provider_representation,omitempty"`
 }
 
 // KYCApplicationParams represents a vendor-agnostic KYC application parameter object
 type KYCApplicationParams struct {
+	// Params is the provider API representation
 	Params map[string]interface{} `json:"params,omitempty"`
 
 	DateOfBirth *string `json:"date_of_birth,omitempty"`
@@ -353,7 +355,7 @@ func (k *KYCApplication) submit(db *gorm.DB) error {
 			common.Log.Warningf("Failed to submit KYC application; failed to marshal decrypted params to go map; %s", err.Error())
 			return err
 		}
-		params = apiClient.MarshalKYCApplicationParams(params)
+		params = apiClient.MarshalKYCApplication(params)
 	}
 
 	resp, err := apiClient.SubmitApplication(params)
@@ -430,6 +432,14 @@ func (k *KYCApplication) enrich() (interface{}, error) {
 	}
 
 	k.Params, _ = k.decryptedParams()
+	if k.Params.Params != nil {
+		common.Log.Debugf("Enriching standard KYCApplicationParams using provider params")
+		standardizedParams := apiClient.MarshalKYCApplicationParams(k.Params.Params)
+		standardizedParamsJSON, _ := json.Marshal(standardizedParams)
+		json.Unmarshal(standardizedParamsJSON, &k.Params)
+		k.Params.Params = nil
+	}
+
 	var marshaledResponse interface{}
 
 	switch *k.Provider {
