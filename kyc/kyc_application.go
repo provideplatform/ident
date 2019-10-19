@@ -35,7 +35,7 @@ const kycApplicationStatusRejected = "rejected"
 const kycApplicationStatusSubmitted = "submitted"
 const kycApplicationStatusUnderReview = "review"
 
-const defaultKYCProvider = identitymindKYCProvider
+const defaultKYCProvider = vouchedKYCProvider
 const defaultKYCApplicationType = consumerKYCApplicationType
 const consumerKYCApplicationType = "kyc"
 const businessKYCApplicationType = "kyb"
