@@ -1,5 +1,5 @@
 hash: 942596610937cde74bb26e68af070d4013fc10506e902d9f986eb3434aa56d72
-updated: 2019-10-18T01:06:16.693001-04:00
+updated: 2019-10-19T02:27:49.488756-04:00
 imports:
 - name: github.com/allegro/bigcache
   version: baaa21686666424b386f282d68fc1d23594ab38d
@@ -113,7 +113,7 @@ imports:
   subpackages:
   - verifier
 - name: github.com/kthomas/vouched-golang
-  version: 1d546b52009350c12f083fd9839dc85a627645ea
+  version: 3aac447fa4bdbe0c84e978a7c468da5f7939c078
 - name: github.com/lib/pq
   version: 931b5ae4c24e6810c8c82ab4734904de3df1c3dc
   subpackages:
