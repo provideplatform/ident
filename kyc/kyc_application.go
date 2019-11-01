@@ -34,6 +34,7 @@ const kycApplicationStatusPending = "pending"
 const kycApplicationStatusRejected = "rejected"
 const kycApplicationStatusSubmitted = "submitted"
 const kycApplicationStatusUnderReview = "review"
+const kycApplicationStatusUnderRemediate = "remediate"
 
 const defaultKYCProvider = vouchedKYCProvider
 const defaultKYCApplicationType = consumerKYCApplicationType
@@ -49,6 +50,7 @@ func init() {
 	db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_application_id", "application_id")
 	db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_user_id", "user_id")
 	db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_identifier", "identifier")
+	db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_pii_hash", "pii_hash")
 	db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_status", "status")
 	db.Model(&KYCApplication{}).AddForeignKey("user_id", "users(id)", "SET NULL", "CASCADE")
 }
@@ -140,6 +142,9 @@ type KYCApplication struct {
 	Params                 *KYCApplicationParams  `sql:"-" json:"params,omitempty"`
 	EncryptedParams        *string                `sql:"type:bytea" json:"-"`
 	ProviderRepresentation map[string]interface{} `sql:"-" json:"provider_representation,omitempty"`
+	PIIHash                *string                `json:"-"`
+	SimilarKYCApplications []*KYCApplication      `sql:"-" json:"similar_kyc_applications,omitempty"`
+	SimilarUsers           []*user.UserResponse   `sql:"-" json:"similar_users,omitempty"`
 }
 
 // KYCApplicationParams represents a vendor-agnostic KYC application parameter object
@@ -213,6 +218,7 @@ func (k *KYCApplication) Create(db *gorm.DB) bool {
 		return false
 	}
 
+	k.enrichPIIHash(db)
 	k.setEncryptedParams(k.Params)
 
 	if db.NewRecord(k) {
@@ -424,7 +430,12 @@ func (k *KYCApplication) submit(db *gorm.DB) error {
 }
 
 // enrich the KYCApplication with the provider's current representation
-func (k *KYCApplication) enrich() (interface{}, error) {
+func (k *KYCApplication) enrich(db *gorm.DB) (interface{}, error) {
+	err := k.enrichSimilar(db)
+	if err != nil {
+		common.Log.Warningf("Similar user enrichment failed for KYC application: %s; %s", k.ID, err.Error())
+	}
+
 	apiClient, err := k.KYCAPIClient()
 	if err != nil {
 		common.Log.Warningf("Failed to enrich KYC application; no KYC API client resolved for provider: %s", *k.Provider)
@@ -463,9 +474,20 @@ func (k *KYCApplication) enrich() (interface{}, error) {
 			if err != nil {
 				return nil, fmt.Errorf("Failed to unmarshal identitymind KYC application response to struct; %s", err.Error())
 			}
+
+			// TODO: enrich errors if similar applications have been detected in k.SimilarUsers
 		}
 	case vouchedKYCProvider:
 		if apiResponse, apiResponseOk := resp.(*vouched.KYCApplication); apiResponseOk {
+			if len(k.SimilarKYCApplications) > 0 {
+				msg := "KYC application is similar to others; manual remediation required"
+				common.Log.Debugf("%s for KYC application: %s", k.ID)
+				apiResponse.Errors = append(apiResponse.Errors, &vouched.Error{
+					Message: &msg,
+					Type:    common.StringOrNil("SimilarApplicationError"),
+				})
+			}
+
 			provideRepresentationJSON, _ := json.Marshal(apiResponse)
 			providerRepresentation := map[string]interface{}{}
 			json.Unmarshal(provideRepresentationJSON, &providerRepresentation)
@@ -479,6 +501,58 @@ func (k *KYCApplication) enrich() (interface{}, error) {
 		// no-op
 	}
 	return marshaledResponse, nil
+}
+
+// enrichPIIHash calculates and sets the PII hash based on the metadata in the KYC application
+func (k *KYCApplication) enrichPIIHash(db *gorm.DB) error {
+	piiDigest := sha256.New()
+	if k.Params.Name != nil {
+		piiDigest.Write([]byte(*k.Params.Name))
+	}
+	if k.Params.DateOfBirth != nil {
+		piiDigest.Write([]byte(*k.Params.DateOfBirth))
+	}
+	hash := hex.EncodeToString(piiDigest.Sum(nil))
+	k.PIIHash = &hash
+	return nil
+}
+
+// enrichSimilar retrieves and enriches a list of other KYC applications and users which
+// appear to be similar to this KYC application instance or its associated user; uses PII
+// hash for metadata comparison
+func (k *KYCApplication) enrichSimilar(db *gorm.DB) error {
+	if k.UserID == nil || *k.UserID == uuid.Nil {
+		return fmt.Errorf("Unable to search for similar users by PII hash without associated user for KYC application: %s", k.ID)
+	}
+	if k.PIIHash == nil {
+		return fmt.Errorf("Unable to search for similar users by PII hash for KYC application: %s", k.ID)
+	}
+	similarUsers := make([]*user.UserResponse, 0)
+	similarUserIDs := map[string]struct{}{}
+	var similarKYCApplications []*KYCApplication
+	db.Where("application_id = ? AND pii_hash = ? AND user_id != ?", k.ApplicationID, k.PIIHash, k.UserID).Find(&similarKYCApplications)
+	if similarKYCApplications != nil {
+		db := dbconf.DatabaseConnection()
+		for _, similar := range similarKYCApplications {
+			similarUser := similar.User(db)
+			if similarUser != nil {
+				userIDStr := similarUser.ID.String()
+				_, userOk := similarUserIDs[userIDStr]
+				if !userOk && similarUser.Name != nil && similarUser.Email != nil {
+					similarUsers = append(similarUsers, &user.UserResponse{
+						ID:        similarUser.ID,
+						CreatedAt: similarUser.CreatedAt,
+						Name:      *similarUser.Name,
+						Email:     *similarUser.Email,
+					})
+					similarUserIDs[userIDStr] = struct{}{}
+				}
+			}
+		}
+	}
+	k.SimilarKYCApplications = similarKYCApplications
+	k.SimilarUsers = similarUsers
+	return nil
 }
 
 func (k *KYCApplication) decryptedParams() (*KYCApplicationParams, error) {
@@ -639,6 +713,10 @@ func (k *KYCApplication) isUnderReview() bool {
 		return false
 	}
 	return strings.ToLower(*k.Status) == kycApplicationStatusUnderReview
+}
+
+func (k *KYCApplication) requiresRemediation() bool {
+	return len(k.SimilarKYCApplications) > 0 || len(k.SimilarUsers) > 0
 }
 
 func (k *KYCApplication) updateStatus(db *gorm.DB, status string, description *string) {

@@ -164,7 +164,7 @@ func consumeCheckKYCApplicationStatusMsg(msg *stan.Msg) {
 		return
 	}
 
-	application, err := kycApplication.enrich()
+	application, err := kycApplication.enrich(db)
 	if err != nil {
 		common.Log.Warningf("Failed to enrich KYC application with using KYC provider API; %s", err.Error())
 		natsutil.Nack(msg)
@@ -192,7 +192,10 @@ func consumeCheckKYCApplicationStatusMsg(msg *stan.Msg) {
 		vouchedApplication := application.(*vouched.KYCApplication)
 		if vouchedApplication.Status != nil {
 			common.Log.Debugf("Resolved vouched KYC application status to '%s' for KYC application: %s", *vouchedApplication.Status, kycApplication.ID)
-			if vouchedApplication.IsAccepted() {
+
+			if vouchedApplication.Status != nil && *vouchedApplication.Status == "completed" && kycApplication.requiresRemediation() {
+				kycApplication.updateStatus(db, kycApplicationStatusUnderRemediate, nil)
+			} else if vouchedApplication.IsAccepted() {
 				kycApplication.updateStatus(db, kycApplicationStatusAccepted, nil)
 			} else if vouchedApplication.IsRejected() {
 				kycApplication.updateStatus(db, kycApplicationStatusRejected, nil)

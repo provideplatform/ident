@@ -62,8 +62,10 @@ func kycApplicationDetailsHandler(c *gin.Context) {
 		return
 	}
 
+	db := dbconf.DatabaseConnection()
+
 	kycApplication := &KYCApplication{}
-	query := dbconf.DatabaseConnection().Where("id = ?", c.Param("id"))
+	query := db.Where("id = ?", c.Param("id"))
 	if appID != nil {
 		query = query.Where("application_id = ?", appID)
 	}
@@ -85,7 +87,7 @@ func kycApplicationDetailsHandler(c *gin.Context) {
 		return
 	}
 
-	kycApplication.enrich()
+	kycApplication.enrich(db)
 	provide.Render(kycApplication, 200, c)
 }
 
