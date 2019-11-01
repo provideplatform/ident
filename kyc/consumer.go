@@ -18,7 +18,7 @@ import (
 
 const natsCheckKYCApplicationStatusSubject = "ident.kyc.status"
 const natsCheckKYCApplicationStatusMaxInFlight = 2048
-const checkKYCApplicationStatusAckWait = time.Minute * 10
+const checkKYCApplicationStatusAckWait = time.Second * 30
 
 const natsSubmitKYCApplicationSubject = "ident.kyc.submit"
 const natsSubmitKYCApplicationMaxInFlight = 2048
