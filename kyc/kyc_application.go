@@ -481,7 +481,7 @@ func (k *KYCApplication) enrich(db *gorm.DB) (interface{}, error) {
 		if apiResponse, apiResponseOk := resp.(*vouched.KYCApplication); apiResponseOk {
 			if len(k.SimilarKYCApplications) > 0 {
 				msg := "KYC application is similar to others; manual remediation required"
-				common.Log.Debugf("%s for KYC application: %s", k.ID)
+				common.Log.Debugf("%s for KYC application: %s", msg, k.ID)
 				apiResponse.Errors = append(apiResponse.Errors, &vouched.Error{
 					Message: &msg,
 					Type:    common.StringOrNil("SimilarApplicationError"),
