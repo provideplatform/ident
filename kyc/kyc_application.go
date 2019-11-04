@@ -206,11 +206,16 @@ func (k *KYCApplication) Create(db *gorm.DB) bool {
 	}
 
 	if k.Name == nil {
-		user := k.User(db)
-		if user != nil && user.ID != uuid.Nil {
-			k.Name = user.Name
-		} else if k.Params != nil && k.Params.Name != nil {
+		if k.Params != nil && k.Params.Name != nil {
 			k.Name = k.Params.Name
+		} else if k.Params != nil && k.Params.FirstName != nil && k.Params.LastName != nil {
+			name := fmt.Sprintf("%s %s", *k.Params.FirstName, *k.Params.LastName)
+			k.Name = &name
+		} else {
+			user := k.User(db)
+			if user != nil && user.ID != uuid.Nil {
+				k.Name = user.Name
+			}
 		}
 	}
 
@@ -433,7 +438,7 @@ func (k *KYCApplication) submit(db *gorm.DB) error {
 func (k *KYCApplication) enrich(db *gorm.DB) (interface{}, error) {
 	err := k.enrichSimilar(db)
 	if err != nil {
-		common.Log.Warningf("Similar user enrichment failed for KYC application: %s; %s", k.ID, err.Error())
+		common.Log.Debugf("Similar user enrichment failed for KYC application: %s; %s", k.ID, err.Error())
 	}
 
 	apiClient, err := k.KYCAPIClient()
@@ -505,13 +510,34 @@ func (k *KYCApplication) enrich(db *gorm.DB) (interface{}, error) {
 
 // enrichPIIHash calculates and sets the PII hash based on the metadata in the KYC application
 func (k *KYCApplication) enrichPIIHash(db *gorm.DB) error {
+	var name *string
+	var dob *string
+
 	piiDigest := sha256.New()
-	if k.Params.Name != nil {
-		piiDigest.Write([]byte(*k.Params.Name))
+	if k.Name != nil {
+		name = k.Name
+	} else if k.Params.Name != nil {
+		name = k.Params.Name
+	} else if k.Params.FirstName != nil && k.Params.LastName != nil {
+		nameStr := fmt.Sprintf("%s %s", *k.Params.FirstName, *k.Params.LastName)
+		name = &nameStr
 	}
+
 	if k.Params.DateOfBirth != nil {
-		piiDigest.Write([]byte(*k.Params.DateOfBirth))
+		dob = k.Params.DateOfBirth
 	}
+
+	if name == nil && dob == nil {
+		return fmt.Errorf("Not enriching PII hash without name or dob for KYC application: %s", k.ID)
+	}
+
+	if name != nil {
+		piiDigest.Write([]byte(*name))
+	}
+	if dob != nil {
+		piiDigest.Write([]byte(*dob))
+	}
+
 	hash := hex.EncodeToString(piiDigest.Sum(nil))
 	k.PIIHash = &hash
 	return nil
