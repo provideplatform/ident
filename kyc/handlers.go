@@ -88,6 +88,12 @@ func kycApplicationDetailsHandler(c *gin.Context) {
 	}
 
 	kycApplication.enrich(db)
+	if appID == nil {
+		common.Log.Debugf("Redacting similar KYC application and user metadata from API response for KYC application: %s", kycApplication.ID)
+		kycApplication.SimilarKYCApplications = nil
+		kycApplication.SimilarUsers = nil
+	}
+
 	provide.Render(kycApplication, 200, c)
 }
 
