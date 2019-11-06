@@ -152,6 +152,7 @@ type KYCApplicationParams struct {
 	// Params is the provider API representation
 	Params map[string]interface{} `json:"params,omitempty"`
 
+	IDNumber    *string `json:"id_number,omitempty"`
 	DateOfBirth *string `json:"date_of_birth,omitempty"`
 	FirstName   *string `json:"first_name,omitempty"`
 	LastName    *string `json:"last_name,omitempty"`

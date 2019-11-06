@@ -24,6 +24,9 @@ func (v *Vouched) MarshalKYCApplication(params map[string]interface{}) map[strin
 		"firstName": params["first_name"],
 		"lastName":  params["last_name"],
 	}
+	if idNumber, idNumberOk := params["id"]; idNumberOk {
+		params["id"] = idNumber
+	}
 	if idPhoto, idPhotoOk := params["id_photo"]; idPhotoOk {
 		vouchedParams["idPhoto"] = idPhoto
 	}
@@ -51,6 +54,9 @@ func (v *Vouched) MarshalKYCApplicationParams(vouchedParams map[string]interface
 		"date_of_birth": vouchedParams["date_of_birth"],
 		"first_name":    vouchedParams["firstName"],
 		"last_name":     vouchedParams["lastName"],
+	}
+	if idNumber, idNumberOk := vouchedParams["id"]; idNumberOk {
+		params["id_number"] = idNumber
 	}
 	if idPhoto, idPhotoOk := vouchedParams["idPhoto"]; idPhotoOk {
 		params["id_photo"] = idPhoto
