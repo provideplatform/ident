@@ -480,12 +480,6 @@ func (k *KYCApplication) enrich(db *gorm.DB) (interface{}, error) {
 		}
 	case vouchedKYCProvider:
 		if apiResponse, apiResponseOk := resp.(*vouched.KYCApplication); apiResponseOk {
-			provideRepresentationJSON, _ := json.Marshal(apiResponse)
-			providerRepresentation := map[string]interface{}{}
-			json.Unmarshal(provideRepresentationJSON, &providerRepresentation)
-			delete(providerRepresentation, "request")
-			k.ProviderRepresentation = providerRepresentation
-
 			fuzzySimilarity := true
 			if apiResponse.Result != nil && apiResponse.Result.ID != nil {
 				piiDigest := sha256.New()
@@ -516,6 +510,12 @@ func (k *KYCApplication) enrich(db *gorm.DB) (interface{}, error) {
 				}
 				common.Log.Debugf("%s for KYC application: %s", msg, k.ID)
 			}
+
+			provideRepresentationJSON, _ := json.Marshal(apiResponse)
+			providerRepresentation := map[string]interface{}{}
+			json.Unmarshal(provideRepresentationJSON, &providerRepresentation)
+			delete(providerRepresentation, "request")
+			k.ProviderRepresentation = providerRepresentation
 
 			marshaledResponse = apiResponse
 		}
