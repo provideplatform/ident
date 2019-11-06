@@ -437,11 +437,6 @@ func (k *KYCApplication) submit(db *gorm.DB) error {
 
 // enrich the KYCApplication with the provider's current representation
 func (k *KYCApplication) enrich(db *gorm.DB) (interface{}, error) {
-	err := k.enrichSimilar(db)
-	if err != nil {
-		common.Log.Debugf("Similar user enrichment failed for KYC application: %s; %s", k.ID, err.Error())
-	}
-
 	apiClient, err := k.KYCAPIClient()
 	if err != nil {
 		common.Log.Warningf("Failed to enrich KYC application; no KYC API client resolved for provider: %s", *k.Provider)
@@ -500,12 +495,24 @@ func (k *KYCApplication) enrich(db *gorm.DB) (interface{}, error) {
 			delete(providerRepresentation, "request")
 			k.ProviderRepresentation = providerRepresentation
 
+			if apiResponse.Result != nil && apiResponse.Result.ID != nil {
+				piiDigest := sha256.New()
+				piiDigest.Write([]byte(*apiResponse.Result.ID))
+				hash := hex.EncodeToString(piiDigest.Sum(nil))
+				k.PIIHash = &hash
+			}
+
 			marshaledResponse = apiResponse
 		}
-
 	default:
 		// no-op
 	}
+
+	err = k.enrichSimilar(db)
+	if err != nil {
+		common.Log.Debugf("Similar user enrichment failed for KYC application: %s; %s", k.ID, err.Error())
+	}
+
 	return marshaledResponse, nil
 }
 
@@ -515,28 +522,32 @@ func (k *KYCApplication) enrichPIIHash(db *gorm.DB) error {
 	var dob *string
 
 	piiDigest := sha256.New()
-	if k.Name != nil {
-		name = k.Name
-	} else if k.Params.Name != nil {
-		name = k.Params.Name
-	} else if k.Params.FirstName != nil && k.Params.LastName != nil {
-		nameStr := fmt.Sprintf("%s %s", *k.Params.FirstName, *k.Params.LastName)
-		name = &nameStr
-	}
+	if k.Params.IDNumber != nil {
+		piiDigest.Write([]byte(*k.Params.IDNumber))
+	} else {
+		if k.Params.Name != nil {
+			name = k.Params.Name
+		} else if k.Params.FirstName != nil && k.Params.LastName != nil {
+			nameStr := fmt.Sprintf("%s %s", *k.Params.FirstName, *k.Params.LastName)
+			name = &nameStr
+		} else if k.Name != nil {
+			name = k.Name
+		}
 
-	if k.Params.DateOfBirth != nil {
-		dob = k.Params.DateOfBirth
-	}
+		if k.Params.DateOfBirth != nil {
+			dob = k.Params.DateOfBirth
+		}
 
-	if name == nil && dob == nil {
-		return fmt.Errorf("Not enriching PII hash without name or dob for KYC application: %s", k.ID)
-	}
+		if name == nil && dob == nil {
+			return fmt.Errorf("Not enriching PII hash without name or dob for KYC application: %s", k.ID)
+		}
 
-	if name != nil {
-		piiDigest.Write([]byte(*name))
-	}
-	if dob != nil {
-		piiDigest.Write([]byte(*dob))
+		if name != nil {
+			piiDigest.Write([]byte(*name))
+		}
+		if dob != nil {
+			piiDigest.Write([]byte(*dob))
+		}
 	}
 
 	hash := hex.EncodeToString(piiDigest.Sum(nil))
