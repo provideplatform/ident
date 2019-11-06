@@ -201,6 +201,7 @@ func consumeCheckKYCApplicationStatusMsg(msg *stan.Msg) {
 				kycApplication.PIIHash = &hash
 				db.Save(&kycApplication)
 				kycApplication.enrich(db)
+				common.Log.Debugf("Re-enriched KYC application after reading id number %s for KYC application: %s", *vouchedApplication.Result.ID, kycApplication.ID)
 			}
 
 			if vouchedApplication.Status != nil && *vouchedApplication.Status == "completed" && kycApplication.requiresRemediation() {
