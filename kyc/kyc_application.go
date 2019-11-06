@@ -492,6 +492,7 @@ func (k *KYCApplication) enrich(db *gorm.DB) (interface{}, error) {
 				piiDigest.Write([]byte(*apiResponse.Result.ID))
 				hash := hex.EncodeToString(piiDigest.Sum(nil))
 				k.PIIHash = &hash
+				db.Save(&k)
 				fuzzySimilarity = false
 			}
 

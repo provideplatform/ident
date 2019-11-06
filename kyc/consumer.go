@@ -199,6 +199,7 @@ func consumeCheckKYCApplicationStatusMsg(msg *stan.Msg) {
 				piiDigest.Write([]byte(*vouchedApplication.Result.ID))
 				hash := hex.EncodeToString(piiDigest.Sum(nil))
 				kycApplication.PIIHash = &hash
+				db.Save(&kycApplication)
 				kycApplication.enrich(db)
 			}
 
