@@ -480,37 +480,47 @@ func (k *KYCApplication) enrich(db *gorm.DB) (interface{}, error) {
 		}
 	case vouchedKYCProvider:
 		if apiResponse, apiResponseOk := resp.(*vouched.KYCApplication); apiResponseOk {
-			if len(k.SimilarKYCApplications) > 0 {
-				msg := "KYC application is similar to others; manual remediation required"
-				common.Log.Debugf("%s for KYC application: %s", msg, k.ID)
-				apiResponse.Errors = append(apiResponse.Errors, &vouched.Error{
-					Message: &msg,
-					Type:    common.StringOrNil("SimilarApplicationError"),
-				})
-			}
-
 			provideRepresentationJSON, _ := json.Marshal(apiResponse)
 			providerRepresentation := map[string]interface{}{}
 			json.Unmarshal(provideRepresentationJSON, &providerRepresentation)
 			delete(providerRepresentation, "request")
 			k.ProviderRepresentation = providerRepresentation
 
+			fuzzySimilarity := true
 			if apiResponse.Result != nil && apiResponse.Result.ID != nil {
 				piiDigest := sha256.New()
 				piiDigest.Write([]byte(*apiResponse.Result.ID))
 				hash := hex.EncodeToString(piiDigest.Sum(nil))
 				k.PIIHash = &hash
+				fuzzySimilarity = false
+			}
+
+			err = k.enrichSimilar(db)
+			if err != nil {
+				common.Log.Debugf("Similar user enrichment failed for KYC application: %s; %s", k.ID, err.Error())
+			}
+			if len(k.SimilarKYCApplications) > 0 {
+				var msg string
+				if fuzzySimilarity {
+					msg = "KYC application is similar to others; manual remediation required"
+					apiResponse.Errors = append(apiResponse.Errors, &vouched.Error{
+						Message: &msg,
+						Type:    common.StringOrNil("SimilarApplicationError"),
+					})
+				} else {
+					msg = "KYC application matches others; manual remediation required"
+					apiResponse.Errors = append(apiResponse.Errors, &vouched.Error{
+						Message: &msg,
+						Type:    common.StringOrNil("DuplicateApplicationError"),
+					})
+				}
+				common.Log.Debugf("%s for KYC application: %s", msg, k.ID)
 			}
 
 			marshaledResponse = apiResponse
 		}
 	default:
 		// no-op
-	}
-
-	err = k.enrichSimilar(db)
-	if err != nil {
-		common.Log.Debugf("Similar user enrichment failed for KYC application: %s; %s", k.ID, err.Error())
 	}
 
 	return marshaledResponse, nil

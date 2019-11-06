@@ -1,6 +1,8 @@
 package kyc
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"strings"
@@ -192,6 +194,13 @@ func consumeCheckKYCApplicationStatusMsg(msg *stan.Msg) {
 		vouchedApplication := application.(*vouched.KYCApplication)
 		if vouchedApplication.Status != nil {
 			common.Log.Debugf("Resolved vouched KYC application status to '%s' for KYC application: %s", *vouchedApplication.Status, kycApplication.ID)
+			if vouchedApplication.Result != nil && vouchedApplication.Result.ID != nil {
+				piiDigest := sha256.New()
+				piiDigest.Write([]byte(*vouchedApplication.Result.ID))
+				hash := hex.EncodeToString(piiDigest.Sum(nil))
+				kycApplication.PIIHash = &hash
+				kycApplication.enrich(db)
+			}
 
 			if vouchedApplication.Status != nil && *vouchedApplication.Status == "completed" && kycApplication.requiresRemediation() {
 				kycApplication.updateStatus(db, kycApplicationStatusUnderRemediate, nil)
