@@ -1,5 +1,5 @@
 hash: 942596610937cde74bb26e68af070d4013fc10506e902d9f986eb3434aa56d72
-updated: 2019-11-05T20:25:57.985382-05:00
+updated: 2019-11-12T02:42:03.410289-05:00
 imports:
 - name: github.com/allegro/bigcache
   version: baaa21686666424b386f282d68fc1d23594ab38d
@@ -86,6 +86,12 @@ imports:
   version: 03bdf7bcb2c4d98c8fdbf62f1473fb1303ca1c1d
 - name: github.com/gorilla/websocket
   version: c3e18be99d19e6b3e8f1559eea2c161a665c4b6b
+- name: github.com/ipfs/go-ipfs-api
+  version: a151d7e6ea407930825e3475126b705113c5c64d
+  subpackages:
+  - options
+- name: github.com/ipfs/go-ipfs-files
+  version: 96cf7c9133bdbb405d41143ced9a6161df08cc90
 - name: github.com/jinzhu/gorm
   version: 81c17a7e2529c59efc4e74c5b32c1fb71fb12fa2
   subpackages:
@@ -120,12 +126,48 @@ imports:
   - hstore
   - oid
   - scram
+- name: github.com/libp2p/go-flow-metrics
+  version: b1aae8c25b4822de58289e6af21362f93753fa23
+- name: github.com/libp2p/go-libp2p-core
+  version: 2f75277a8d7b0ee88bd7e9458d054c448f29ec34
+  subpackages:
+  - crypto
+  - crypto/pb
+  - metrics
+  - peer
+  - protocol
+- name: github.com/libp2p/go-libp2p-crypto
+  version: ddb6d72b5ad0ae81bf1ee77b628eac1d7237536a
+- name: github.com/libp2p/go-libp2p-metrics
+  version: 2551ab4747111d6c216a06d963c575cebdfd5c9f
+- name: github.com/libp2p/go-libp2p-peer
+  version: 62676d8fb785a8fc279878cbe8e03b878f005910
+- name: github.com/libp2p/go-openssl
+  version: 1934e456a08650fa43aefb673eb660b7cac8c0b4
+  subpackages:
+  - utils
 - name: github.com/mattn/go-isatty
   version: da60ac76bf7019a8b005f8dd1ad9d1a0e6434155
+- name: github.com/minio/blake2b-simd
+  version: 3f5f724cb5b182a5c278d6d3d55b40e7f8c2efb4
+- name: github.com/minio/sha256-simd
+  version: f675151bb5e19dc10d7430bd9d4ef5e7d1b5521f
+- name: github.com/mitchellh/go-homedir
+  version: af06845cf3004701891bf4fdb884bfe4920b3727
 - name: github.com/modern-go/concurrent
   version: bacd9c7ef1dd9b15be4a9909b8ac7a4e313eec94
 - name: github.com/modern-go/reflect2
   version: 94122c33edd36123c84d5368cfb2b69df93a0ec8
+- name: github.com/mr-tron/base58
+  version: d504ab2e22d97cb9f10b1d146a1e6a063f4a5f43
+  subpackages:
+  - base58
+- name: github.com/multiformats/go-multiaddr
+  version: f96df18bf0c217c77f6cc0f9e810a178cea12f38
+- name: github.com/multiformats/go-multiaddr-net
+  version: c9acf9f27c5020e78925937dc3de142d2d393cd1
+- name: github.com/multiformats/go-multihash
+  version: 249ead2008065c476a2ee45e8e75e8b85d846a72
 - name: github.com/nats-io/nats.go
   version: e2837a2879e82886f6e21715e3a0217fdc46d370
   subpackages:
@@ -142,9 +184,13 @@ imports:
 - name: github.com/pkg/errors
   version: 27936f6d90f9c8e1145f11ed52ffffbfdb9e0af7
 - name: github.com/provideservices/provide-go
-  version: d88f33ff060dcde37054bdfc84d8a3e4d1751831
+  version: ce4b30d7bf6446633eeff1ec1254dd103998cd77
 - name: github.com/rs/cors
   version: db0fe48135e83b5812a5a31be0eea66984b1b521
+- name: github.com/spacemonkeygo/spacelog
+  version: 2296661a0572a51438413369004fa931c2641923
+- name: github.com/spaolacci/murmur3
+  version: 539464a789e9b9f01bc857458ffe2c5c1a2ed382
 - name: github.com/steakknife/bloomfilter
   version: 6819c0d2a57025e1700378ee59b7382d71987f14
 - name: github.com/steakknife/hamming
@@ -155,10 +201,24 @@ imports:
   - codec
 - name: github.com/vincent-petithory/dataurl
   version: 9a301d65acbb728fcc3ace14f45f511a4cfeea9c
+- name: github.com/whyrusleeping/tar-utils
+  version: 8c6c8ba81d5c71fd69c0f48dbde4b2fb422b6dfc
+- name: go.opencensus.io
+  version: fa651b05963cfb6060755dc887e7d156ba66e792
+  subpackages:
+  - internal/tagencoding
+  - metric/metricdata
+  - metric/metricproducer
+  - resource
+  - stats
+  - stats/internal
+  - stats/view
+  - tag
 - name: golang.org/x/crypto
   version: 4def268fd1a49955bfb3dda92fe3db4f924f2285
   subpackages:
   - bcrypt
+  - blake2s
   - blowfish
   - cast5
   - ed25519
