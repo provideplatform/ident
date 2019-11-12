@@ -57,3 +57,9 @@ require (
 	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20190709231704-1e4459ed25ff // indirect
 	gopkg.in/urfave/cli.v1 v1.20.0 // indirect
 )
+
+replace (
+    github.com/Sirupsen/logrus v1.3.0 => github.com/Sirupsen/logrus v1.0.6
+    github.com/Sirupsen/logrus v1.4.0 => github.com/sirupsen/logrus v1.0.6
+    github.com/Sirupsen/logrus v1.0.5 => github.com/sirupsen/logrus v1.0.5
+)
