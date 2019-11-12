@@ -6,7 +6,7 @@ clean:
 	go fix ./...
 	go clean -i
 
-build: clean
+build: clean mod
 	go fmt ./...
 	go build -v -o ./.bin/ident_api ./cmd/api
 	go build -v -o ./.bin/ident_consumer ./cmd/consumer
@@ -26,6 +26,11 @@ lint:
 
 migrations: build run_local_dependencies
 	./scripts/run_local_migrations.sh
+
+mod:
+	go mod init 2>/dev/null || true
+	go mod tidy
+	go mod vendor
 
 run_local: build run_local_dependencies
 	./scripts/run_local.sh
