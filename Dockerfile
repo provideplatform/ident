@@ -1,4 +1,4 @@
-FROM golang:1.11
+FROM golang:1.13
 
 RUN mkdir -p /go/src/github.com/provideapp
 ADD . /go/src/github.com/provideapp/ident
