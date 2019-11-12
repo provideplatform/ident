@@ -29,12 +29,12 @@ setup_go()
         echo 'Using' `go version`
     else
         echo 'Installing go'
-        wget https://dl.google.com/go/go1.13.linux-amd64.tar.gz
-        sudo tar -xvf go1.13.linux-amd64.tar.gz
-        sudo mv go /usr/lib/go-1.13
-        sudo ln -s /usr/lib/go-1.13 /usr/lib/go
-        sudo ln -s /usr/lib/go-1.13/bin/go /usr/bin/go
-        sudo ln -s /usr/lib/go-1.13/bin/gofmt /usr/bin/gofmt
+        wget https://dl.google.com/go/go1.11.linux-amd64.tar.gz
+        sudo tar -xvf go1.11.linux-amd64.tar.gz
+        sudo mv go /usr/lib/go-1.11
+        sudo ln -s /usr/lib/go-1.11 /usr/lib/go
+        sudo ln -s /usr/lib/go-1.11/bin/go /usr/bin/go
+        sudo ln -s /usr/lib/go-1.11/bin/gofmt /usr/bin/gofmt
     fi
 
     # Set up Go environment to treat this workspace as within GOPATH. 
