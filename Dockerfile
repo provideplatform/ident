@@ -1,11 +1,10 @@
-FROM golang:1.11
+FROM golang:1.13
 
 RUN mkdir -p /go/src/github.com/provideapp
 ADD . /go/src/github.com/provideapp/ident
 WORKDIR /go/src/github.com/provideapp/ident
 
-RUN curl https://glide.sh/get | sh
-RUN glide install
+RUN make build
 
 RUN go build -v -o ./bin/ident_api ./cmd/api
 RUN go build -v -o ./bin/ident_consumer ./cmd/consumer
