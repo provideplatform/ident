@@ -206,6 +206,8 @@ func consumeCheckKYCApplicationStatusMsg(msg *stan.Msg) {
 
 			if vouchedApplication.Status != nil && *vouchedApplication.Status == "completed" && kycApplication.requiresRemediation() {
 				kycApplication.updateStatus(db, kycApplicationStatusUnderRemediate, nil)
+				common.Log.Debugf("KYC application requires remediation: %s; acking status message", kycApplication.ID)
+				msg.Ack()
 			} else if vouchedApplication.IsAccepted() {
 				kycApplication.updateStatus(db, kycApplicationStatusAccepted, nil)
 			} else if vouchedApplication.IsRejected() {
