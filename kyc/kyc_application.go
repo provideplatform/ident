@@ -587,7 +587,12 @@ func (k *KYCApplication) enrichSimilar(db *gorm.DB) error {
 		dropchars := int(float64(len(*k.IDNumber)) - math.Round(float64(len(*k.IDNumber))*defaultKYCIDNumberOCRSimilarityThreshold))
 		idNumberQueryMatchAnyTrailing := (*k.IDNumber)[0 : len(*k.IDNumber)-dropchars]
 		idNumberQueryMatchAnyLeading := (*k.IDNumber)[len(*k.IDNumber)-dropchars:]
-		db.Where("application_id != ? AND user_id != ? AND (id_number LIKE '%?' OR id_number LIKE '?%')", k.ApplicationID, k.UserID, idNumberQueryMatchAnyTrailing, idNumberQueryMatchAnyLeading).Find(&similarKYCApplications)
+
+		db.Where(
+			"application_id != ? AND user_id != ? AND (id_number LIKE ? OR id_number LIKE ?)",
+			k.ApplicationID, k.UserID, fmt.Sprintf("%%%s", idNumberQueryMatchAnyTrailing), fmt.Sprintf("%s%%", idNumberQueryMatchAnyLeading),
+		).Find(&similarKYCApplications)
+
 		if similarKYCApplications != nil && len(similarKYCApplications) > 0 {
 			common.Log.Debugf("Resolved similar KYC applications based on partial id number match for KYC application: %s", k.ID)
 		}
