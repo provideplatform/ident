@@ -594,7 +594,7 @@ func (k *KYCApplication) enrichSimilar(db *gorm.DB) error {
 	}
 
 	if similarKYCApplications == nil || len(similarKYCApplications) == 0 && k.PIIHash != nil {
-		db.Where("application_id != ? AND user_id != ? AND pii_hash = ?", k.ApplicationID, k.PIIHash, k.UserID).Find(&similarKYCApplications)
+		db.Where("application_id != ? AND user_id != ? AND pii_hash = ?", k.ApplicationID, k.UserID, k.PIIHash).Find(&similarKYCApplications)
 		for _, similar := range similarKYCApplications {
 			similarUser := similar.User(db)
 			if similarUser != nil {
