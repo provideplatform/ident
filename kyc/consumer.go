@@ -195,10 +195,13 @@ func consumeCheckKYCApplicationStatusMsg(msg *stan.Msg) {
 		if vouchedApplication.Status != nil {
 			common.Log.Debugf("Resolved vouched KYC application status to '%s' for KYC application: %s", *vouchedApplication.Status, kycApplication.ID)
 			if vouchedApplication.Result != nil && vouchedApplication.Result.ID != nil {
+				kycApplication.IDNumber = vouchedApplication.Result.ID
+
 				piiDigest := sha256.New()
 				piiDigest.Write([]byte(*vouchedApplication.Result.ID))
 				hash := hex.EncodeToString(piiDigest.Sum(nil))
 				kycApplication.PIIHash = &hash
+
 				db.Save(&kycApplication)
 				kycApplication.enrich(db)
 				common.Log.Debugf("Re-enriched KYC application after reading id number %s for KYC application: %s", *vouchedApplication.Result.ID, kycApplication.ID)

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"strings"
 	"time"
@@ -27,6 +28,7 @@ import (
 )
 
 const defaultKYCWebhookTimeout = time.Second * 5
+const defaultKYCIDNumberOCRSimilarityThreshold = 0.8 // % of OCR'd chars in ID number to use from front and back of string to determine similarity
 
 const kycApplicationStatusAccepted = "accepted"
 const kycApplicationStatusFailed = "failed" // the KYC application API call itself failed
@@ -50,6 +52,7 @@ func init() {
 	db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_application_id", "application_id")
 	db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_user_id", "user_id")
 	db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_identifier", "identifier")
+	db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_id_number", "id_number")
 	db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_pii_hash", "pii_hash")
 	db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_status", "status")
 	db.Model(&KYCApplication{}).AddForeignKey("user_id", "users(id)", "SET NULL", "CASCADE")
@@ -143,6 +146,7 @@ type KYCApplication struct {
 	EncryptedParams        *string                `sql:"type:bytea" json:"-"`
 	ProviderRepresentation map[string]interface{} `sql:"-" json:"provider_representation,omitempty"`
 	PIIHash                *string                `json:"-"`
+	IDNumber               *string                `json:"-"`
 	SimilarKYCApplications []*KYCApplication      `sql:"-" json:"similar_kyc_applications,omitempty"`
 	SimilarUsers           []*user.UserResponse   `sql:"-" json:"similar_users,omitempty"`
 }
@@ -572,15 +576,25 @@ func (k *KYCApplication) enrichSimilar(db *gorm.DB) error {
 	if k.UserID == nil || *k.UserID == uuid.Nil {
 		return fmt.Errorf("Unable to search for similar users by PII hash without associated user for KYC application: %s", k.ID)
 	}
-	if k.PIIHash == nil {
-		return fmt.Errorf("Unable to search for similar users by PII hash for KYC application: %s", k.ID)
+	if k.IDNumber == nil && k.PIIHash == nil {
+		return fmt.Errorf("Unable to search for similar users by id number or PII hash for KYC application: %s", k.ID)
 	}
 	similarUsers := make([]*user.UserResponse, 0)
 	similarUserIDs := map[string]struct{}{}
 	var similarKYCApplications []*KYCApplication
-	db.Where("application_id = ? AND pii_hash = ? AND user_id != ?", k.ApplicationID, k.PIIHash, k.UserID).Find(&similarKYCApplications)
-	if similarKYCApplications != nil {
-		db := dbconf.DatabaseConnection()
+
+	if k.IDNumber != nil {
+		dropchars := int(float64(len(*k.IDNumber)) - math.Round(float64(len(*k.IDNumber))*defaultKYCIDNumberOCRSimilarityThreshold))
+		idNumberQueryMatchAnyTrailing := (*k.IDNumber)[0 : len(*k.IDNumber)-dropchars]
+		idNumberQueryMatchAnyLeading := (*k.IDNumber)[len(*k.IDNumber)-dropchars:]
+		db.Where("application_id = ? AND user_id != ? AND (id_number LIKE '%?' OR id_number LIKE '?%')", k.ApplicationID, k.UserID, idNumberQueryMatchAnyTrailing, idNumberQueryMatchAnyLeading).Find(&similarKYCApplications)
+		if similarKYCApplications != nil && len(similarKYCApplications) > 0 {
+			common.Log.Debugf("Resolved similar KYC applications based on partial id number match for KYC application: %s", k.ID)
+		}
+	}
+
+	if similarKYCApplications == nil || len(similarKYCApplications) == 0 && k.PIIHash != nil {
+		db.Where("application_id = ? AND pii_hash = ? AND user_id != ?", k.ApplicationID, k.PIIHash, k.UserID).Find(&similarKYCApplications)
 		for _, similar := range similarKYCApplications {
 			similarUser := similar.User(db)
 			if similarUser != nil {
