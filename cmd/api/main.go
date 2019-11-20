@@ -49,7 +49,7 @@ func main() {
 	common.Log.Debugf("starting ident API...")
 	installSignalHandlers()
 
-	go runAPI()
+	runAPI()
 
 	timer := time.NewTicker(runloopTickInterval)
 	defer timer.Stop()
@@ -107,10 +107,12 @@ func runAPI() {
 	}
 
 	if common.ShouldServeTLS() {
-		srv.ListenAndServeTLS(common.CertificatePath, common.PrivateKeyPath)
+		go srv.ListenAndServeTLS(common.CertificatePath, common.PrivateKeyPath)
 	} else {
-		srv.ListenAndServe()
+		go srv.ListenAndServe()
 	}
+
+	common.Log.Debugf("Listening on %s", common.ListenAddr)
 }
 
 func statusHandler(c *gin.Context) {
