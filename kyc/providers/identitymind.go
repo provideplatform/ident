@@ -1,6 +1,9 @@
 package providers
 
 import (
+	"fmt"
+	"strings"
+
 	identitymind "github.com/kthomas/identitymind-golang"
 )
 
@@ -19,12 +22,141 @@ func InitIdentityMind() *IdentityMind {
 
 // MarshalKYCApplication transforms the given map representation of KYCApplicationParams to the IdentityMind equivalent
 func (i *IdentityMind) MarshalKYCApplication(params map[string]interface{}) map[string]interface{} {
-	return map[string]interface{}{}
+	identitymindParams := map[string]interface{}{
+		"dob": params["date_of_birth"],
+		"man": strings.Trim(fmt.Sprintf("%s %s", params["first_name"], params["last_name"]), " "),
+	}
+	if merchantID, merchantIDOk := params["merchant_id"]; merchantIDOk {
+		params["m"] = merchantID
+	}
+	if affiliateID, affiliateIDOk := params["affiliate_id"]; affiliateIDOk {
+		params["aflid"] = affiliateID
+	}
+	if merchantApplicationID, merchantApplicationIDOk := params["merchant_application_id"]; merchantApplicationIDOk {
+		params["merchantAid"] = merchantApplicationID
+	}
+	if authService, authServiceOk := params["authorized_by"]; authServiceOk {
+		params["soc"] = authService
+	}
+	if ipAddr, ipAddrOk := params["ip"]; ipAddrOk {
+		params["ip"] = ipAddr
+	}
+	if email, emailOk := params["email"]; emailOk {
+		params["tea"] = email
+	}
+	if ssn, ssnOk := params["ssn"]; ssnOk {
+		params["assn"] = ssn
+	}
+	if phone, phoneOk := params["mobile"]; phoneOk {
+		params["phn"] = phone
+	}
+	if mobile, mobileOk := params["mobile"]; mobileOk {
+		params["pm"] = mobile
+	}
+	if address, addressOk := params["street_address"]; addressOk {
+		params["bsn"] = address
+	}
+	if city, cityOk := params["city"]; cityOk {
+		params["bc"] = city
+	}
+	if state, stateOk := params["state"]; stateOk {
+		params["bs"] = state
+	}
+	if postalCode, postalCodeOk := params["postal_code"]; postalCodeOk {
+		params["bz"] = postalCode
+	}
+	// if idNumber, idNumberOk := params["id"]; idNumberOk {
+	// 	params["id"] = idNumber
+	// }
+	if idPhoto, idPhotoOk := params["id_photo"]; idPhotoOk {
+		identitymindParams["scanData"] = idPhoto
+	}
+	if idPhotoBack, idPhotoBackOk := params["id_photo_back"]; idPhotoBackOk {
+		identitymindParams["backsideImageData"] = idPhotoBack
+	}
+	if selfie, selfieOk := params["selfie"]; selfieOk {
+		identitymindParams["faceImageData"] = selfie
+	}
+	if sourceDigitalCurrencyAddresses, sourceDigitalCurrencyAddressesOk := params["source_digital_currency_addresses"]; sourceDigitalCurrencyAddressesOk {
+		identitymindParams["sdcad"] = sourceDigitalCurrencyAddresses
+	}
+	if destinationDigitalCurrencyAddresses, destinationDigitalCurrencyAddressesOk := params["destination_digital_currency_addresses"]; destinationDigitalCurrencyAddressesOk {
+		identitymindParams["ddcad"] = destinationDigitalCurrencyAddresses
+	}
+	if nestedParams, nestedParamsOk := params["params"].(map[string]interface{}); nestedParamsOk {
+		for k, v := range nestedParams {
+			identitymindParams[k] = v
+		}
+	}
+	return identitymindParams
 }
 
 // MarshalKYCApplicationParams transforms the given IdentityMind KYC application map representation to the KYCApplicationParams
-func (i *IdentityMind) MarshalKYCApplicationParams(params map[string]interface{}) map[string]interface{} {
-	return map[string]interface{}{}
+func (i *IdentityMind) MarshalKYCApplicationParams(identitymindParams map[string]interface{}) map[string]interface{} {
+	name := identitymindParams["man"].(string)
+	params := map[string]interface{}{
+		"date_of_birth": identitymindParams["dob"],
+		"first_name":    strings.Trim(strings.Split(name, " ")[0], " "),
+		"last_name":     strings.Trim(strings.Split(name, " ")[len(strings.Split(name, " "))-1], " "),
+	}
+	// if idNumber, idNumberOk := params["id"]; idNumberOk {
+	// 	params["id"] = idNumber
+	// }
+	if idPhoto, idPhotoOk := params["scanData"]; idPhotoOk {
+		params["id_photo"] = idPhoto
+	}
+	if idPhotoBack, idPhotoBackOk := params["backsideImageData"]; idPhotoBackOk {
+		params["id_photo_back"] = idPhotoBack
+	}
+	if selfie, selfieOk := params["faceImageData"]; selfieOk {
+		params["selfie"] = selfie
+	}
+	if merchantID, merchantIDOk := params["m"]; merchantIDOk {
+		params["merchant_id"] = merchantID
+	}
+	if affiliateID, affiliateIDOk := params["aflid"]; affiliateIDOk {
+		params["affiliate_id"] = affiliateID
+	}
+	if merchantApplicationID, merchantApplicationIDOk := params["merchantAid"]; merchantApplicationIDOk {
+		params["merchant_application_id"] = merchantApplicationID
+	}
+	if authService, authServiceOk := params["soc"]; authServiceOk {
+		params["authorized_by"] = authService
+	}
+	if ipAddr, ipAddrOk := params["ip"]; ipAddrOk {
+		params["ip"] = ipAddr
+	}
+	if email, emailOk := params["tea"]; emailOk {
+		params["email"] = email
+	}
+	if ssn, ssnOk := params["assn"]; ssnOk {
+		params["ssn"] = ssn
+	}
+	if phone, phoneOk := params["phn"]; phoneOk {
+		params["phone"] = phone
+	}
+	if mobile, mobileOk := params["pm"]; mobileOk {
+		params["mobile"] = mobile
+	}
+	if address, addressOk := params["bsn"]; addressOk {
+		params["street_address"] = address
+	}
+	if city, cityOk := params["bc"]; cityOk {
+		params["city"] = city
+	}
+	if state, stateOk := params["bs"]; stateOk {
+		params["state"] = state
+	}
+	if postalCode, postalCodeOk := params["bz"]; postalCodeOk {
+		params["postal_code"] = postalCode
+	}
+	if sourceDigitalCurrencyAddresses, sourceDigitalCurrencyAddressesOk := params["sdcad"]; sourceDigitalCurrencyAddressesOk {
+		params["source_digital_currency_addresses"] = sourceDigitalCurrencyAddresses
+	}
+	if destinationDigitalCurrencyAddresses, destinationDigitalCurrencyAddressesOk := params["ddcad"]; destinationDigitalCurrencyAddressesOk {
+		params["destination_digital_currency_addresses"] = destinationDigitalCurrencyAddresses
+	}
+	return params
 }
 
 // Cases

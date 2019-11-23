@@ -153,6 +153,9 @@ type KYCApplication struct {
 
 // KYCApplicationParams represents a vendor-agnostic KYC application parameter object
 type KYCApplicationParams struct {
+	// AffiliateID is the provider API affiliate identifier, if applicable
+	AffiliateID *string `json:"affiliate_id,omitempty"`
+
 	// Params is the provider API representation
 	Params map[string]interface{} `json:"params,omitempty"`
 
@@ -161,10 +164,12 @@ type KYCApplicationParams struct {
 	FirstName   *string `json:"first_name,omitempty"`
 	LastName    *string `json:"last_name,omitempty"`
 	Name        *string `json:"name,omitempty"`
+	Email       *string `json:"email,omitempty"`
 	IDPhoto     *string `json:"id_photo,omitempty"`
 	IDPhotoBack *string `json:"id_photo_back,omitempty"`
 	Selfie      *string `json:"selfie,omitempty"`
 	SelfieVideo *string `json:"selfie_video,omitempty"`
+	SSN         *string `json:"ssn,omitempty"`
 	Type        *string `json:"type,omitempty"`
 	WebhookURL  *string `json:"webhook_url,omitempty"`
 }
