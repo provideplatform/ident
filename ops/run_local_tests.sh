@@ -27,8 +27,10 @@ if [[ -z "${RACE}" ]]; then
   RACE=true
 fi
 
-PGPASSWORD=${DATABASE_PASSWORD} dropdb -U ${DATABASE_USER} ident_test || true >/dev/null
-PGPASSWORD=${DATABASE_PASSWORD} createdb -O ${DATABASE_USER} -U ${DATABASE_USER} ident_test || true >/dev/null
+dropdb $DATABASE_NAME || true >/dev/null
+dropuser $DATABASE_USER || true >/dev/null
+
+DATABASE_USER=$DATABASE_USER DATABASE_PASSWORD=$DATABASE_PASSWORD DATABASE_NAME=$DATABASE_NAME make migrate
 
 PGP_PUBLIC_KEY='-----BEGIN PGP PUBLIC KEY BLOCK-----
 

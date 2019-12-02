@@ -45,19 +45,6 @@ const businessKYCApplicationType = "kyb"
 const identitymindKYCProvider = "identitymind"
 const vouchedKYCProvider = "vouched"
 
-func init() {
-	db := dbconf.DatabaseConnection()
-
-	db.AutoMigrate(&KYCApplication{})
-	db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_application_id", "application_id")
-	db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_user_id", "user_id")
-	db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_identifier", "identifier")
-	db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_id_number", "id_number")
-	db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_pii_hash", "pii_hash")
-	db.Model(&KYCApplication{}).AddIndex("idx_kyc_applications_status", "status")
-	db.Model(&KYCApplication{}).AddForeignKey("user_id", "users(id)", "SET NULL", "CASCADE")
-}
-
 // KYCAPI is implemented by BillingAccount KYC clients such as identitymind.go
 type KYCAPI interface {
 	// KYCApplicationParams

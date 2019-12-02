@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kthomas/go-pgputil"
+
 	"github.com/provideapp/ident/application"
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/consumer"
@@ -42,6 +44,7 @@ func init() {
 	}
 
 	common.RequireJWT()
+	pgputil.RequirePGP()
 	consumer.RunAPIUsageDaemon()
 }
 

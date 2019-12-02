@@ -12,15 +12,6 @@ import (
 	provide "github.com/provideservices/provide-go"
 )
 
-func init() {
-	db := dbconf.DatabaseConnection()
-
-	db.AutoMigrate(&Token{})
-	db.Model(&Token{}).AddIndex("idx_tokens_token", "token")
-	db.Model(&Token{}).AddForeignKey("application_id", "applications(id)", "SET NULL", "CASCADE")
-	db.Model(&Token{}).AddForeignKey("user_id", "users(id)", "SET NULL", "CASCADE")
-}
-
 // Token model which is represented as JWT; tokens will be used is a wide variety of cases
 type Token struct {
 	provide.Model

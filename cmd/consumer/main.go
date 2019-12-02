@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/kthomas/go-pgputil"
 	"github.com/provideapp/ident/common"
 	_ "github.com/provideapp/ident/kyc" // KYC package
 )
@@ -21,12 +22,16 @@ var (
 	shutdownCtx context.Context
 )
 
-func main() {
+func init() {
 	if !common.ConsumeNATSStreamingSubscriptions {
 		common.Log.Panicf("Dedicated NATS streaming subscription consumer started without CONSUME_NATS_STREAMING_SUBSCRIPTIONS=true")
 		return
 	}
 
+	pgputil.RequirePGP()
+}
+
+func main() {
 	common.Log.Debug("Installing signal handlers for dedicated NATS streaming subscription consumer")
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)

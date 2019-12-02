@@ -14,15 +14,6 @@ import (
 
 const natsSiaApplicationNotificationSubject = "sia.application.notification"
 
-func init() {
-	db := dbconf.DatabaseConnection()
-
-	db.AutoMigrate(&Application{})
-	db.Model(&Application{}).AddIndex("idx_applications_hidden", "hidden")
-	db.Model(&Application{}).AddIndex("idx_applications_network_id", "network_id")
-	db.Model(&Application{}).AddForeignKey("user_id", "users(id)", "SET NULL", "CASCADE")
-}
-
 // Application model which is initially owned by the user who created it
 type Application struct {
 	provide.Model

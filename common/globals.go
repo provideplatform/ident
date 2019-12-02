@@ -12,7 +12,6 @@ import (
 	"github.com/dgrijalva/jwt-go"
 
 	logger "github.com/kthomas/go-logger"
-	natsutil "github.com/kthomas/go-natsutil"
 	selfsignedcert "github.com/kthomas/go-self-signed-cert"
 )
 
@@ -77,11 +76,6 @@ func init() {
 	requireEmailVerification()
 
 	requireTLS = os.Getenv("REQUIRE_TLS") == "true"
-
-	err := natsutil.EstablishSharedNatsStreamingConnection()
-	if err != nil {
-		log.Panicf("Failed to established NATS streaming connection; %s", err.Error())
-	}
 
 	ConsumeNATSStreamingSubscriptions = strings.ToLower(os.Getenv("CONSUME_NATS_STREAMING_SUBSCRIPTIONS")) == "true"
 }

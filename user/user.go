@@ -23,16 +23,6 @@ import (
 const defaultResetPasswordTokenTimeout = time.Hour * 1
 const natsSiaUserNotificationSubject = "sia.user.notification"
 
-func init() {
-	db := dbconf.DatabaseConnection()
-
-	db.AutoMigrate(&User{})
-	db.Model(&User{}).AddIndex("idx_users_application_id", "application_id")
-	db.Model(&User{}).AddIndex("idx_users_email", "email")
-	db.Model(&User{}).AddUniqueIndex("idx_users_application_id_email", "application_id", "email")
-	db.Model(&User{}).AddForeignKey("application_id", "applications(id)", "SET NULL", "CASCADE")
-}
-
 // User model
 type User struct {
 	provide.Model
