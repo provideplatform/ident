@@ -11,12 +11,16 @@ if [[ -z "${NATS_STREAMING_SERVER_PORT}" ]]; then
   NATS_STREAMING_SERVER_PORT=4222
 fi
 
+if [[ -z "${DATABASE_NAME}" ]]; then
+  DATABASE_NAME=ident_test
+fi
+
 if [[ -z "${DATABASE_USER}" ]]; then
-  DATABASE_USER=ident
+  DATABASE_USER=identtest
 fi
 
 if [[ -z "${DATABASE_PASSWORD}" ]]; then
-  DATABASE_PASSWORD=ident
+  DATABASE_PASSWORD=
 fi
 
 if [[ -z "${TAGS}" ]]; then
