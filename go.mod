@@ -32,7 +32,7 @@ require (
 	github.com/onsi/ginkgo v1.7.0
 	github.com/onsi/gomega v1.4.3
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
-	github.com/provideservices/provide-go v0.0.0-20191128185712-3f9331a9050c
+	github.com/provideservices/provide-go v0.0.0-20191202100929-9cc66daf7156
 	golang.org/x/crypto v0.0.0-20191122220453-ac88ee75c92c
 	golang.org/x/net v0.0.0-20191009170851-d66e71096ffb // indirect
 	golang.org/x/text v0.3.3-0.20190829152558-3d0f7978add9 // indirect
