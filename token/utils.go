@@ -1,29 +1,39 @@
 package token
 
 import (
+	"encoding/json"
+	"time"
+
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
-	dbconf "github.com/kthomas/go-db-config"
-	uuid "github.com/kthomas/go.uuid"
-	provide "github.com/provideservices/provide-go"
+	"github.com/provideapp/ident/common"
 )
 
-// ParseBearerAuthToken is a convenience method to parse the presented
-// bearer authorization header and resolve it to a token instance
-func ParseBearerAuthToken(c *gin.Context) *Token {
-	jwtToken, err := provide.ParseBearerAuthorizationHeader(c, nil)
-	if err != nil {
-		return nil
-	}
-	var token *Token
-	if claims, ok := jwtToken.Claims.(jwt.MapClaims); ok {
-		if jti, jtiok := claims["jti"]; jtiok {
-			token = &Token{}
-			dbconf.DatabaseConnection().Where("id = ?", jti).Find(&token)
-			if token == nil || token.ID == uuid.Nil {
-				return nil
-			}
+// InContext returns the previously authorized token instance in
+// the given gin context, if one exists; this me`thod does not
+// attempt to re-authorize the context
+func InContext(c *gin.Context) *Token {
+	if tok, exists := c.Get("token"); exists {
+		if token, tokenOk := tok.(*Token); tokenOk {
+			return token
 		}
 	}
-	return token
+	return nil
+}
+
+func parseJWTTimestampClaim(claims jwt.MapClaims, claim string) *time.Time {
+	var retval *time.Time
+	switch timeclaim := claims[claim].(type) {
+	case float64:
+		timeval := time.Unix(int64(timeclaim), 0)
+		retval = &timeval
+	case json.Number:
+		val, _ := timeclaim.Int64()
+		timeval := time.Unix(val, 0)
+		retval = &timeval
+	default:
+		common.Log.Warningf("failed to parse bearer authorization timestamp claim: %s", claim)
+		return nil
+	}
+	return retval
 }

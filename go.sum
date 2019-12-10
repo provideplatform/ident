@@ -205,6 +205,8 @@ github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORN
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
 github.com/kr/text v0.1.0 h1:45sCR5RtlFHMR4UwH9sdQ5TC8v0qDQCHnXt+kaKSTVE=
 github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
+github.com/kthomas/go-auth0 v0.0.0-20191125044405-5e59b0d714de h1:1kBaVCIZxYf4JzHLhNHBJ6YlZ2EF0DbPC19dYDKYQ0E=
+github.com/kthomas/go-auth0 v0.0.0-20191125044405-5e59b0d714de/go.mod h1:WaVVs362PNlfK1Qo1svv4u/Wer+GRuE4eGNxbbANoZc=
 github.com/kthomas/go-db-config v0.0.0-20190930131840-6f8768ecee4c h1:KIw63xEiZRfXkvq3iKJjofzJhT7hGoj3PLy7zK3jMjQ=
 github.com/kthomas/go-db-config v0.0.0-20190930131840-6f8768ecee4c/go.mod h1:oApzEAKQeLYMWVUCv09olaXsxUac+bSJCOLTOgw3Ekc=
 github.com/kthomas/go-logger v0.0.0-20190616094252-01c360658513 h1:lcgOk2ZGtDy87lMLWiZCXzNGe5vLprb8bPN84BsGqUY=
@@ -390,6 +392,8 @@ github.com/stretchr/testify v1.4.0 h1:2E4SXV/wtOkTonXsotYi4li6zVWxYlZuYNCXe9XRJy
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/syndtr/goleveldb v1.0.0 h1:fBdIW9lB4Iz0n9khmH8w27SJ3QEJ7+IgjPEwGSZiFdE=
 github.com/syndtr/goleveldb v1.0.0/go.mod h1:ZVVdQEZoIme9iO1Ch2Jdy24qqXrMMOU6lpPAyBWyWuQ=
+github.com/t-tiger/gorm-bulk-insert v1.2.0 h1:o2f18HJ3hvEhmqs/bZXg8eEWvfbpFBtRora7OypsPAU=
+github.com/t-tiger/gorm-bulk-insert v1.2.0/go.mod h1:ruDlk8xDl+8sX4bA7PQuYly9YEb3pbp1eP2LCyeRrFY=
 github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926/go.mod h1:9ESjWnEqriFuLhtthL60Sar/7RFoluCcXsuvEwTV5KM=
 github.com/tyler-smith/go-bip39 v1.0.2 h1:+t3w+KwLXO6154GNJY+qUtIxLTmFjfUmpguQT1OlOT8=
 github.com/tyler-smith/go-bip39 v1.0.2/go.mod h1:sJ5fKU0s6JVwZjjcUEX2zFOnvq0ASQ2K9Zr6cf67kNs=

@@ -135,7 +135,7 @@ type KYCApplication struct {
 	PIIHash                *string                `json:"-"`
 	IDNumber               *string                `json:"-"`
 	SimilarKYCApplications []*KYCApplication      `sql:"-" json:"similar_kyc_applications,omitempty"`
-	SimilarUsers           []*user.UserResponse   `sql:"-" json:"similar_users,omitempty"`
+	SimilarUsers           []*user.Response       `sql:"-" json:"similar_users,omitempty"`
 }
 
 // KYCApplicationParams represents a vendor-agnostic KYC application parameter object
@@ -571,7 +571,7 @@ func (k *KYCApplication) enrichSimilar(db *gorm.DB) error {
 	if k.IDNumber == nil && k.PIIHash == nil {
 		return fmt.Errorf("Unable to search for similar users by id number or PII hash for KYC application: %s", k.ID)
 	}
-	similarUsers := make([]*user.UserResponse, 0)
+	similarUsers := make([]*user.Response, 0)
 	similarUserIDs := map[string]struct{}{}
 	var similarKYCApplications []*KYCApplication
 
@@ -598,7 +598,7 @@ func (k *KYCApplication) enrichSimilar(db *gorm.DB) error {
 				userIDStr := similarUser.ID.String()
 				_, userOk := similarUserIDs[userIDStr]
 				if !userOk && similarUser.Name != nil && similarUser.Email != nil {
-					similarUsers = append(similarUsers, &user.UserResponse{
+					similarUsers = append(similarUsers, &user.Response{
 						ID:        similarUser.ID,
 						CreatedAt: similarUser.CreatedAt,
 						Name:      *similarUser.Name,

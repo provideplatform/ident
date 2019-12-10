@@ -28,7 +28,7 @@ func InstallKYCAPI(r *gin.Engine) {
 }
 
 func kycApplicationListHandler(c *gin.Context) {
-	bearer := token.ParseBearerAuthToken(c)
+	bearer := token.InContext(c)
 	if bearer == nil || (bearer != nil && bearer.ApplicationID == nil && bearer.UserID == nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
@@ -236,7 +236,7 @@ func updateKYCApplicationHandler(c *gin.Context) {
 }
 
 func kycApplicationDocumentsListHandler(c *gin.Context) {
-	bearer := token.ParseBearerAuthToken(c)
+	bearer := token.InContext(c)
 	if bearer == nil || (bearer != nil && bearer.ApplicationID == nil && bearer.UserID == nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
@@ -263,7 +263,7 @@ func kycApplicationDocumentsListHandler(c *gin.Context) {
 }
 
 func createKYCApplicationDocumentHandler(c *gin.Context) {
-	bearer := token.ParseBearerAuthToken(c)
+	bearer := token.InContext(c)
 	if bearer == nil || (bearer != nil && bearer.ApplicationID == nil && bearer.UserID == nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
@@ -321,7 +321,7 @@ func createKYCApplicationDocumentHandler(c *gin.Context) {
 }
 
 func kycApplicationDocumentDownloadHandler(c *gin.Context) {
-	bearer := token.ParseBearerAuthToken(c)
+	bearer := token.InContext(c)
 	if bearer == nil || (bearer != nil && bearer.ApplicationID == nil && bearer.UserID == nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
@@ -368,7 +368,7 @@ func kycApplicationDocumentDownloadHandler(c *gin.Context) {
 }
 
 func userKYCApplicationsListHandler(c *gin.Context) {
-	bearer := token.ParseBearerAuthToken(c)
+	bearer := token.InContext(c)
 	if bearer == nil || (bearer != nil && bearer.ApplicationID == nil && bearer.UserID == nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return

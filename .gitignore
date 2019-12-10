@@ -28,8 +28,10 @@ _cgo_export.*
 
 ident
 ident_api
+ident_api_accountant
 ident_consumer
 ident_migrate
+ident_sudo
 
 sia_consumer
 sia_consumer.*

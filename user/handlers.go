@@ -14,21 +14,24 @@ import (
 	provide "github.com/provideservices/provide-go"
 )
 
-// InstallUserAPI installs the handlers using the given gin Engine
-func InstallUserAPI(r *gin.Engine) {
+// InstallPublicUserAPI installs unauthenticated API handlers using the given gin Engine
+func InstallPublicUserAPI(r *gin.Engine) {
 	r.POST("/api/v1/authenticate", authenticationHandler)
-
-	r.GET("/api/v1/users", usersListHandler)
-	r.GET("/api/v1/users/:id", userDetailsHandler)
 	r.POST("/api/v1/users/reset_password", userResetPasswordRequestHandler)
 	r.POST("/api/v1/users/reset_password/:token", userResetPasswordHandler)
+}
+
+// InstallUserAPI installs handlers using the given gin Engine which require API authorization
+func InstallUserAPI(r *gin.Engine) {
+	r.GET("/api/v1/users", usersListHandler)
+	r.GET("/api/v1/users/:id", userDetailsHandler)
 	r.POST("/api/v1/users", createUserHandler)
 	r.PUT("/api/v1/users/:id", updateUserHandler)
 	r.DELETE("/api/v1/users/:id", deleteUserHandler)
 }
 
 func authenticationHandler(c *gin.Context) {
-	bearer := token.ParseBearerAuthToken(c)
+	bearer := token.InContext(c)
 
 	buf, err := c.GetRawData()
 	if err != nil {
@@ -58,7 +61,11 @@ func authenticationHandler(c *gin.Context) {
 					}
 					appID = &appUUID
 				}
-				resp, err := AuthenticateUser(email, pw, appID)
+				var scope *string
+				if reqScope, reqScopeOk := params["scope"].(string); reqScopeOk {
+					scope = &reqScope
+				}
+				resp, err := AuthenticateUser(email, pw, appID, scope)
 				if err != nil {
 					provide.RenderError(err.Error(), 401, c)
 					return
@@ -84,27 +91,33 @@ func authenticationHandler(c *gin.Context) {
 }
 
 func usersListHandler(c *gin.Context) {
-	bearer := token.ParseBearerAuthToken(c)
-	if bearer == nil || bearer.ApplicationID == nil {
-		provide.RenderError("unauthorized", 401, c)
+	bearer := token.InContext(c)
+	if bearer == nil || (bearer.ApplicationID == nil && !bearer.HasAnyPermission(common.ListUsers, common.Sudo)) {
+		provide.RenderError("forbidden", 403, c)
 		return
 	}
 
-	var users []User
+	users := []*User{}
 	query := dbconf.DatabaseConnection()
-	query = query.Where("application_id = ?", bearer.ApplicationID.String())
-	provide.Paginate(c, query, &User{}).Find(&users)
+
+	if c.Query("email") != "" {
+		query = query.Where("email = ?", strings.ToLower(c.Query("email")))
+	}
+
+	query.Find(&users)
+
+	if c.Query("enrich") == "true" {
+		for _, usr := range users {
+			usr.enrich()
+		}
+	}
+
 	provide.Render(users, 200, c)
 }
 
 func userDetailsHandler(c *gin.Context) {
-	bearer := token.ParseBearerAuthToken(c)
-	if bearer == nil || (bearer != nil && bearer.ApplicationID == nil && bearer.UserID == nil) {
-		provide.RenderError("unauthorized", 401, c)
-		return
-	}
-
-	if bearer.UserID != nil && bearer.UserID.String() != c.Param("id") {
+	bearer := token.InContext(c)
+	if bearer == nil || (!bearer.HasAnyPermission(common.ListUsers, common.Sudo) && bearer.UserID != nil && bearer.UserID.String() != c.Param("id")) {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
@@ -120,14 +133,15 @@ func userDetailsHandler(c *gin.Context) {
 		provide.RenderError("user not found", 404, c)
 		return
 	}
+	user.enrich()
 
-	provide.Render(user, 200, c)
+	provide.Render(user.AsResponse(), 200, c)
 }
 
 func createUserHandler(c *gin.Context) {
-	bearer := token.ParseBearerAuthToken(c)
-	if bearer != nil && bearer.ApplicationID == nil {
-		provide.RenderError("unauthorized", 401, c)
+	bearer := token.InContext(c)
+	if bearer != nil || (bearer.ApplicationID == nil && !bearer.HasAnyPermission(common.CreateUser, common.Sudo)) {
+		provide.RenderError("forbidden", 403, c)
 		return
 	}
 
@@ -172,14 +186,23 @@ func createUserHandler(c *gin.Context) {
 		user.Password = common.StringOrNil(password)
 	}
 
-	if UserExists(*user.Email, user.ApplicationID) {
+	if _, permissionsOk := params["permissions"]; permissionsOk && !bearer.HasAnyPermission(common.UpdateUser, common.Sudo) {
+		provide.RenderError("insufficient permissions to modifiy user permissions", 403, c)
+		return
+	}
+
+	if Exists(*user.Email, user.ApplicationID) {
 		msg := fmt.Sprintf("user exists: %s", *user.Email)
 		provide.RenderError(msg, 409, c)
 		return
 	}
 
-	if user.Create() {
-		provide.Render(user.AsResponse(), 201, c)
+	createAuth0User := !common.IsAuth0(c)
+	vendLegacyToken := true
+	success, resp := user.Create(createAuth0User, vendLegacyToken)
+
+	if success {
+		provide.Render(resp, 201, c)
 	} else {
 		obj := map[string]interface{}{}
 		obj["errors"] = user.Errors
@@ -188,13 +211,8 @@ func createUserHandler(c *gin.Context) {
 }
 
 func updateUserHandler(c *gin.Context) {
-	bearer := token.ParseBearerAuthToken(c)
-	if bearer == nil || (bearer != nil && bearer.ApplicationID == nil && bearer.UserID == nil) {
-		provide.RenderError("unauthorized", 401, c)
-		return
-	}
-
-	if bearer.UserID != nil && bearer.UserID.String() != c.Param("id") {
+	bearer := token.InContext(c)
+	if bearer == nil || (bearer.UserID != nil && bearer.UserID.String() != c.Param("id") || !bearer.HasAnyPermission(common.UpdateUser, common.Sudo)) {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
@@ -209,6 +227,11 @@ func updateUserHandler(c *gin.Context) {
 	err = json.Unmarshal(buf, &params)
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	if _, permissionsOk := params["permissions"]; permissionsOk && !bearer.HasAnyPermission(common.UpdateUser, common.Sudo) {
+		provide.RenderError("insufficient permissions to modifiy user permissions", 403, c)
 		return
 	}
 
@@ -230,7 +253,7 @@ func updateUserHandler(c *gin.Context) {
 		return
 	}
 
-	if bearer != nil {
+	if bearer != nil && !bearer.HasAnyPermission(common.UpdateUser, common.Sudo) {
 		user.ApplicationID = bearer.ApplicationID
 	}
 
@@ -248,8 +271,36 @@ func updateUserHandler(c *gin.Context) {
 	}
 }
 
+func deleteUserHandler(c *gin.Context) {
+	bearer := token.InContext(c)
+	if !bearer.HasAnyPermission(common.DeleteUser, common.Sudo) {
+		provide.RenderError("forbidden", 403, c)
+		return
+	}
+
+	user := &User{}
+	query := dbconf.DatabaseConnection().Where("id = ?", c.Param("id"))
+
+	if bearer.ApplicationID != nil {
+		query = query.Where("application_id = ?", bearer.ApplicationID.String())
+	}
+
+	query.Find(&user)
+	if user.ID == uuid.Nil {
+		provide.RenderError("user not found", 404, c)
+		return
+	}
+
+	if user.Delete() {
+		provide.Render(nil, 204, c)
+	} else {
+		provide.RenderError("user deletion failed", 500, c)
+	}
+}
+
 func userResetPasswordRequestHandler(c *gin.Context) {
-	bearer := token.ParseBearerAuthToken(c)
+	bearer := token.InContext(c)
+
 	buf, err := c.GetRawData()
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -292,7 +343,8 @@ func userResetPasswordRequestHandler(c *gin.Context) {
 }
 
 func userResetPasswordHandler(c *gin.Context) {
-	bearer := token.ParseBearerAuthToken(c)
+	bearer := token.InContext(c)
+
 	buf, err := c.GetRawData()
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -315,7 +367,7 @@ func userResetPasswordHandler(c *gin.Context) {
 		return nil, nil
 	})
 
-	if jwtToken == nil { //err != nil {
+	if jwtToken == nil {
 		// provide.RenderError(fmt.Sprintf("invalid jwt token; %s", err.Error()), 422, c)
 		provide.RenderError("invalid jwt token", 422, c)
 		return
@@ -381,8 +433,4 @@ func userResetPasswordHandler(c *gin.Context) {
 		obj["errors"] = user.Errors
 		provide.Render(obj, 422, c)
 	}
-}
-
-func deleteUserHandler(c *gin.Context) {
-	provide.RenderError("not implemented", 501, c)
 }

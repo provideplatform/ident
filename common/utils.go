@@ -1,8 +1,37 @@
 package common
 
 import (
-	selfsignedcert "github.com/kthomas/go-self-signed-cert"
+	"math/rand"
+	"time"
+
+	"github.com/gin-gonic/gin"
 )
+
+const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+var seededRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+// IsAuth0 returns true if the given request is from an auth0-whitelisted IP address
+func IsAuth0(c *gin.Context) bool {
+	ip := c.ClientIP()
+	for _, whitelistedIP := range Auth0WhitelistedIPs {
+		if ip == whitelistedIP {
+			return true
+		}
+	}
+	return false
+}
+
+// IsBanned returns true if the given request is from a banned IP address
+func IsBanned(c *gin.Context) bool {
+	ip := c.ClientIP()
+	for _, bannedIP := range BannedIPs {
+		if ip == bannedIP {
+			return true
+		}
+	}
+	return false
+}
 
 // PanicIfEmpty panics if the given string is empty
 func PanicIfEmpty(val string, msg string) {
@@ -11,24 +40,19 @@ func PanicIfEmpty(val string, msg string) {
 	}
 }
 
-// ShouldServeTLS returns true if the API should be served over TLS
-func ShouldServeTLS() bool {
-	if requireTLS {
-		privKeyPath, certPath, err := selfsignedcert.GenerateToDisk()
-		if err != nil {
-			Log.Panicf("Failed to generate self-signed certificate; %s", err.Error())
-		}
-		PrivateKeyPath = *privKeyPath
-		CertificatePath = *certPath
-		return true
-	}
-	return false
-}
-
 // StringOrNil returns the given string or nil when empty
 func StringOrNil(str string) *string {
 	if str == "" {
 		return nil
 	}
 	return &str
+}
+
+// RandomString generates a random string of the given length
+func RandomString(length int) string {
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[seededRand.Intn(len(charset))]
+	}
+	return string(b)
 }

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kthomas/go-auth0"
 	"github.com/kthomas/go-pgputil"
 
 	"github.com/provideapp/ident/application"
@@ -39,12 +40,14 @@ var (
 
 func init() {
 	if common.ConsumeNATSStreamingSubscriptions {
-		common.Log.Panicf("Dedicated API instance started with CONSUME_NATS_STREAMING_SUBSCRIPTIONS=true")
+		common.Log.Panicf("dedicated API instance started with CONSUME_NATS_STREAMING_SUBSCRIPTIONS=true")
 		return
 	}
 
+	auth0.RequireAuth0()
 	common.RequireJWT()
 	pgputil.RequirePGP()
+	// common.RequireAPIAccounting()
 	consumer.RunAPIUsageDaemon()
 }
 
@@ -95,6 +98,13 @@ func runAPI() {
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
 	r.Use(provide.CORSMiddleware())
+
+	r.GET("/status", statusHandler)
+	user.InstallPublicUserAPI(r)
+
+	r.Use(token.AuthMiddleware())
+	// r.Use(common.AccountingMiddleware())
+	r.Use(common.RateLimitingMiddleware())
 	r.Use(provide.TrackAPICalls())
 
 	application.InstallApplicationAPI(r)
@@ -102,14 +112,12 @@ func runAPI() {
 	user.InstallUserAPI(r)
 	kyc.InstallKYCAPI(r)
 
-	r.GET("/status", statusHandler)
-
 	srv = &http.Server{
 		Addr:    common.ListenAddr,
 		Handler: r,
 	}
 
-	if common.ShouldServeTLS() {
+	if common.ServeTLS {
 		go srv.ListenAndServeTLS(common.CertificatePath, common.PrivateKeyPath)
 	} else {
 		go srv.ListenAndServe()

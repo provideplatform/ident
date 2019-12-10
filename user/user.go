@@ -21,103 +21,42 @@ import (
 )
 
 const defaultResetPasswordTokenTimeout = time.Hour * 1
+const identUserIDKey = "ident_user_id"
 const natsSiaUserNotificationSubject = "sia.user.notification"
 
 // User model
 type User struct {
 	provide.Model
-	ApplicationID          *uuid.UUID `sql:"type:uuid" json:"application_id,omitempty"`
-	Name                   *string    `sql:"not null" json:"name"`
-	Email                  *string    `sql:"not null" json:"email"`
-	Password               *string    `json:"-"`
-	PrivacyPolicyAgreedAt  *time.Time `json:"privacy_policy_agreed_at"`
-	TermsOfServiceAgreedAt *time.Time `json:"terms_of_service_agreed_at"`
-	ResetPasswordToken     *string    `json:"-"`
+	ApplicationID          *uuid.UUID             `sql:"type:uuid" json:"application_id,omitempty"`
+	Name                   *string                `sql:"not null" json:"name"`
+	Email                  *string                `sql:"not null" json:"email"`
+	Permissions            common.Permission      `sql:"not null" json:"permissions,omitempty"`
+	EphemeralMetadata      *EphemeralUserMetadata `sql:"-" json:"metadata,omitempty"`
+	Password               *string                `json:"-"`
+	PrivacyPolicyAgreedAt  *time.Time             `json:"privacy_policy_agreed_at"`
+	TermsOfServiceAgreedAt *time.Time             `json:"terms_of_service_agreed_at"`
+	ResetPasswordToken     *string                `json:"-"`
 }
 
-// UserResponse is preferred over writing an entire User instance as JSON
-type UserResponse struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
+// AuthenticationResponse is returned upon successful authentication using an email address
+type AuthenticationResponse struct {
+	User  *Response       `json:"user"`
+	Token *token.Response `json:"token"`
 }
 
-// UserAuthenticationResponse is returned upon successful authentication using an email address
-type UserAuthenticationResponse struct {
-	User  *UserResponse        `json:"user"`
-	Token *token.TokenResponse `json:"token"`
+// CreateResponse model
+type CreateResponse struct {
+	User  *Response    `json:"user"`
+	Token *token.Token `json:"token"`
 }
 
-// AuthenticateUser attempts to authenticate by email address and password
-func AuthenticateUser(email, password string, applicationID *uuid.UUID) (*UserAuthenticationResponse, error) {
-	var user = &User{}
-	db := dbconf.DatabaseConnection()
-	query := db.Where("email = ?", strings.ToLower(email))
-	if applicationID != nil && *applicationID != uuid.Nil {
-		query = query.Where("application_id = ?", applicationID)
-	} else {
-		query = query.Where("application_id IS NULL")
-	}
-	query.First(&user)
-	if user != nil && user.ID != uuid.Nil {
-		if !user.authenticate(password) {
-			return nil, errors.New("authentication failed with given credentials")
-		}
-	} else {
-		return nil, fmt.Errorf("invalid email")
-	}
-	token := &token.Token{
-		UserID: &user.ID,
-	}
-	if !token.Create() {
-		var err error
-		if len(token.Errors) > 0 {
-			err = fmt.Errorf("Failed to create token for authenticated user: %s; %s", *user.Email, *token.Errors[0].Message)
-			common.Log.Warningf(err.Error())
-		}
-		return &UserAuthenticationResponse{
-			User:  user.AsResponse(),
-			Token: nil,
-		}, err
-	}
-	return &UserAuthenticationResponse{
-		User:  user.AsResponse(),
-		Token: token.AsResponse(),
-	}, nil
-}
-
-// AuthenticateApplicationUser creates a user token on behalf of the owning application
-func AuthenticateApplicationUser(email string, applicationID uuid.UUID) (*UserAuthenticationResponse, error) {
-	var user = &User{}
-	db := dbconf.DatabaseConnection()
-	query := db.Where("application_id = ? AND email = ?", applicationID, strings.ToLower(email))
-	query.First(&user)
-	if user != nil && user.ID != uuid.Nil {
-		if user.Password != nil {
-			return nil, errors.New("application user authentication not currently supported if user password is set")
-		}
-	} else {
-		return nil, errors.New("application user authentication failed with given credentials")
-	}
-	token := &token.Token{
-		UserID: &user.ID,
-	}
-	if !token.Create() {
-		var err error
-		if len(token.Errors) > 0 {
-			err = fmt.Errorf("Failed to create token for application-authenticated user: %s; %s", *user.Email, *token.Errors[0].Message)
-			common.Log.Warningf(err.Error())
-		}
-		return &UserAuthenticationResponse{
-			User:  user.AsResponse(),
-			Token: nil,
-		}, err
-	}
-	return &UserAuthenticationResponse{
-		User:  user.AsResponse(),
-		Token: token.AsResponse(),
-	}, nil
+// Response is preferred over writing an entire User instance as JSON
+type Response struct {
+	ID        uuid.UUID              `json:"id"`
+	CreatedAt time.Time              `json:"created_at"`
+	Name      string                 `json:"name"`
+	Email     string                 `json:"email"`
+	Metadata  *EphemeralUserMetadata `json:"metadata,omitempty"`
 }
 
 // Find returns a user for the given id
@@ -148,9 +87,82 @@ func FindByEmail(email string, applicationID *uuid.UUID) *User {
 	return user
 }
 
-// UserExists returns true if a user exists for the given email address and app id
-func UserExists(email string, applicationID *uuid.UUID) bool {
+// Exists returns true if a user exists for the given email address and app id
+func Exists(email string, applicationID *uuid.UUID) bool {
 	return FindByEmail(email, applicationID) != nil
+}
+
+// AuthenticateUser attempts to authenticate by email address and password;
+// i.e., this is equivalent to grant_type=password under the OAuth 2 spec
+func AuthenticateUser(email, password string, applicationID *uuid.UUID, scope *string) (*AuthenticationResponse, error) {
+	var user = &User{}
+	db := dbconf.DatabaseConnection()
+	query := db.Where("email = ?", strings.ToLower(email))
+	if applicationID != nil && *applicationID != uuid.Nil {
+		query = query.Where("application_id = ?", applicationID)
+	} else {
+		query = query.Where("application_id IS NULL")
+	}
+	query.First(&user)
+	if user != nil && user.ID != uuid.Nil {
+		if !user.authenticate(password) {
+			return nil, errors.New("authentication failed with given credentials")
+		}
+	} else {
+		return nil, fmt.Errorf("invalid email")
+	}
+	token := &token.Token{
+		UserID: &user.ID,
+		Scope:  scope,
+	}
+	if !token.Vend() {
+		var err error
+		if len(token.Errors) > 0 {
+			err = fmt.Errorf("failed to create token for authenticated user: %s; %s", *user.Email, *token.Errors[0].Message)
+			common.Log.Warningf(err.Error())
+		}
+		return &AuthenticationResponse{
+			User:  user.AsResponse(),
+			Token: nil,
+		}, err
+	}
+	return &AuthenticationResponse{
+		User:  user.AsResponse(),
+		Token: token.AsResponse(),
+	}, nil
+}
+
+// AuthenticateApplicationUser vends a user token on behalf of the owning application
+func AuthenticateApplicationUser(email string, applicationID uuid.UUID) (*AuthenticationResponse, error) {
+	var user = &User{}
+	db := dbconf.DatabaseConnection()
+	query := db.Where("application_id = ? AND email = ?", applicationID, strings.ToLower(email))
+	query.First(&user)
+	if user != nil && user.ID != uuid.Nil {
+		if user.Password != nil {
+			return nil, errors.New("application user authentication not currently supported if user password is set")
+		}
+	} else {
+		return nil, errors.New("application user authentication failed with given credentials")
+	}
+	token := &token.Token{
+		UserID: &user.ID,
+	}
+	if !token.Vend() {
+		var err error
+		if len(token.Errors) > 0 {
+			err = fmt.Errorf("failed to create token for application-authenticated user: %s; %s", *user.Email, *token.Errors[0].Message)
+			common.Log.Warningf(err.Error())
+		}
+		return &AuthenticationResponse{
+			User:  user.AsResponse(),
+			Token: nil,
+		}, err
+	}
+	return &AuthenticationResponse{
+		User:  user.AsResponse(),
+		Token: token.AsResponse(),
+	}, nil
 }
 
 func (u *User) authenticate(password string) bool {
@@ -161,15 +173,16 @@ func (u *User) authenticate(password string) bool {
 }
 
 // Create and persist a user
-func (u *User) Create() bool {
+func (u *User) Create(createAuth0User, vendLegacyToken bool) (bool, interface{}) {
 	db := dbconf.DatabaseConnection()
 
-	if !u.Validate() {
-		return false
+	if !u.validate() {
+		return false, nil
 	}
 
 	if db.NewRecord(u) {
-		result := db.Create(&u)
+		tx := db.Begin()
+		result := tx.Create(&u)
 		rowsAffected := result.RowsAffected
 		errors := result.GetErrors()
 		if len(errors) > 0 {
@@ -181,25 +194,60 @@ func (u *User) Create() bool {
 		}
 		if !db.NewRecord(u) {
 			success := rowsAffected > 0
-			if success && (u.ApplicationID == nil || *u.ApplicationID == uuid.Nil) {
-				payload, _ := json.Marshal(u)
-				natsutil.NatsPublish(natsSiaUserNotificationSubject, payload)
+			if success {
+				common.Log.Debugf("created user: %s", *u.Email)
+
+				var legacyToken *token.Token
+				if vendLegacyToken {
+					tkn, err := u.vendLegacyToken(tx)
+					if err != nil {
+						common.Log.Warningf("failed to vend legacy token for user: %s; %s", *u.Email, err.Error())
+					} else {
+						legacyToken = tkn
+					}
+				}
+
+				if createAuth0User {
+					err := u.createAuth0User(legacyToken)
+					if err != nil {
+						u.Errors = append(u.Errors, &provide.Error{
+							Message: common.StringOrNil(err.Error()),
+						})
+						tx.Rollback()
+						return false, nil
+					}
+				}
+
+				tx.Commit()
+				if success && (u.ApplicationID == nil || *u.ApplicationID == uuid.Nil) {
+					payload, _ := json.Marshal(u)
+					natsutil.NatsPublish(natsSiaUserNotificationSubject, payload)
+				}
+
+				return success, &CreateResponse{
+					User:  u.AsResponse(),
+					Token: legacyToken,
+				}
 			}
-			return success
 		}
+
+		tx.Rollback()
 	}
-	return false
+
+	return false, nil
 }
 
 // Update an existing user
 func (u *User) Update() bool {
 	db := dbconf.DatabaseConnection()
 
-	if !u.Validate() {
+	if !u.validate() {
 		return false
 	}
 
-	result := db.Save(&u)
+	tx := db.Begin()
+	result := tx.Save(&u)
+	success := result.RowsAffected > 0
 	errors := result.GetErrors()
 	if len(errors) > 0 {
 		for _, err := range errors {
@@ -209,7 +257,169 @@ func (u *User) Update() bool {
 		}
 	}
 
-	return len(u.Errors) == 0
+	if success {
+		err := u.updateAuth0User()
+		if err != nil {
+			u.Errors = append(u.Errors, &provide.Error{
+				Message: common.StringOrNil(err.Error()),
+			})
+			tx.Rollback()
+			return false
+		}
+	}
+
+	tx.Commit()
+	return success
+}
+
+// // Delete a user
+// func (u *User) Delete() bool {
+// 	db := dbconf.DatabaseConnection()
+// 	tx := db.Begin()
+// 	result := tx.Delete(&u)
+// 	errors := result.GetErrors()
+// 	if len(errors) > 0 {
+// 		for _, err := range errors {
+// 			u.Errors = append(u.Errors, &provide.Error{
+// 				Message: common.StringOrNil(err.Error()),
+// 			})
+// 		}
+// 	}
+// 	success := len(u.Errors) == 0
+// 	if success {
+// 		common.Log.Debugf("deleted user: %s", *u.Email)
+// 		err := u.deleteAuth0User()
+// 		if err != nil {
+// 			u.Errors = append(u.Errors, &provide.Error{
+// 				Message: common.StringOrNil(err.Error()),
+// 			})
+// 			tx.Rollback()
+// 			return false
+// 		}
+// 	}
+// 	tx.Commit()
+// 	return success
+// }
+
+// createAuth0User attempts to create an associated auth0 user, passing through any ephemeral params
+func (u *User) createAuth0User(legacyToken *token.Token) error {
+	params := u.EphemeralMetadata
+	if params == nil {
+		params = &EphemeralUserMetadata{
+			Name:  u.Email,
+			Email: *u.Email,
+		}
+	}
+
+	if params.Email == "" {
+		params.Email = *u.Email
+	}
+
+	if params.Password == nil {
+		params.Password = common.StringOrNil(common.RandomString(20)) // require password reset
+	}
+
+	if params.AppMetadata == nil {
+		params.AppMetadata = map[string]interface{}{}
+	}
+	params.AppMetadata[identUserIDKey] = u.ID
+
+	err := createAuth0User(params)
+	if err != nil {
+		return fmt.Errorf("failed to create auth0 user: %s; %s", *u.Email, err.Error())
+	}
+
+	return nil
+}
+
+// updateAuth0User attempts to update the associated auth0 user, passing through any ephemeral params
+func (u *User) updateAuth0User() error {
+	params := u.EphemeralMetadata
+	if params == nil {
+		err := errors.New("not updating auth0 user without ephemeral params")
+		common.Log.Debug(err.Error())
+		return err
+	}
+
+	if params.AppMetadata == nil {
+		params.AppMetadata = map[string]interface{}{}
+	}
+	params.AppMetadata[identUserIDKey] = u.ID
+
+	// deep copy the params
+	auth0Params := &EphemeralUserMetadata{}
+	rawparams, _ := json.Marshal(params)
+	json.Unmarshal(rawparams, &auth0Params)
+
+	// enrich the user to make sure the proper auth0 id is used
+	err := u.enrich()
+	if err != nil {
+		err := fmt.Errorf("failed to update auth0 user: %s; %s", *u.Email, err.Error())
+		common.Log.Warning(err.Error())
+		return err
+	}
+
+	err = updateAuth0User(*u.EphemeralMetadata.ID, auth0Params)
+	if err != nil {
+		err := fmt.Errorf("failed to update auth0 user: %s; %s", *u.Email, err.Error())
+		common.Log.Warning(err.Error())
+		return err
+	}
+
+	return nil
+}
+
+// deleteAuth0User attempts to delete the associated auth0 user
+func (u *User) deleteAuth0User() error {
+	err := deleteAuth0User(*u.Email)
+	if err != nil {
+		err := fmt.Errorf("failed to delete auth0 user: %s; %s", *u.Email, err.Error())
+		common.Log.Warning(err.Error())
+		return err
+	}
+
+	return nil
+}
+
+// enrich attempts to enrich the user with its associated auth0 user, enriching `u.EphemeralMetadata`
+func (u *User) enrich() error {
+	ephemeralParams, err := fetchAuth0User(*u.Email)
+	if err != nil {
+		common.Log.Warningf("failed to enrich auth0 user: %s; %s", *u.Email, err.Error())
+		return err
+	}
+	if ephemeralParams.ID == nil {
+		return fmt.Errorf("failed to enrich auth0 user: %s", *u.Email)
+	}
+	if ephemeralParams.AppMetadata != nil && ephemeralParams.AppMetadata[identUserIDKey] == nil {
+		ephemeralParams.AppMetadata[identUserIDKey] = u.ID
+	}
+	u.EphemeralMetadata = ephemeralParams
+	return nil
+}
+
+// vendLegacyToken vends a legacy API token on behalf of the user
+func (u *User) vendLegacyToken(tx *gorm.DB) (*token.Token, error) {
+	common.Log.Debugf("attempting to vend legacy auth token for user: %s", *u.Email)
+	token := &token.Token{
+		UserID:      &u.ID,
+		Permissions: u.Permissions,
+	}
+
+	// if u.ExpiresAt != nil {
+	// 	var ttl int
+	// 	delta := u.ExpiresAt.Sub(time.Now())
+	// 	if delta < 0 {
+	// 		return token, fmt.Errorf("failed to vend legacy auth token for expired user: %s", *u.Email)
+	// 	}
+	// 	ttl = int(delta)
+	// 	token.TTL = &ttl
+	// }
+
+	if !token.VendLegacy(tx) {
+		return token, fmt.Errorf("failed to vend legacy auth token for user: %s", *u.Email)
+	}
+	return token, nil
 }
 
 func (u *User) verifyEmailAddress() bool {
@@ -225,7 +435,7 @@ func (u *User) verifyEmailAddress() bool {
 		}
 
 		if common.PerformEmailVerification {
-			common.Log.Debugf("Attempting to verify deliverability for email address: %s", *u.Email)
+			common.Log.Debugf("attempting to verify deliverability for email address: %s", *u.Email)
 
 			var emailVerificationErr error
 			emailVerifier := trumail.NewVerifier(common.EmailVerificationFromDomain, common.EmailVerificationFromAddress, common.EmailVerificationTimeout, common.EmailVerificationAttempts)
@@ -256,14 +466,17 @@ func (u *User) verifyEmailAddress() bool {
 	return validEmailAddress
 }
 
-// Validate a user for persistence
-func (u *User) Validate() bool {
+// validate a user for persistence
+func (u *User) validate() bool {
 	u.Errors = make([]*provide.Error, 0)
 	db := dbconf.DatabaseConnection()
 	if db.NewRecord(u) {
 		if u.Password != nil || u.ApplicationID == nil {
 			u.verifyEmailAddress()
 			u.rehashPassword()
+		}
+		if u.Permissions == 0 {
+			u.Permissions = common.DefaultUserPermission
 		}
 	}
 	return len(u.Errors) == 0
@@ -304,12 +517,13 @@ func (u *User) Delete() bool {
 }
 
 // AsResponse marshals a user into a user response
-func (u *User) AsResponse() *UserResponse {
-	return &UserResponse{
+func (u *User) AsResponse() *Response {
+	return &Response{
 		ID:        u.ID,
 		CreatedAt: u.CreatedAt,
 		Name:      *u.Name,
 		Email:     *u.Email,
+		Metadata:  u.EphemeralMetadata,
 	}
 }
 
@@ -318,7 +532,7 @@ func (u *User) CreateResetPasswordToken(db *gorm.DB) bool {
 	issuedAt := time.Now()
 	tokenID, err := uuid.NewV4()
 	if err != nil {
-		common.Log.Warningf("Failed to generate reset password JWT token; %s", err.Error())
+		common.Log.Warningf("failed to generate reset password JWT token; %s", err.Error())
 		return false
 	}
 	claims := map[string]interface{}{
@@ -334,7 +548,7 @@ func (u *User) CreateResetPasswordToken(db *gorm.DB) bool {
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims(claims))
 	token, err := jwtToken.SignedString([]byte{})
 	if err != nil {
-		common.Log.Warningf("Failed to sign reset password JWT token; %s", err.Error())
+		common.Log.Warningf("failed to sign reset password JWT token; %s", err.Error())
 		return false
 	}
 

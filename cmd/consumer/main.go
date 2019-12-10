@@ -24,7 +24,7 @@ var (
 
 func init() {
 	if !common.ConsumeNATSStreamingSubscriptions {
-		common.Log.Panicf("Dedicated NATS streaming subscription consumer started without CONSUME_NATS_STREAMING_SUBSCRIPTIONS=true")
+		common.Log.Panicf("dedicated NATS streaming subscription consumer started without CONSUME_NATS_STREAMING_SUBSCRIPTIONS=true")
 		return
 	}
 
@@ -32,12 +32,12 @@ func init() {
 }
 
 func main() {
-	common.Log.Debug("Installing signal handlers for dedicated NATS streaming subscription consumer")
+	common.Log.Debug("installing signal handlers for dedicated NATS streaming subscription consumer")
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 	shutdownCtx, cancelF = context.WithCancel(context.Background())
 
-	common.Log.Debugf("Running dedicated NATS streaming subscription consumer main()")
+	common.Log.Debugf("running dedicated NATS streaming subscription consumer main()")
 	timer := time.NewTicker(natsStreamingSubscriptionStatusTickerInterval)
 	defer timer.Stop()
 
@@ -46,7 +46,7 @@ func main() {
 		case <-timer.C:
 			// TODO: check NATS subscription statuses
 		case sig := <-sigs:
-			common.Log.Infof("Received signal: %s", sig)
+			common.Log.Infof("received signal: %s", sig)
 			common.Log.Warningf("NATS streaming connection subscriptions are not yet being drained...")
 			shutdown()
 		case <-shutdownCtx.Done():
@@ -56,13 +56,13 @@ func main() {
 		}
 	}
 
-	common.Log.Debug("Exiting dedicated NATS streaming subscription consumer main()")
+	common.Log.Debug("exiting dedicated NATS streaming subscription consumer main()")
 	cancelF()
 }
 
 func shutdown() {
 	if atomic.AddUint32(&closing, 1) == 1 {
-		common.Log.Debug("Shutting down dedicated NATS streaming subscription consumer")
+		common.Log.Debug("shutting down dedicated NATS streaming subscription consumer")
 		cancelF()
 	}
 }

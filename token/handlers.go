@@ -7,6 +7,7 @@ import (
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/ident/application"
+	"github.com/provideapp/ident/common"
 	provide "github.com/provideservices/provide-go"
 )
 
@@ -20,26 +21,29 @@ func InstallTokenAPI(r *gin.Engine) {
 }
 
 func tokensListHandler(c *gin.Context) {
-	bearer := ParseBearerAuthToken(c)
-	if bearer == nil {
-		provide.RenderError("unauthorized", 401, c)
-		return
-	}
+	bearer := InContext(c)
 
+	var tokens []*Token
 	query := dbconf.DatabaseConnection()
 
-	var tokens []Token
-	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
+	if bearer.HasAnyPermission(common.ListTokens, common.Sudo) && c.Query("user_id") != "" {
+		// sudo arbitrary filtering by user_id
+		query = query.Where("user_id = ?", c.Query("user_id"))
+	} else if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
 		query = query.Where("application_id = ?", bearer.ApplicationID)
 	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
 		query = query.Where("user_id = ?", bearer.UserID)
+	} else {
+		provide.RenderError("forbidden", 403, c)
+		return
 	}
+
 	provide.Paginate(c, query, &Token{}).Find(&tokens)
 	provide.Render(tokens, 200, c)
 }
 
 func createTokenHandler(c *gin.Context) {
-	bearer := ParseBearerAuthToken(c)
+	bearer := InContext(c)
 
 	buf, err := c.GetRawData()
 	if err != nil {
@@ -54,6 +58,11 @@ func createTokenHandler(c *gin.Context) {
 		return
 	}
 
+	var grantType *string
+	if reqGrantType, reqGrantTypeOk := params["grant_type"].(string); reqGrantTypeOk {
+		grantType = &reqGrantType
+	}
+
 	var appID *uuid.UUID
 	if applicationID, ok := params["application_id"].(string); ok {
 		appUUID, err := uuid.FromString(applicationID)
@@ -65,34 +74,47 @@ func createTokenHandler(c *gin.Context) {
 	}
 
 	if appID != nil {
+		db := dbconf.DatabaseConnection()
+
 		var app = &application.Application{}
-		dbconf.DatabaseConnection().Where("id = ?", appID).Find(&app)
+		db.Where("id = ?", appID).Find(&app)
 		if app != nil && app.ID != uuid.Nil && bearer.UserID != nil && *bearer.UserID != app.UserID {
 			provide.RenderError("forbidden", 403, c)
 			return
 		}
-		resp, err := CreateApplicationToken(&app.ID)
+		resp, err := CreateApplicationToken(db, &app.ID)
 		if err != nil {
 			provide.RenderError(err.Error(), 401, c)
 			return
 		}
 		provide.Render(resp, 201, c)
 		return
+	} else if grantType != nil && *grantType == authorizationGrantRefreshToken {
+
 	}
 
 	provide.RenderError("unauthorized", 401, c)
 }
 
 func deleteTokenHandler(c *gin.Context) {
-	userID := provide.AuthorizedSubjectID(c, "user")
-	appID := provide.AuthorizedSubjectID(c, "application")
-	if (userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) {
+	bearer := InContext(c)
+	userID := bearer.UserID
+	appID := bearer.ApplicationID
+	if bearer == nil || ((userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil)) || !bearer.HasAnyPermission(common.DeleteToken, common.Sudo) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
 
+	db := dbconf.DatabaseConnection()
+
 	var token = &Token{}
-	dbconf.DatabaseConnection().Where("id = ?", c.Param("id")).Find(&token)
+
+	if bearer.HasAnyPermission(common.DeleteToken, common.Sudo) {
+		db.Where("id = ?", c.Param("id")).Find(&token)
+	} else {
+		db.Where("id = ? AND user_id = ?", c.Param("id"), bearer.UserID).Find(&token)
+	}
+
 	if token.ID == uuid.Nil {
 		provide.RenderError("token not found", 404, c)
 		return
@@ -105,7 +127,7 @@ func deleteTokenHandler(c *gin.Context) {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
-	if !token.Delete() {
+	if !token.Delete(db) {
 		provide.RenderError("token not deleted", 500, c)
 		return
 	}
@@ -113,8 +135,9 @@ func deleteTokenHandler(c *gin.Context) {
 }
 
 func applicationTokensListHandler(c *gin.Context) {
-	userID := provide.AuthorizedSubjectID(c, "user")
-	appID := provide.AuthorizedSubjectID(c, "application")
+	bearer := InContext(c)
+	userID := bearer.UserID
+	appID := bearer.ApplicationID
 	if (userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return

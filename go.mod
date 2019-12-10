@@ -15,6 +15,7 @@ require (
 	github.com/golang-migrate/migrate v3.5.4+incompatible
 	github.com/gorilla/websocket v1.4.1 // indirect
 	github.com/jinzhu/gorm v1.9.11
+	github.com/kthomas/go-auth0 v0.0.0-20191125044405-5e59b0d714de
 	github.com/kthomas/go-db-config v0.0.0-20190930131840-6f8768ecee4c
 	github.com/kthomas/go-logger v0.0.0-20190616094252-01c360658513
 	github.com/kthomas/go-natsutil v0.0.0-20191005052905-c26ab647994e
@@ -33,6 +34,7 @@ require (
 	github.com/onsi/gomega v1.4.3
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/provideservices/provide-go v0.0.0-20191202100929-9cc66daf7156
+	github.com/t-tiger/gorm-bulk-insert v1.2.0
 	golang.org/x/crypto v0.0.0-20191122220453-ac88ee75c92c
 	golang.org/x/net v0.0.0-20191009170851-d66e71096ffb // indirect
 	golang.org/x/text v0.3.3-0.20190829152558-3d0f7978add9 // indirect
