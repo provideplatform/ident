@@ -405,6 +405,7 @@ func (t *Token) encodeJWTAppClaims() map[string]interface{} {
 	if t.ApplicationID != nil {
 		appClaims["application_id"] = t.ApplicationID
 	}
+
 	if t.UserID != nil {
 		appClaims["user_id"] = t.UserID
 	}

@@ -71,6 +71,8 @@ func authorize(c *gin.Context) *Token {
 
 	var token *Token
 	if claims, ok := jwtToken.Claims.(jwt.MapClaims); ok {
+		appclaims, appclaimsOk := claims[common.JWTApplicationClaimsKey].(map[string]interface{})
+
 		var appID *uuid.UUID
 		var userID *uuid.UUID
 
@@ -87,13 +89,28 @@ func authorize(c *gin.Context) *Token {
 		subUUID, err := uuid.FromString(subprts[1])
 		if err != nil {
 			common.Log.Warningf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
-		} else {
-			switch subprts[0] {
-			case "user":
-				userID = &subUUID
-			case "application":
-				appID = &subUUID
+			return nil
+		}
+
+		switch subprts[0] {
+		case "application":
+			appID = &subUUID
+		case "token":
+			// this is a refresh token and can only authorize new access tokens on behalf of a user_id specified in the application claims
+			if appclaimsOk {
+				if claimedUserID, claimedUserIDOk := appclaims["user_id"].(string); claimedUserIDOk {
+					subUUID, err := uuid.FromString(claimedUserID)
+					if err != nil {
+						common.Log.Warningf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
+						return nil
+					}
+
+					userID = &subUUID
+					common.Log.Debugf("authorized refresh token for creation of new access token on behalf of user: %s", userID)
+				}
 			}
+		case "user":
+			userID = &subUUID
 		}
 
 		var iat *time.Time
@@ -124,11 +141,12 @@ func authorize(c *gin.Context) *Token {
 		if aud, audOk := claims["aud"].(string); audOk {
 			token.Audience = &aud
 		}
+
 		if iss, issOk := claims["iss"].(string); issOk {
 			token.Issuer = &iss
 		}
 
-		if appclaims, appclaimsOk := claims[common.JWTApplicationClaimsKey].(map[string]interface{}); appclaimsOk {
+		if appclaimsOk {
 			if permissions, permissionsOk := appclaims["permissions"].(float64); permissionsOk {
 				token.Permissions = common.Permission(permissions)
 			} else {
@@ -136,5 +154,6 @@ func authorize(c *gin.Context) *Token {
 			}
 		}
 	}
+
 	return token
 }
