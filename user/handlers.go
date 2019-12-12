@@ -198,8 +198,7 @@ func createUserHandler(c *gin.Context) {
 	}
 
 	createAuth0User := !common.IsAuth0(c)
-	vendLegacyToken := true
-	success, resp := user.Create(createAuth0User, vendLegacyToken)
+	success, resp := user.Create(createAuth0User)
 
 	if success {
 		provide.Render(resp, 201, c)

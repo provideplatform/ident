@@ -173,7 +173,7 @@ func (u *User) authenticate(password string) bool {
 }
 
 // Create and persist a user
-func (u *User) Create(createAuth0User, vendLegacyToken bool) (bool, interface{}) {
+func (u *User) Create(createAuth0User bool) (bool, interface{}) {
 	db := dbconf.DatabaseConnection()
 
 	if !u.validate() {
@@ -197,18 +197,8 @@ func (u *User) Create(createAuth0User, vendLegacyToken bool) (bool, interface{})
 			if success {
 				common.Log.Debugf("created user: %s", *u.Email)
 
-				var legacyToken *token.Token
-				if vendLegacyToken {
-					tkn, err := u.vendLegacyToken(tx)
-					if err != nil {
-						common.Log.Warningf("failed to vend legacy token for user: %s; %s", *u.Email, err.Error())
-					} else {
-						legacyToken = tkn
-					}
-				}
-
 				if createAuth0User {
-					err := u.createAuth0User(legacyToken)
+					err := u.createAuth0User()
 					if err != nil {
 						u.Errors = append(u.Errors, &provide.Error{
 							Message: common.StringOrNil(err.Error()),
@@ -226,7 +216,7 @@ func (u *User) Create(createAuth0User, vendLegacyToken bool) (bool, interface{})
 
 				return success, &CreateResponse{
 					User:  u.AsResponse(),
-					Token: legacyToken,
+					Token: nil,
 				}
 			}
 		}
@@ -272,37 +262,8 @@ func (u *User) Update() bool {
 	return success
 }
 
-// // Delete a user
-// func (u *User) Delete() bool {
-// 	db := dbconf.DatabaseConnection()
-// 	tx := db.Begin()
-// 	result := tx.Delete(&u)
-// 	errors := result.GetErrors()
-// 	if len(errors) > 0 {
-// 		for _, err := range errors {
-// 			u.Errors = append(u.Errors, &provide.Error{
-// 				Message: common.StringOrNil(err.Error()),
-// 			})
-// 		}
-// 	}
-// 	success := len(u.Errors) == 0
-// 	if success {
-// 		common.Log.Debugf("deleted user: %s", *u.Email)
-// 		err := u.deleteAuth0User()
-// 		if err != nil {
-// 			u.Errors = append(u.Errors, &provide.Error{
-// 				Message: common.StringOrNil(err.Error()),
-// 			})
-// 			tx.Rollback()
-// 			return false
-// 		}
-// 	}
-// 	tx.Commit()
-// 	return success
-// }
-
 // createAuth0User attempts to create an associated auth0 user, passing through any ephemeral params
-func (u *User) createAuth0User(legacyToken *token.Token) error {
+func (u *User) createAuth0User() error {
 	params := u.EphemeralMetadata
 	if params == nil {
 		params = &EphemeralUserMetadata{
@@ -398,30 +359,6 @@ func (u *User) enrich() error {
 	return nil
 }
 
-// vendLegacyToken vends a legacy API token on behalf of the user
-func (u *User) vendLegacyToken(tx *gorm.DB) (*token.Token, error) {
-	common.Log.Debugf("attempting to vend legacy auth token for user: %s", *u.Email)
-	token := &token.Token{
-		UserID:      &u.ID,
-		Permissions: u.Permissions,
-	}
-
-	// if u.ExpiresAt != nil {
-	// 	var ttl int
-	// 	delta := u.ExpiresAt.Sub(time.Now())
-	// 	if delta < 0 {
-	// 		return token, fmt.Errorf("failed to vend legacy auth token for expired user: %s", *u.Email)
-	// 	}
-	// 	ttl = int(delta)
-	// 	token.TTL = &ttl
-	// }
-
-	if !token.VendLegacy(tx) {
-		return token, fmt.Errorf("failed to vend legacy auth token for user: %s", *u.Email)
-	}
-	return token, nil
-}
-
 func (u *User) verifyEmailAddress() bool {
 	var validEmailAddress bool
 	if u.Email != nil {
@@ -504,7 +441,8 @@ func (u *User) rehashPassword() {
 // Delete a user
 func (u *User) Delete() bool {
 	db := dbconf.DatabaseConnection()
-	result := db.Delete(u)
+	tx := db.Begin()
+	result := tx.Delete(&u)
 	errors := result.GetErrors()
 	if len(errors) > 0 {
 		for _, err := range errors {
@@ -513,7 +451,20 @@ func (u *User) Delete() bool {
 			})
 		}
 	}
-	return len(u.Errors) == 0
+	success := len(u.Errors) == 0
+	if success {
+		common.Log.Debugf("deleted user: %s", *u.Email)
+		err := u.deleteAuth0User()
+		if err != nil {
+			u.Errors = append(u.Errors, &provide.Error{
+				Message: common.StringOrNil(err.Error()),
+			})
+			tx.Rollback()
+			return false
+		}
+	}
+	tx.Commit()
+	return success
 }
 
 // AsResponse marshals a user into a user response

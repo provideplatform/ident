@@ -13,19 +13,23 @@ import (
 	provide "github.com/provideservices/provide-go"
 )
 
-const authorizationScopeOfflineAccess = "offline_access"
 const authorizationGrantRefreshToken = "refresh_token"
+const authorizationScopeOfflineAccess = "offline_access"
 
 const defaultRefreshTokenTTL = time.Hour * 24
-const defaultAccessTokenTTL = time.Minute * 10
+const defaultAccessTokenTTL = time.Minute * 60
 const defaultTokenType = "bearer"
 
-// Token instances are only persisted to maintain backward compatibility with legacy API keys
+// Token instances can be ephemeral (access/refresh style) or "legacy" -- in the sense that
+// a "legacy" token never expires and is persisted along with its hashed representation
 type Token struct {
 	provide.Model
 
-	// Token is deprecated and represents legacy tokens persisted in the db
+	// Token represents a legacy token authorization which never expires, but is hashed and
+	// persisted in the db so therefore it can be revoked; requests which contain authorization
+	// headers containing these legacy tokens also present claims, so no db lookup is required
 	Token         *string    `json:"token"`
+	Hash          *string    `json:"-"`
 	ApplicationID *uuid.UUID `sql:"type:uuid" json:"-"`
 	UserID        *uuid.UUID `sql:"type:uuid" json:"-"`
 
@@ -35,6 +39,8 @@ type Token struct {
 	TokenType    *string `sql:"-" json:"token_type,omitempty"`
 	Scope        *string `sql:"-" json:"scope,omitempty"`
 
+	// Ephemeral JWT claims; these are here for convenience and are not always populated,
+	// even if they exist on the underlying token
 	Audience  *string    `sql:"-" json:"audience,omitempty"`
 	Issuer    *string    `sql:"-" json:"issuer,omitempty"`
 	IssuedAt  *time.Time `sql:"-" json:"issued_at,omitempty"`
@@ -42,7 +48,7 @@ type Token struct {
 	NotBefore *time.Time `sql:"-" json:"not_before_at,omitempty"`
 	Subject   *string    `sql:"-" json:"subject,omitempty"`
 
-	ApplicationClaimsKey *string           `sql:"-" json:"-"`
+	ApplicationClaimsKey *string           `sql:"-" json:"-"` // string key where application-specific claims are encoded
 	Permissions          common.Permission `sql:"-" json:"permissions,omitempty"`
 	TTL                  *int              `sql:"-" json:"-"` // number of seconds this token will be valid; used internally
 	Data                 *json.RawMessage  `sql:"-" json:"data,omitempty"`
@@ -61,23 +67,10 @@ type Response struct {
 	Permissions  *uint32    `json:"permissions,omitempty"`
 }
 
-// // GetApplication - retrieve the application associated with the token (or nil if one does not exist)
-// func (t *Token) GetApplication() *Application {
-// 	if t.ApplicationID == nil {
-// 		return nil
-// 	}
-// 	var app = &Application{}
-// 	dbconf.DatabaseConnection().Model(t).Related(&app)
-// 	if app.ID == uuid.Nil {
-// 		return nil
-// 	}
-// 	return app
-// }
-
 // FindLegacyToken - lookup a legacy token
 func FindLegacyToken(token string) *Token {
 	tkn := &Token{}
-	dbconf.DatabaseConnection().Where("token = ?", token).Find(&tkn)
+	dbconf.DatabaseConnection().Where("hash = ?", common.SHA256(token)).Find(&tkn)
 	if tkn != nil && tkn.ID != uuid.Nil {
 		return tkn
 	}
@@ -91,40 +84,8 @@ func GetApplicationTokens(applicationID *uuid.UUID) []*Token {
 	return tokens
 }
 
-// CreateApplicationToken creates a new token on behalf of the application
-func CreateApplicationToken(db *gorm.DB, applicationID *uuid.UUID) (*Token, error) {
-	token := &Token{
-		ApplicationID: applicationID,
-	}
-	result := db.Create(&token)
-	errors := result.GetErrors()
-	if len(errors) > 0 {
-		for _, err := range errors {
-			token.Errors = append(token.Errors, &provide.Error{
-				Message: common.StringOrNil(err.Error()),
-			})
-		}
-	}
-	if len(token.Errors) > 0 {
-		return nil, fmt.Errorf("failed to create token for application: %s; %s", applicationID.String(), *token.Errors[0].Message)
-	}
-	return token, nil
-}
-
-// // GetUser - retrieve the user associated with the token (or nil if one does not exist)
-// func (t *Token) GetUser() *user.User {
-// 	if t.UserID == nil {
-// 		return nil
-// 	}
-// 	var user = &user.User{}
-// 	dbconf.DatabaseConnection().Model(t).Related(&user)
-// 	if user != nil && user.ID == uuid.Nil {
-// 		return nil
-// 	}
-// 	return user
-// }
-
-// ParseData - parse the optional token data payload
+// ParseData parses and returns any data to be encoded within
+// application-specific claims in a bearer JWT
 func (t *Token) ParseData() map[string]interface{} {
 	var data map[string]interface{}
 	if t.Data != nil {
@@ -184,11 +145,11 @@ func (t *Token) HasAnyPermission(permissions ...common.Permission) bool {
 func (t *Token) Vend() bool {
 	db := dbconf.DatabaseConnection()
 	if db.NewRecord(t) {
-		common.Log.Debugf("vending signed JWT credential for user id: %s", t.UserID)
 		if !t.validate() {
 			return false
 		}
 
+		common.Log.Debugf("vending signed JWT credential for subject: %s", *t.Subject)
 		if t.ID == uuid.Nil {
 			// this token is ephemeral (id == 00000000-0000-0000-0000-000000000000)
 			jti, _ := uuid.NewV4()
@@ -197,7 +158,10 @@ func (t *Token) Vend() bool {
 
 		if t.Scope != nil && *t.Scope == authorizationScopeOfflineAccess {
 			if !t.vendRefreshToken() {
-				common.Log.Warningf("failed to vend refresh token for access/refresh token pair; %s", t.Errors[0].Message)
+				msg := "failed to vend refresh token for access/refresh token pair"
+				if len(t.Errors) > 0 {
+					msg = fmt.Sprintf("%s; %s", msg, *t.Errors[0].Message)
+				}
 				return false
 			}
 		}
@@ -220,6 +184,7 @@ func (t *Token) vendRefreshToken() bool {
 		return false
 	}
 
+	ttl := int(defaultAccessTokenTTL.Seconds())
 	refreshToken := &Token{
 		TokenType:     common.StringOrNil(defaultTokenType),
 		UserID:        t.UserID,
@@ -227,6 +192,7 @@ func (t *Token) vendRefreshToken() bool {
 		Audience:      t.Audience,
 		Issuer:        t.Issuer,
 		Subject:       common.StringOrNil(fmt.Sprintf("token:%s", t.ID.String())),
+		TTL:           &ttl,
 	}
 
 	if !refreshToken.Vend() {
@@ -238,10 +204,10 @@ func (t *Token) vendRefreshToken() bool {
 	return true
 }
 
-// VendLegacy authorizes a legacy API token which may be subsequently used by the
-// bearer for platform API authorization; legacy API tokens are the only tokens
-// actually written to persistent storage.
-func (t *Token) VendLegacy(tx *gorm.DB) bool {
+// vendApplicationToken creates a new token on behalf of the application;
+// these tokens should be used for machine-to-machine applications, and so
+// are persisted as "legacy" tokens as described in the VendLegacyToken docs
+func vendApplicationToken(tx *gorm.DB, applicationID *uuid.UUID) (*Token, error) {
 	var db *gorm.DB
 	if tx != nil {
 		db = tx
@@ -249,24 +215,28 @@ func (t *Token) VendLegacy(tx *gorm.DB) bool {
 		db = dbconf.DatabaseConnection()
 	}
 
+	t := &Token{
+		ApplicationID: applicationID,
+	}
+
+	if !t.validate() {
+		return nil, fmt.Errorf("failed to vend token for application: %s; %s", applicationID.String(), *t.Errors[0].Message)
+	}
+
 	if db.NewRecord(t) {
-		// this token is persisted, in contrast with signed bearer tokens created using t.Vend()
-		common.Log.Debugf("vending legacy API token for user id: %s", t.UserID)
-		if !t.validate() {
-			return false
-		}
+		// this token is hashed and persisted, in contrast with signed bearer tokens created using t.Vend()
+		common.Log.Debugf("vending API token for application; subject: %s", *t.Subject)
 
 		err := t.encodeJWT()
 		if err != nil {
-			common.Log.Debugf("failed to vend legacy API token for user id: %s", t.UserID)
+			common.Log.Debugf("vending legacy API token for subject: %s", *t.Subject)
 			t.Errors = append(t.Errors, &provide.Error{
 				Message: common.StringOrNil(err.Error()),
 			})
-			return false
+			return nil, fmt.Errorf("failed to vend token for application: %s; %s", applicationID.String(), *t.Errors[0].Message)
 		}
 
 		result := db.Create(&t)
-		rowsAffected := result.RowsAffected
 		errors := result.GetErrors()
 		if len(errors) > 0 {
 			for _, err := range errors {
@@ -274,13 +244,15 @@ func (t *Token) VendLegacy(tx *gorm.DB) bool {
 					Message: common.StringOrNil(err.Error()),
 				})
 			}
+			return nil, fmt.Errorf("failed to vend token for application: %s; %s", applicationID.String(), *t.Errors[0].Message)
 		}
-		return rowsAffected > 0
 	}
-	return false
+
+	return t, nil
 }
 
-// validate a token; package private due to side-effects of setting issue and expiry timestamps
+// validate a token; package private due to side-effects of setting
+// issue and expiry timestamps, audience, issuer and other derived claims
 func (t *Token) validate() bool {
 	t.Errors = make([]*provide.Error, 0)
 

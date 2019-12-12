@@ -22,7 +22,6 @@ const createSudoerCmd = "createsudoer"
 const createUserCmd = "createuser"
 const deleteUserCmd = "deleteuser"
 const syncAuth0Cmd = "syncauth0"
-const vendLegacyTokenCmd = "vendlegacytoken"
 const vendTokenCmd = "vendtoken"
 
 func init() {
@@ -70,27 +69,6 @@ func main() {
 		deleteUser(email)
 	case syncAuth0Cmd:
 		syncAuth0()
-	case vendLegacyTokenCmd:
-		email := strings.ToLower(argv[1])
-
-		var ttl *int
-		if len(argv) == 3 {
-			parsedttl, err := strconv.Atoi(argv[2])
-			if err != nil {
-				exit(fmt.Sprintf("failed to vend legacy token for user: %s; could not parse ttl for expiration; %s", email, err.Error()), 1)
-			}
-			ttl = &parsedttl
-		}
-
-		var legacyToken *string // memory to which the optional last argument will be read; validated to be 64 chars and persisted as a legacy token
-		if len(argv) == 4 {
-			legacyToken = &argv[3]
-			if len(*legacyToken) != defaultLegacyAuthTokenLength {
-				exit(fmt.Sprintf("failed to import legacy auth token (%s) for user: %s", *legacyToken, email), 1)
-			}
-		}
-
-		vendLegacyToken(email, ttl, legacyToken)
 	case vendTokenCmd:
 		email := strings.ToLower(argv[1])
 
@@ -136,7 +114,7 @@ func createUser(email string, permission common.Permission, rawjson *string) {
 		EphemeralMetadata: ephemeralUserParams,
 	}
 
-	success, _ := usr.Create(true, false)
+	success, _ := usr.Create(true)
 	if !success {
 		exit(fmt.Sprintf("failed to create user: %s", email), 1)
 	}
@@ -160,9 +138,9 @@ func deleteUser(email string) {
 
 	userTokens := make([]*token.Token, 0)
 	db.Where("user_id = ?", usr.ID).Find(&userTokens)
-	for _, legacyToken := range userTokens {
-		if legacyToken.Delete(db) {
-			common.Log.Debugf("deleted legacy token %s for user: %s", *legacyToken.Token, *usr.Email)
+	for _, token := range userTokens {
+		if token.Delete(db) {
+			common.Log.Debugf("deleted legacy token %s for user: %s", *token.Token, *usr.Email)
 		}
 	}
 
@@ -172,10 +150,10 @@ func deleteUser(email string) {
 }
 
 func syncAuth0() {
-	common.Log.Debugf("attempting to sync auth0 users and legacy api tokens to ident system of record")
+	common.Log.Debugf("attempting to sync auth0 users to ident system of record")
 	err := syncAuth0UsersAndLegacyTokens(dbconf.DatabaseConnection())
 	if err != nil {
-		exit(fmt.Sprintf("failed to sync auth0 users and legacy api tokens; %s", err.Error()), 1)
+		exit(fmt.Sprintf("failed to sync auth0 users; %s", err.Error()), 1)
 	}
 	common.Log.Debug("auth0 sync completed successfully")
 }
@@ -199,41 +177,6 @@ func vendToken(email string, ttl *int) {
 	}
 
 	common.Log.Debugf("bearer token created for user: %s\n\n\t%s\n\nPlease keep this in a safe place and treat it as you would other private keys.", email, *token.Token)
-	if token.HasPermission(common.Sudo) {
-		common.Log.Debug("with great power comes great responsibility...")
-	}
-}
-
-func vendLegacyToken(email string, ttl *int, legacyToken *string) {
-	user := user.FindByEmail(email, nil)
-	if user == nil {
-		exit(fmt.Sprintf("user does not exist: %s", email), 1)
-	}
-
-	token := &token.Token{
-		UserID:      &user.ID,
-		Permissions: user.Permissions,
-		Token:       legacyToken,
-	}
-	if ttl != nil {
-		token.TTL = ttl
-	}
-
-	if token.Token == nil {
-		common.Log.Debugf("attempting to vend legacy auth token for user: %s", email)
-		if !token.VendLegacy(nil) {
-			exit(fmt.Sprintf("failed to vend legacy auth token for user: %s", email), 1)
-		}
-	} else {
-		result := dbconf.DatabaseConnection().Create(&token)
-		errors := result.GetErrors()
-		if len(errors) > 0 {
-			exit(fmt.Sprintf("failed to import legacy auth token for user: %s; %s", email, errors[0].Error()), 1)
-		}
-		common.Log.Debugf("legacy auth token imported for user: %s", email)
-	}
-
-	common.Log.Debugf("legacy auth token created for user: %s\n\n\t%s\n\nPlease keep this in a safe place and treat it as you would other private keys.", email, *token.Token)
 	if token.HasPermission(common.Sudo) {
 		common.Log.Debug("with great power comes great responsibility...")
 	}

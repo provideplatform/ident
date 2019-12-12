@@ -35,6 +35,9 @@ var (
 	// apiAccountingConn is the network connection to which API call accounting packets will be delivered
 	apiAccountingConn *net.UDPConn
 
+	// Auth0IntegrationEnabled is a flag that indicates if the configured Auth0 integration should be used; this is a temporary config item and will be removed in the future
+	Auth0IntegrationEnabled bool
+
 	// Auth0WhitelistedIPs are the list of IPs that are used by Auth0 when invoking our callbacks
 	Auth0WhitelistedIPs []string
 
@@ -109,6 +112,8 @@ func init() {
 	requireEmailVerification()
 	requireGin()
 	requireIPLists()
+
+	Auth0IntegrationEnabled = strings.ToLower(os.Getenv("AUTH0_ENABLED")) == "true"
 
 	ConsumeNATSStreamingSubscriptions = strings.ToLower(os.Getenv("CONSUME_NATS_STREAMING_SUBSCRIPTIONS")) == "true"
 }

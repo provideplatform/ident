@@ -2,7 +2,6 @@ package token
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/gin-gonic/gin"
 	dbconf "github.com/kthomas/go-db-config"
@@ -83,7 +82,7 @@ func createTokenHandler(c *gin.Context) {
 			provide.RenderError("forbidden", 403, c)
 			return
 		}
-		resp, err := CreateApplicationToken(db, &app.ID)
+		resp, err := vendApplicationToken(db, &app.ID)
 		if err != nil {
 			provide.RenderError(err.Error(), 401, c)
 			return
@@ -91,24 +90,8 @@ func createTokenHandler(c *gin.Context) {
 		provide.Render(resp.AsResponse(), 201, c)
 		return
 	} else if grantType != nil && *grantType == authorizationGrantRefreshToken {
-		refreshToken := authorize(c)
-		if refreshToken != nil {
-			accessToken := &Token{
-				UserID: refreshToken.UserID,
-				Scope:  refreshToken.Scope,
-			}
-			if !accessToken.Vend() {
-				var err error
-				if len(accessToken.Errors) > 0 {
-					err = fmt.Errorf("failed to authorize access token using refresh token on behalf of user: %s; %s", *accessToken.UserID, *accessToken.Errors[0].Message)
-					common.Log.Warningf(err.Error())
-					provide.RenderError(err.Error(), 401, c)
-					return
-				}
-			}
-			provide.Render(accessToken.AsResponse(), 201, c)
-			return
-		}
+		refreshAccessToken(c)
+		return
 	}
 
 	provide.RenderError("unauthorized", 401, c)
