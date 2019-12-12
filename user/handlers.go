@@ -19,6 +19,8 @@ func InstallPublicUserAPI(r *gin.Engine) {
 	r.POST("/api/v1/authenticate", authenticationHandler)
 	r.POST("/api/v1/users/reset_password", userResetPasswordRequestHandler)
 	r.POST("/api/v1/users/reset_password/:token", userResetPasswordHandler)
+
+	r.POST("/api/v1/oauth/callback", oauthCallbackHandler)
 }
 
 // InstallUserAPI installs handlers using the given gin Engine which require API authorization
@@ -432,4 +434,8 @@ func userResetPasswordHandler(c *gin.Context) {
 		obj["errors"] = user.Errors
 		provide.Render(obj, 422, c)
 	}
+}
+
+func oauthCallbackHandler(c *gin.Context) {
+	provide.RenderError("not implemented", 501, c)
 }
