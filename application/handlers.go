@@ -39,6 +39,10 @@ func applicationsListHandler(c *gin.Context) {
 		query = query.Where("network_id = ?", c.Query("network_id"))
 	}
 
+	if c.Query("type") != "" {
+		query = query.Where("type = ?", c.Query("type"))
+	}
+
 	provide.Paginate(c, query, &Application{}).Find(&apps)
 	for _, app := range apps {
 		mergedConfig := app.mergedConfig()

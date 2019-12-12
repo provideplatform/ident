@@ -21,6 +21,7 @@ type Application struct {
 	UserID          uuid.UUID        `sql:"type:uuid not null" json:"user_id"`
 	Name            *string          `sql:"not null" json:"name"`
 	Description     *string          `json:"description"`
+	Type            *string          `json:"type"`
 	Config          *json.RawMessage `sql:"type:json" json:"config"`
 	EncryptedConfig *string          `sql:"type:bytea" json:"-"`
 	Hidden          bool             `sql:"not null;default:false" json:"hidden"` // soft-delete mechanism
@@ -119,7 +120,7 @@ func (app *Application) sanitizeConfig() {
 func (app *Application) Create() bool {
 	db := dbconf.DatabaseConnection()
 
-	if !app.Validate() {
+	if !app.validate() {
 		return false
 	}
 
@@ -149,7 +150,7 @@ func (app *Application) Create() bool {
 }
 
 // Validate an application for persistence
-func (app *Application) Validate() bool {
+func (app *Application) validate() bool {
 	app.Errors = make([]*provide.Error, 0)
 	return len(app.Errors) == 0
 }
@@ -158,7 +159,7 @@ func (app *Application) Validate() bool {
 func (app *Application) Update() bool {
 	db := dbconf.DatabaseConnection()
 
-	if !app.Validate() {
+	if !app.validate() {
 		return false
 	}
 
