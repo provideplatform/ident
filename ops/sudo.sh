@@ -3,6 +3,10 @@
 # this file does not actually invoke sudo... it is named sudo.sh because
 # it gives authorized ident administrators keys to the kingdom...
 
+if [[ -z "${AUTH0_INTEGRATION_ENABLED}" ]]; then
+  AUTH0_INTEGRATION_ENABLED=false
+fi
+
 if [[ -z "${AUTH0_CLIENT_ID}" ]]; then
   AUTH0_CLIENT_ID='1MypDFhR6y28Ue2hLfSbvkyH0Mf9yA1e' # sandbox creds
 fi
@@ -114,6 +118,7 @@ if [[ -z "${DATABASE_LOGGING}" ]]; then
   DATABASE_LOGGING=false
 fi
 
+AUTH0_INTEGRATION_ENABLED=$AUTH0_INTEGRATION_ENABLED \
 AUTH0_AUDIENCE=$AUTH0_AUDIENCE \
 AUTH0_DOMAIN=$AUTH0_DOMAIN \
 AUTH0_CLIENT_ID=$AUTH0_CLIENT_ID \
