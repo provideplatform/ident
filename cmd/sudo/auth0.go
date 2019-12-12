@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -14,6 +15,12 @@ const identUserIDKey = "ident_user_id"
 // syncAuth0 synchronizes data in Auth0 with local Postgres by
 // paging through all users and ensuring a record exists for each
 func syncAuth0UsersAndLegacyTokens(db *gorm.DB) error {
+	if !common.Auth0IntegrationEnabled {
+		err := fmt.Errorf("unable to sync auth0 users when AUTH0_INTEGRATION_ENABLED is not true")
+		common.Log.Warning(err.Error())
+		return err
+	}
+
 	common.Log.Debugf("syncing auth0 users...")
 	users, err := auth0.ExportUsers()
 	if err != nil {
