@@ -28,7 +28,7 @@ type Token struct {
 	// Token represents a legacy token authorization which never expires, but is hashed and
 	// persisted in the db so therefore it can be revoked; requests which contain authorization
 	// headers containing these legacy tokens also present claims, so no db lookup is required
-	Token         *string    `json:"token"`
+	Token         *string    `sql:"type:bytea" json:"token"`
 	Hash          *string    `json:"-"`
 	ApplicationID *uuid.UUID `sql:"type:uuid" json:"-"`
 	UserID        *uuid.UUID `sql:"type:uuid" json:"-"`
