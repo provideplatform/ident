@@ -113,7 +113,7 @@ func init() {
 	requireGin()
 	requireIPLists()
 
-	Auth0IntegrationEnabled = strings.ToLower(os.Getenv("AUTH0_ENABLED")) == "true"
+	Auth0IntegrationEnabled = strings.ToLower(os.Getenv("AUTH0_INTEGRATION_ENABLED")) == "true"
 
 	ConsumeNATSStreamingSubscriptions = strings.ToLower(os.Getenv("CONSUME_NATS_STREAMING_SUBSCRIPTIONS")) == "true"
 }
