@@ -52,11 +52,13 @@ type CreateResponse struct {
 
 // Response is preferred over writing an entire User instance as JSON
 type Response struct {
-	ID        uuid.UUID              `json:"id"`
-	CreatedAt time.Time              `json:"created_at"`
-	Name      string                 `json:"name"`
-	Email     string                 `json:"email"`
-	Metadata  *EphemeralUserMetadata `json:"metadata,omitempty"`
+	ID                     uuid.UUID              `json:"id"`
+	CreatedAt              time.Time              `json:"created_at"`
+	Name                   string                 `json:"name"`
+	Email                  string                 `json:"email"`
+	PrivacyPolicyAgreedAt  *time.Time             `json:"privacy_policy_agreed_at"`
+	TermsOfServiceAgreedAt *time.Time             `json:"terms_of_service_agreed_at"`
+	Metadata               *EphemeralUserMetadata `json:"metadata,omitempty"`
 }
 
 // Find returns a user for the given id
@@ -401,11 +403,13 @@ func (u *User) Delete() bool {
 // AsResponse marshals a user into a user response
 func (u *User) AsResponse() *Response {
 	return &Response{
-		ID:        u.ID,
-		CreatedAt: u.CreatedAt,
-		Name:      *u.Name,
-		Email:     *u.Email,
-		Metadata:  u.EphemeralMetadata,
+		ID:                     u.ID,
+		CreatedAt:              u.CreatedAt,
+		Name:                   *u.Name,
+		Email:                  *u.Email,
+		Metadata:               u.EphemeralMetadata,
+		PrivacyPolicyAgreedAt:  u.PrivacyPolicyAgreedAt,
+		TermsOfServiceAgreedAt: u.TermsOfServiceAgreedAt,
 	}
 }
 
