@@ -197,7 +197,7 @@ func (u *User) Create(createAuth0User bool) (bool, interface{}) {
 			if success {
 				common.Log.Debugf("created user: %s", *u.Email)
 
-				if createAuth0User {
+				if createAuth0User && common.Auth0IntegrationEnabled {
 					err := u.createAuth0User()
 					if err != nil {
 						u.Errors = append(u.Errors, &provide.Error{
@@ -247,7 +247,9 @@ func (u *User) Update() bool {
 		}
 	}
 
-	if success {
+	if success && common.Auth0IntegrationEnabled {
+		common.Log.Debugf("updated user: %s", *u.Email)
+
 		err := u.updateAuth0User()
 		if err != nil {
 			u.Errors = append(u.Errors, &provide.Error{
@@ -260,103 +262,6 @@ func (u *User) Update() bool {
 
 	tx.Commit()
 	return success
-}
-
-// createAuth0User attempts to create an associated auth0 user, passing through any ephemeral params
-func (u *User) createAuth0User() error {
-	params := u.EphemeralMetadata
-	if params == nil {
-		params = &EphemeralUserMetadata{
-			Name:  u.Email,
-			Email: *u.Email,
-		}
-	}
-
-	if params.Email == "" {
-		params.Email = *u.Email
-	}
-
-	if params.Password == nil {
-		params.Password = common.StringOrNil(common.RandomString(20)) // require password reset
-	}
-
-	if params.AppMetadata == nil {
-		params.AppMetadata = map[string]interface{}{}
-	}
-	params.AppMetadata[identUserIDKey] = u.ID
-
-	err := createAuth0User(params)
-	if err != nil {
-		return fmt.Errorf("failed to create auth0 user: %s; %s", *u.Email, err.Error())
-	}
-
-	return nil
-}
-
-// updateAuth0User attempts to update the associated auth0 user, passing through any ephemeral params
-func (u *User) updateAuth0User() error {
-	params := u.EphemeralMetadata
-	if params == nil {
-		err := errors.New("not updating auth0 user without ephemeral params")
-		common.Log.Debug(err.Error())
-		return err
-	}
-
-	if params.AppMetadata == nil {
-		params.AppMetadata = map[string]interface{}{}
-	}
-	params.AppMetadata[identUserIDKey] = u.ID
-
-	// deep copy the params
-	auth0Params := &EphemeralUserMetadata{}
-	rawparams, _ := json.Marshal(params)
-	json.Unmarshal(rawparams, &auth0Params)
-
-	// enrich the user to make sure the proper auth0 id is used
-	err := u.enrich()
-	if err != nil {
-		err := fmt.Errorf("failed to update auth0 user: %s; %s", *u.Email, err.Error())
-		common.Log.Warning(err.Error())
-		return err
-	}
-
-	err = updateAuth0User(*u.EphemeralMetadata.ID, auth0Params)
-	if err != nil {
-		err := fmt.Errorf("failed to update auth0 user: %s; %s", *u.Email, err.Error())
-		common.Log.Warning(err.Error())
-		return err
-	}
-
-	return nil
-}
-
-// deleteAuth0User attempts to delete the associated auth0 user
-func (u *User) deleteAuth0User() error {
-	err := deleteAuth0User(*u.Email)
-	if err != nil {
-		err := fmt.Errorf("failed to delete auth0 user: %s; %s", *u.Email, err.Error())
-		common.Log.Warning(err.Error())
-		return err
-	}
-
-	return nil
-}
-
-// enrich attempts to enrich the user with its associated auth0 user, enriching `u.EphemeralMetadata`
-func (u *User) enrich() error {
-	ephemeralParams, err := fetchAuth0User(*u.Email)
-	if err != nil {
-		common.Log.Warningf("failed to enrich auth0 user: %s; %s", *u.Email, err.Error())
-		return err
-	}
-	if ephemeralParams.ID == nil {
-		return fmt.Errorf("failed to enrich auth0 user: %s", *u.Email)
-	}
-	if ephemeralParams.AppMetadata != nil && ephemeralParams.AppMetadata[identUserIDKey] == nil {
-		ephemeralParams.AppMetadata[identUserIDKey] = u.ID
-	}
-	u.EphemeralMetadata = ephemeralParams
-	return nil
 }
 
 func (u *User) verifyEmailAddress() bool {
@@ -401,6 +306,29 @@ func (u *User) verifyEmailAddress() bool {
 		}
 	}
 	return validEmailAddress
+}
+
+// enrich attempts to enrich the user; currently this only supports any user/app metadata on the
+// user's associated auth0 record, enriching `u.EphemeralMetadata`; no-op if auth0 is not configured
+func (u *User) enrich() error {
+	if !common.Auth0IntegrationEnabled {
+		return nil
+	}
+
+	auth0User, err := u.fetchAuth0User()
+	if err != nil {
+		return err
+	}
+
+	if auth0User.AppMetadata != nil && auth0User.AppMetadata[identUserIDKey] == nil {
+		auth0User.AppMetadata[identUserIDKey] = u.ID
+	}
+
+	if auth0User != nil {
+		u.EphemeralMetadata = auth0User
+	}
+
+	return nil
 }
 
 // validate a user for persistence
@@ -452,15 +380,18 @@ func (u *User) Delete() bool {
 		}
 	}
 	success := len(u.Errors) == 0
-	if success {
+	if success && common.Auth0IntegrationEnabled {
 		common.Log.Debugf("deleted user: %s", *u.Email)
-		err := u.deleteAuth0User()
-		if err != nil {
-			u.Errors = append(u.Errors, &provide.Error{
-				Message: common.StringOrNil(err.Error()),
-			})
-			tx.Rollback()
-			return false
+
+		if common.Auth0IntegrationEnabled {
+			err := u.deleteAuth0User()
+			if err != nil {
+				u.Errors = append(u.Errors, &provide.Error{
+					Message: common.StringOrNil(err.Error()),
+				})
+				tx.Rollback()
+				return false
+			}
 		}
 	}
 	tx.Commit()

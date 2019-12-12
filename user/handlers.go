@@ -197,7 +197,7 @@ func createUserHandler(c *gin.Context) {
 		return
 	}
 
-	createAuth0User := !common.IsAuth0(c)
+	createAuth0User := !common.IsAuth0(c) && common.Auth0IntegrationEnabled
 	success, resp := user.Create(createAuth0User)
 
 	if success {
