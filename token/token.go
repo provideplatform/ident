@@ -236,6 +236,8 @@ func vendApplicationToken(tx *gorm.DB, applicationID *uuid.UUID) (*Token, error)
 			return nil, fmt.Errorf("failed to vend token for application: %s; %s", applicationID.String(), *t.Errors[0].Message)
 		}
 
+		t.Hash = common.StringOrNil(common.SHA256(*t.Token))
+
 		result := db.Create(&t)
 		errors := result.GetErrors()
 		if len(errors) > 0 {
