@@ -73,17 +73,6 @@ func createApplicationHandler(c *gin.Context) {
 		return
 	}
 
-	// def create
-	//   network_id = params[:config][:network_id] rescue nil
-	//   raise BadRequest unless network_id
-	//   _, _, @application = IdentService.create_application(jwt_token, params)
-	//   application_id = @application['id'] rescue nil
-	//   _, _, @application['token'] = _create_api_token(application_id) rescue nil
-	//   api_token = @application['token']['token'] rescue nil
-	//   status, _, @application['account'] = _create_account(api_token, application_id, network_id)
-	//   render json: @application, status: status
-	// end
-
 	app := &Application{}
 	err = json.Unmarshal(buf, app)
 	if err != nil {
