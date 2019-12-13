@@ -2,6 +2,7 @@ package application
 
 import (
 	"encoding/json"
+	"errors"
 	"strings"
 
 	dbconf "github.com/kthomas/go-db-config"
@@ -9,6 +10,7 @@ import (
 	"github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/ident/common"
+	"github.com/provideapp/ident/token"
 	provide "github.com/provideservices/provide-go"
 )
 
@@ -17,14 +19,21 @@ const natsSiaApplicationNotificationSubject = "sia.application.notification"
 // Application model which is initially owned by the user who created it
 type Application struct {
 	provide.Model
-	NetworkID       uuid.UUID        `sql:"type:uuid not null" json:"network_id"`
-	UserID          uuid.UUID        `sql:"type:uuid not null" json:"user_id"`
+	NetworkID       uuid.UUID        `sql:"type:uuid not null" json:"network_id,omitempty"`
+	UserID          uuid.UUID        `sql:"type:uuid not null" json:"user_id,omitempty"` // this is the user that initially created the app
 	Name            *string          `sql:"not null" json:"name"`
 	Description     *string          `json:"description"`
+	Status          *string          `sql:"-" json:"status,omitempty"` // this is for enrichment purposes only
 	Type            *string          `json:"type"`
 	Config          *json.RawMessage `sql:"type:json" json:"config"`
 	EncryptedConfig *string          `sql:"type:bytea" json:"-"`
-	Hidden          bool             `sql:"not null;default:false" json:"hidden"` // soft-delete mechanism
+	Hidden          bool             `sql:"not null;default:false" json:"-"` // soft-delete mechanism
+}
+
+// CreateResponse model
+type CreateResponse struct {
+	Application *Application `json:"application"`
+	Token       *token.Token `json:"token"`
 }
 
 // ApplicationsByUserID returns a list of applications which have been created
@@ -117,17 +126,18 @@ func (app *Application) sanitizeConfig() {
 }
 
 // Create and persist an application
-func (app *Application) Create() bool {
+func (app *Application) Create() (*CreateResponse, error) {
 	db := dbconf.DatabaseConnection()
+	tx := db.Begin()
 
 	if !app.validate() {
-		return false
+		return nil, errors.New(*app.Errors[0].Message)
 	}
 
 	app.sanitizeConfig()
 
-	if db.NewRecord(app) {
-		result := db.Create(&app)
+	if tx.NewRecord(app) {
+		result := tx.Create(&app)
 		rowsAffected := result.RowsAffected
 		errors := result.GetErrors()
 		if len(errors) > 0 {
@@ -137,16 +147,30 @@ func (app *Application) Create() bool {
 				})
 			}
 		}
+
 		if !db.NewRecord(app) {
 			success := rowsAffected > 0
 			if success {
+				tkn, err := token.VendApplicationToken(tx, &app.ID)
+				if err != nil {
+					tx.Rollback()
+					return nil, err
+				}
+
 				payload, _ := json.Marshal(app)
 				natsutil.NatsPublish(natsSiaApplicationNotificationSubject, payload)
+
+				tx.Commit()
+				return &CreateResponse{
+					Application: app,
+					Token:       tkn,
+				}, nil
 			}
-			return success
 		}
 	}
-	return false
+
+	tx.Rollback()
+	return nil, errors.New("failed to create application")
 }
 
 // Validate an application for persistence

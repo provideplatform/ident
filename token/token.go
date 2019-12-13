@@ -204,10 +204,10 @@ func (t *Token) vendRefreshToken() bool {
 	return true
 }
 
-// vendApplicationToken creates a new token on behalf of the application;
+// VendApplicationToken creates a new token on behalf of the application;
 // these tokens should be used for machine-to-machine applications, and so
 // are persisted as "legacy" tokens as described in the VendLegacyToken docs
-func vendApplicationToken(tx *gorm.DB, applicationID *uuid.UUID) (*Token, error) {
+func VendApplicationToken(tx *gorm.DB, applicationID *uuid.UUID) (*Token, error) {
 	var db *gorm.DB
 	if tx != nil {
 		db = tx
