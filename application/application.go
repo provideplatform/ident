@@ -27,7 +27,7 @@ type Application struct {
 	Type            *string          `json:"type"`
 	Config          *json.RawMessage `sql:"type:json" json:"config"`
 	EncryptedConfig *string          `sql:"type:bytea" json:"-"`
-	Hidden          bool             `sql:"not null;default:false" json:"-"` // soft-delete mechanism
+	Hidden          bool             `sql:"not null;default:false" json:"hidden"` // soft-delete mechanism
 }
 
 // CreateResponse model
