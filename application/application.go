@@ -156,11 +156,11 @@ func (app *Application) Create() (*CreateResponse, error) {
 					tx.Rollback()
 					return nil, err
 				}
+				tx.Commit()
 
 				payload, _ := json.Marshal(app)
 				natsutil.NatsPublish(natsSiaApplicationNotificationSubject, payload)
 
-				tx.Commit()
 				return &CreateResponse{
 					Application: app,
 					Token:       tkn,
