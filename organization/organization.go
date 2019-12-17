@@ -17,7 +17,7 @@ const natsSiaOrganizationNotificationSubject = "sia.user.notification"
 type Organization struct {
 	provide.Model
 	Name        *string           `sql:"not null" json:"name"`
-	UserID      *uuid.UUID        `sql:"-" json:"user_id,omitempty"`
+	UserID      *uuid.UUID        `json:"user_id,omitempty"`
 	Description *string           `json:"description"`
 	Permissions common.Permission `sql:"not null" json:"permissions,omitempty"`
 
