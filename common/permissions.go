@@ -42,13 +42,13 @@ const (
 	DeleteApplication Permission = 0x400
 
 	// ListApplicationTokens permission
-	ListApplicationTokens Permission = 0x800
+	// ListApplicationTokens Permission = 0x800
 
 	// CreateApplicationToken permission
-	CreateApplicationToken Permission = 0x1000
+	// CreateApplicationToken Permission = 0x1000
 
 	// DeleteApplicationToken permission
-	DeleteApplicationToken Permission = 0x2000
+	// DeleteApplicationToken Permission = 0x2000
 
 	// Privileged permissions begin at 2^20
 
