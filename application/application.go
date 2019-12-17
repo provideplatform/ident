@@ -151,7 +151,7 @@ func (app *Application) Create() (*CreateResponse, error) {
 		if !db.NewRecord(app) {
 			success := rowsAffected > 0
 			if success {
-				tkn, err := token.VendApplicationToken(tx, &app.ID)
+				tkn, err := token.VendApplicationToken(tx, &app.ID, nil) // FIXME-- support subresource permissioning
 				if err != nil {
 					tx.Rollback()
 					return nil, err

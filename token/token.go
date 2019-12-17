@@ -20,6 +20,12 @@ const defaultRefreshTokenTTL = time.Hour * 24
 const defaultAccessTokenTTL = time.Minute * 60
 const defaultTokenType = "bearer"
 
+const wildcardApplicationResource = "*"
+
+var defaultApplicationResources = map[string]common.Permission{
+	wildcardApplicationResource: common.DefaultApplicationResourcePermission,
+}
+
 // Token instances can be ephemeral (access/refresh style) or "legacy" -- in the sense that
 // a "legacy" token never expires and is persisted along with its hashed representation
 type Token struct {
@@ -52,6 +58,7 @@ type Token struct {
 	Permissions          common.Permission `sql:"-" json:"permissions,omitempty"`
 	TTL                  *int              `sql:"-" json:"-"` // number of seconds this token will be valid; used internally
 	Data                 *json.RawMessage  `sql:"-" json:"data,omitempty"`
+	Resources            *json.RawMessage  `sql:"-" json:"-,omitempty"`
 }
 
 // Response represents the token portion of the response to a successful authentication request
@@ -97,6 +104,22 @@ func (t *Token) ParseData() map[string]interface{} {
 		}
 	}
 	return data
+}
+
+// ParseResources parses and returns the resources mapping, which contains
+// the resource subject name i.e., the `sub` part of the encoded subject `<sub>:<id>`
+// mapped to the generic permission mask for that resource
+func (t *Token) ParseResources() map[string]interface{} {
+	var resources map[string]interface{}
+	if t.Resources != nil {
+		resources = map[string]interface{}{}
+		err := json.Unmarshal(*t.Resources, &resources)
+		if err != nil {
+			common.Log.Warningf("failed to unmarshal token resources; %s", err.Error())
+			return nil
+		}
+	}
+	return resources
 }
 
 // AsResponse marshals a token into a token response
@@ -207,7 +230,7 @@ func (t *Token) vendRefreshToken() bool {
 // VendApplicationToken creates a new token on behalf of the application;
 // these tokens should be used for machine-to-machine applications, and so
 // are persisted as "legacy" tokens as described in the VendLegacyToken docs
-func VendApplicationToken(tx *gorm.DB, applicationID *uuid.UUID) (*Token, error) {
+func VendApplicationToken(tx *gorm.DB, applicationID *uuid.UUID, resources map[string]common.Permission) (*Token, error) {
 	var db *gorm.DB
 	if tx != nil {
 		db = tx
@@ -215,8 +238,17 @@ func VendApplicationToken(tx *gorm.DB, applicationID *uuid.UUID) (*Token, error)
 		db = dbconf.DatabaseConnection()
 	}
 
+	appResources := resources
+	if appResources == nil {
+		appResources = defaultApplicationResources
+	}
+	rawResources, _ := json.Marshal(appResources)
+	resourcesJSON := json.RawMessage(rawResources)
+
 	t := &Token{
 		ApplicationID: applicationID,
+		Permissions:   common.DefaultUserPermission,
+		Resources:     &resourcesJSON,
 	}
 
 	if !t.validate() {
@@ -382,6 +414,11 @@ func (t *Token) encodeJWTAppClaims() map[string]interface{} {
 
 	if t.UserID != nil {
 		appClaims["user_id"] = t.UserID
+	}
+
+	appResources := t.ParseResources()
+	if appResources != nil {
+		appClaims["resources"] = appResources
 	}
 
 	appData := t.ParseData()
