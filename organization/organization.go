@@ -99,9 +99,7 @@ func (o *Organization) Create() bool {
 							return false
 						}
 					} else {
-						common.Log.Warningf("failed to create organization; org user id was specified but not resolved: %s", o.UserID)
-						tx.Rollback()
-						return false
+						tx.Commit()
 					}
 				}
 
