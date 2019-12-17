@@ -6,23 +6,49 @@ package common
 type Permission uint32
 
 const (
-	// AppPermission1 permission
-	AppPermission1 Permission = 0x1
+	// Authenticate permission
+	Authenticate Permission = 0x1
 
-	// AppPermission2 permission
-	AppPermission2 Permission = 0x2
+	// ListResources generic permission
+	ListResources Permission = 0x2
 
-	// AppPermission3 permission
-	AppPermission3 Permission = 0x4
+	// CreateResource generic permission
+	CreateResource Permission = 0x4
 
-	// AppPermission4 permission
-	AppPermission4 Permission = 0x8
+	// UpdateResource generic permission
+	UpdateResource Permission = 0x8
 
-	// AppPermission5 permission
-	AppPermission5 Permission = 0x10
+	// DeleteResource generic permission
+	DeleteResource Permission = 0x10
 
-	// AppPermission6 permission
-	AppPermission6 Permission = 0x12
+	// GrantResourceAuthorization generic permission
+	GrantResourceAuthorization Permission = 0x20
+
+	// RevokeResourceAuthorization generic permission
+	RevokeResourceAuthorization Permission = 0x40
+
+	// Ident-specific permissions begin at 2^7
+
+	// ListApplications permission
+	ListApplications Permission = 0x80
+
+	// CreateApplication permission
+	CreateApplication Permission = 0x100
+
+	// UpdateApplication permission
+	UpdateApplication Permission = 0x200
+
+	// DeleteApplication permission
+	DeleteApplication Permission = 0x400
+
+	// ListApplicationTokens permission
+	ListApplicationTokens Permission = 0x800
+
+	// CreateApplicationToken permission
+	CreateApplicationToken Permission = 0x1000
+
+	// DeleteApplicationToken permission
+	DeleteApplicationToken Permission = 0x2000
 
 	// Privileged permissions begin at 2^20
 
@@ -52,13 +78,13 @@ const (
 )
 
 // DefaultUserPermission is the default mask to use if permissions are not explicitly set upon user creation
-const DefaultUserPermission Permission = 0x0
+const DefaultUserPermission Permission = Authenticate | ListApplications | CreateApplication | UpdateApplication
 
 // DefaultAuth0RequestPermission is the ephemeral permission mask to apply to Auth0 requests
 const DefaultAuth0RequestPermission = ListUsers | CreateUser
 
 // DefaultSudoerPermission is the default mask to use when a new sudoer is created
-const DefaultSudoerPermission = Sudo
+const DefaultSudoerPermission = DefaultUserPermission | Sudo
 
 // set updates the mask with the given permissions; package private
 func (p Permission) set(flags Permission) Permission {
