@@ -266,7 +266,7 @@ mOK0zVVwSsBZysngslc2X2lPYROs4hHygQiCtuFrt4BZb7OnLL4Xz9xUsJSmeYbZ
 RB2pCO6C2xWltowiV5YCTSlg+RYUGN8fKoyYkZPdwEGRJqbXmROYAQHFKN4C
 -----END RSA PRIVATE KEY-----'
 
-pkgs=(application consumer kyc token user)
+pkgs=(application consumer kyc organization token user)
 for d in "${pkgs[@]}" ; do
   pkg=$(echo $d | sed 's/\/*$//g')
   

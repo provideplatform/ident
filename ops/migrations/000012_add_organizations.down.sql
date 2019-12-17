@@ -1,0 +1,13 @@
+DROP INDEX idx_organizations_user_id;
+
+ALTER TABLE ONLY organizations DROP CONSTRAINT organizations_user_id_users_id_foreign;
+
+ALTER TABLE ONLY applications_organizations DROP CONSTRAINT applications_application_id_applications_id_foreign;
+ALTER TABLE ONLY applications_organizations DROP CONSTRAINT applications_organization_id_organizations_id_foreign;
+
+ALTER TABLE ONLY organizations_users DROP CONSTRAINT organizations_organization_id_organizations_id_foreign;
+ALTER TABLE ONLY organizations_users DROP CONSTRAINT organizations_user_id_users_id_foreign;
+
+DROP TABLE applications_organizations;
+DROP TABLE organizations_users;
+DROP TABLE organizations;

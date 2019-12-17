@@ -17,6 +17,7 @@ import (
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/consumer"
 	"github.com/provideapp/ident/kyc"
+	"github.com/provideapp/ident/organization"
 	"github.com/provideapp/ident/token"
 	"github.com/provideapp/ident/user"
 
@@ -108,6 +109,7 @@ func runAPI() {
 	r.Use(provide.TrackAPICalls())
 
 	application.InstallApplicationAPI(r)
+	organization.InstallOrganizationAPI(r)
 	token.InstallTokenAPI(r)
 	user.InstallUserAPI(r)
 	kyc.InstallKYCAPI(r)

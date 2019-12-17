@@ -10,6 +10,7 @@ import (
 	"github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/ident/common"
+	"github.com/provideapp/ident/organization"
 	"github.com/provideapp/ident/token"
 	provide "github.com/provideservices/provide-go"
 )
@@ -28,6 +29,8 @@ type Application struct {
 	Config          *json.RawMessage `sql:"type:json" json:"config"`
 	EncryptedConfig *string          `sql:"type:bytea" json:"-"`
 	Hidden          bool             `sql:"not null;default:false" json:"hidden"` // soft-delete mechanism
+
+	Organization []*organization.Organization `gorm:"many2many:applications_organizations" json:"-"`
 }
 
 // CreateResponse model
@@ -123,6 +126,30 @@ func (app *Application) sanitizeConfig() {
 
 	app.setConfig(cfg)
 	app.setEncryptedConfig(encryptedConfig)
+}
+
+func (app *Application) addOrganization(org *organization.Organization) bool {
+	common.Log.Debugf("adding organization %s to application: %s", org.ID, app.ID)
+	result := dbconf.DatabaseConnection().Model(&app).Association("Organizations").Append(&org)
+	success := result.Error != nil
+	if success {
+		common.Log.Debugf("added organization %s to application: %s", org.ID, app.ID)
+	} else {
+		common.Log.Warningf("failed to add organization %s to application: %s", org.ID, app.ID)
+	}
+	return success
+}
+
+func (app *Application) removeOrganization(org *organization.Organization) bool {
+	common.Log.Debugf("removing organization %s from application: %s", org.ID, app.ID)
+	result := dbconf.DatabaseConnection().Model(&app).Association("Organizations").Delete(&org)
+	success := result.Error != nil
+	if success {
+		common.Log.Debugf("removed organization %s from application: %s", org.ID, app.ID)
+	} else {
+		common.Log.Warningf("failed to remove organization %s from application: %s", org.ID, app.ID)
+	}
+	return success
 }
 
 // Create and persist an application
