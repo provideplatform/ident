@@ -107,6 +107,10 @@ func AuthenticateUser(email, password string, applicationID *uuid.UUID, scope *s
 	}
 	query.First(&user)
 	if user != nil && user.ID != uuid.Nil {
+		if !user.hasPermission(common.Authenticate) {
+			return nil, errors.New("authentication failed due to revoked authenticate permission")
+		}
+
 		if !user.authenticate(password) {
 			return nil, errors.New("authentication failed with given credentials")
 		}
@@ -141,6 +145,10 @@ func AuthenticateApplicationUser(email string, applicationID uuid.UUID) (*Authen
 	query := db.Where("application_id = ? AND email = ?", applicationID, strings.ToLower(email))
 	query.First(&user)
 	if user != nil && user.ID != uuid.Nil {
+		if !user.hasPermission(common.Authenticate) {
+			return nil, errors.New("authentication failed due to revoked authenticate permission")
+		}
+
 		if user.Password != nil {
 			return nil, errors.New("application user authentication not currently supported if user password is set")
 		}
@@ -167,11 +175,27 @@ func AuthenticateApplicationUser(email string, applicationID uuid.UUID) (*Authen
 	}, nil
 }
 
+// authenticate returns true if the User can be authenticated using the given password
 func (u *User) authenticate(password string) bool {
 	if u.Password == nil {
 		return false
 	}
 	return bcrypt.CompareHashAndPassword([]byte(*u.Password), []byte(password)) == nil
+}
+
+// hasPermission returns true if the permissioned User has the given permissions
+func (u *User) hasPermission(permission common.Permission) bool {
+	return u.Permissions.Has(permission)
+}
+
+// hasAnyPermission returns true if the permissioned User has any the given permissions
+func (u *User) hasAnyPermission(permissions ...common.Permission) bool {
+	for _, p := range permissions {
+		if u.hasPermission(p) {
+			return true
+		}
+	}
+	return false
 }
 
 // Create and persist a user
