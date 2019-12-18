@@ -48,9 +48,12 @@ func refreshAccessToken(c *gin.Context) {
 	if refreshToken != nil {
 		ttl := int(defaultAccessTokenTTL.Seconds())
 		accessToken := &Token{
-			UserID: refreshToken.UserID,
-			Scope:  refreshToken.Scope,
-			TTL:    &ttl,
+			ApplicationID:       refreshToken.ApplicationID,
+			UserID:              refreshToken.UserID,
+			Scope:               refreshToken.Scope,
+			Permissions:         refreshToken.Permissions,
+			ExtendedPermissions: refreshToken.ExtendedPermissions,
+			TTL:                 &ttl,
 		}
 
 		if accessToken.Vend() {

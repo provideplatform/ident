@@ -210,13 +210,15 @@ func (t *Token) vendRefreshToken() bool {
 
 	ttl := int(defaultAccessTokenTTL.Seconds())
 	refreshToken := &Token{
-		TokenType:     common.StringOrNil(defaultTokenType),
-		UserID:        t.UserID,
-		ApplicationID: t.ApplicationID,
-		Audience:      t.Audience,
-		Issuer:        t.Issuer,
-		Subject:       common.StringOrNil(fmt.Sprintf("token:%s", t.ID.String())),
-		TTL:           &ttl,
+		TokenType:           common.StringOrNil(defaultTokenType),
+		UserID:              t.UserID,
+		ApplicationID:       t.ApplicationID,
+		Audience:            t.Audience,
+		Issuer:              t.Issuer,
+		Subject:             common.StringOrNil(fmt.Sprintf("token:%s", t.ID.String())),
+		Permissions:         t.Permissions,
+		ExtendedPermissions: t.ExtendedPermissions,
+		TTL:                 &ttl,
 	}
 
 	if !refreshToken.Vend() {

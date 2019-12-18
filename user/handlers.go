@@ -48,6 +48,11 @@ func authenticationHandler(c *gin.Context) {
 		return
 	}
 
+	var scope *string
+	if reqScope, reqScopeOk := params["scope"].(string); reqScopeOk {
+		scope = &reqScope
+	}
+
 	if bearer == nil || bearer.UserID == nil {
 		if email, ok := params["email"].(string); ok {
 			if pw, pwok := params["password"].(string); pwok {
@@ -63,10 +68,6 @@ func authenticationHandler(c *gin.Context) {
 					}
 					appID = &appUUID
 				}
-				var scope *string
-				if reqScope, reqScopeOk := params["scope"].(string); reqScopeOk {
-					scope = &reqScope
-				}
 				resp, err := AuthenticateUser(email, pw, appID, scope)
 				if err != nil {
 					provide.RenderError(err.Error(), 401, c)
@@ -75,7 +76,7 @@ func authenticationHandler(c *gin.Context) {
 				provide.Render(resp, 201, c)
 				return
 			} else if bearer.ApplicationID != nil {
-				resp, err := AuthenticateApplicationUser(email, *bearer.ApplicationID)
+				resp, err := AuthenticateApplicationUser(email, *bearer.ApplicationID, scope)
 				if err != nil {
 					provide.RenderError(err.Error(), 401, c)
 					return

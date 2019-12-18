@@ -113,8 +113,9 @@ func AuthenticateUser(email, password string, applicationID *uuid.UUID, scope *s
 		return nil, fmt.Errorf("invalid email")
 	}
 	token := &token.Token{
-		UserID: &user.ID,
-		Scope:  scope,
+		UserID:      &user.ID,
+		Scope:       scope,
+		Permissions: user.Permissions,
 	}
 	if !token.Vend() {
 		var err error
@@ -134,7 +135,7 @@ func AuthenticateUser(email, password string, applicationID *uuid.UUID, scope *s
 }
 
 // AuthenticateApplicationUser vends a user token on behalf of the owning application
-func AuthenticateApplicationUser(email string, applicationID uuid.UUID) (*AuthenticationResponse, error) {
+func AuthenticateApplicationUser(email string, applicationID uuid.UUID, scope *string) (*AuthenticationResponse, error) {
 	var user = &User{}
 	db := dbconf.DatabaseConnection()
 	query := db.Where("application_id = ? AND email = ?", applicationID, strings.ToLower(email))
@@ -151,7 +152,9 @@ func AuthenticateApplicationUser(email string, applicationID uuid.UUID) (*Authen
 		return nil, errors.New("application user authentication failed with given credentials")
 	}
 	token := &token.Token{
-		UserID: &user.ID,
+		UserID:      &user.ID,
+		Scope:       scope,
+		Permissions: user.Permissions,
 	}
 	if !token.Vend() {
 		var err error
