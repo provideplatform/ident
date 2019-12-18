@@ -387,6 +387,11 @@ func (t *Token) encodeJWT() error {
 		claims["nbf"] = t.NotBefore.Unix()
 	}
 
+	if t.ApplicationID != nil {
+		// drop exp claim from revocable application token
+		delete(claims, "exp")
+	}
+
 	appClaimsKey := common.JWTApplicationClaimsKey
 	if t.ApplicationClaimsKey != nil {
 		appClaimsKey = *t.ApplicationClaimsKey
