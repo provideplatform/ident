@@ -17,6 +17,7 @@ import (
 // InstallPublicUserAPI installs unauthenticated API handlers using the given gin Engine
 func InstallPublicUserAPI(r *gin.Engine) {
 	r.POST("/api/v1/authenticate", authenticationHandler)
+	r.POST("/api/v1/users", createUserHandler)
 	r.POST("/api/v1/users/reset_password", userResetPasswordRequestHandler)
 	r.POST("/api/v1/users/reset_password/:token", userResetPasswordHandler)
 
@@ -27,7 +28,6 @@ func InstallPublicUserAPI(r *gin.Engine) {
 func InstallUserAPI(r *gin.Engine) {
 	r.GET("/api/v1/users", usersListHandler)
 	r.GET("/api/v1/users/:id", userDetailsHandler)
-	r.POST("/api/v1/users", createUserHandler)
 	r.PUT("/api/v1/users/:id", updateUserHandler)
 	r.DELETE("/api/v1/users/:id", deleteUserHandler)
 }
@@ -188,7 +188,7 @@ func createUserHandler(c *gin.Context) {
 		user.Password = common.StringOrNil(password)
 	}
 
-	if _, permissionsOk := params["permissions"]; permissionsOk && !bearer.HasAnyPermission(common.UpdateUser, common.Sudo) {
+	if _, permissionsOk := params["permissions"]; permissionsOk && (bearer == nil || !bearer.HasAnyPermission(common.UpdateUser, common.Sudo)) {
 		provide.RenderError("insufficient permissions to modifiy user permissions", 403, c)
 		return
 	}
