@@ -75,7 +75,7 @@ func createTokenHandler(c *gin.Context) {
 
 	if appID != nil {
 		db := dbconf.DatabaseConnection()
-		resp, err := VendApplicationToken(db, appID, nil) // FIXME-- support subresource permissioning
+		resp, err := VendApplicationToken(db, appID, nil) // FIXME-- support extended permissions
 		if err != nil {
 			provide.RenderError(err.Error(), 401, c)
 			return

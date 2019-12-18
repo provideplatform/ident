@@ -23,7 +23,7 @@ const defaultTokenType = "bearer"
 const extendedApplicationClaimsKey = "extended"
 const wildcardApplicationResource = "*"
 
-var defaultApplicationResources = map[string]common.Permission{
+var defaultApplicationExtendedPermissions = map[string]common.Permission{
 	wildcardApplicationResource: common.DefaultApplicationResourcePermission,
 }
 
@@ -57,9 +57,9 @@ type Token struct {
 
 	ApplicationClaimsKey *string           `sql:"-" json:"-"` // string key where application-specific claims are encoded
 	Permissions          common.Permission `sql:"-" json:"permissions,omitempty"`
+	ExtendedPermissions  *json.RawMessage  `sql:"-" json:"-"`
 	TTL                  *int              `sql:"-" json:"-"` // number of seconds this token will be valid; used internally
 	Data                 *json.RawMessage  `sql:"-" json:"data,omitempty"`
-	Resources            *json.RawMessage  `sql:"-" json:"-"`
 }
 
 // Response represents the token portion of the response to a successful authentication request
@@ -107,20 +107,20 @@ func (t *Token) ParseData() map[string]interface{} {
 	return data
 }
 
-// ParseResources parses and returns the resources mapping, which contains
-// the resource subject name i.e., the `sub` part of the encoded subject `<sub>:<id>`
-// mapped to the generic permission mask for that resource
-func (t *Token) ParseResources() map[string]interface{} {
-	var resources map[string]interface{}
-	if t.Resources != nil {
-		resources = map[string]interface{}{}
-		err := json.Unmarshal(*t.Resources, &resources)
+// ParseExtendedPermissions parses and returns the extended permissions mapping for
+// resources which contains the resource subject name i.e., the `sub` part of the
+// encoded subject `<sub>:<id>` mapped to the generic permission mask for that resource
+func (t *Token) ParseExtendedPermissions() map[string]interface{} {
+	var extendedPermissions map[string]interface{}
+	if t.ExtendedPermissions != nil {
+		extendedPermissions = map[string]interface{}{}
+		err := json.Unmarshal(*t.ExtendedPermissions, &extendedPermissions)
 		if err != nil {
-			common.Log.Warningf("failed to unmarshal token resources; %s", err.Error())
+			common.Log.Warningf("failed to unmarshal extended permissions; %s", err.Error())
 			return nil
 		}
 	}
-	return resources
+	return extendedPermissions
 }
 
 // AsResponse marshals a token into a token response
@@ -231,7 +231,7 @@ func (t *Token) vendRefreshToken() bool {
 // VendApplicationToken creates a new token on behalf of the application;
 // these tokens should be used for machine-to-machine applications, and so
 // are persisted as "legacy" tokens as described in the VendLegacyToken docs
-func VendApplicationToken(tx *gorm.DB, applicationID *uuid.UUID, resources map[string]common.Permission) (*Token, error) {
+func VendApplicationToken(tx *gorm.DB, applicationID *uuid.UUID, extPermissions map[string]common.Permission) (*Token, error) {
 	var db *gorm.DB
 	if tx != nil {
 		db = tx
@@ -239,17 +239,17 @@ func VendApplicationToken(tx *gorm.DB, applicationID *uuid.UUID, resources map[s
 		db = dbconf.DatabaseConnection()
 	}
 
-	appResources := resources
-	if appResources == nil {
-		appResources = defaultApplicationResources
+	extendedPermissions := extPermissions
+	if extendedPermissions == nil {
+		extPermissions = defaultApplicationExtendedPermissions
 	}
-	rawResources, _ := json.Marshal(appResources)
-	resourcesJSON := json.RawMessage(rawResources)
+	rawExtPermissions, _ := json.Marshal(extendedPermissions)
+	extPermissionsJSON := json.RawMessage(rawExtPermissions)
 
 	t := &Token{
-		ApplicationID: applicationID,
-		Permissions:   common.DefaultApplicationResourcePermission,
-		Resources:     &resourcesJSON,
+		ApplicationID:       applicationID,
+		Permissions:         common.DefaultApplicationResourcePermission,
+		ExtendedPermissions: &extPermissionsJSON,
 	}
 
 	if !t.validate() {
@@ -417,10 +417,10 @@ func (t *Token) encodeJWTAppClaims() map[string]interface{} {
 		appClaims["user_id"] = t.UserID
 	}
 
-	appResources := t.ParseResources()
-	if appResources != nil {
+	extendedPermissions := t.ParseExtendedPermissions()
+	if extendedPermissions != nil {
 		appClaims[extendedApplicationClaimsKey] = map[string]interface{}{
-			"permissions": appResources,
+			"permissions": extendedPermissions,
 		}
 	}
 
