@@ -241,7 +241,7 @@ func VendApplicationToken(tx *gorm.DB, applicationID *uuid.UUID, extPermissions 
 
 	extendedPermissions := extPermissions
 	if extendedPermissions == nil {
-		extPermissions = defaultApplicationExtendedPermissions
+		extendedPermissions = defaultApplicationExtendedPermissions
 	}
 	rawExtPermissions, _ := json.Marshal(extendedPermissions)
 	extPermissionsJSON := json.RawMessage(rawExtPermissions)
