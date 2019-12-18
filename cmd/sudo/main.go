@@ -114,8 +114,7 @@ func createUser(email string, permission common.Permission, rawjson *string) {
 		EphemeralMetadata: ephemeralUserParams,
 	}
 
-	success, _ := usr.Create(true)
-	if !success {
+	if !usr.Create(true) {
 		exit(fmt.Sprintf("failed to create user: %s", email), 1)
 	}
 

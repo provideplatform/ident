@@ -31,7 +31,7 @@ type Application struct {
 	EncryptedConfig *string          `sql:"type:bytea" json:"-"`
 	Hidden          bool             `sql:"not null;default:false" json:"hidden"` // soft-delete mechanism
 
-	Organization []*organization.Organization `gorm:"many2many:applications_organizations" json:"-"`
+	Organizations []*organization.Organization `gorm:"many2many:applications_organizations" json:"-"`
 }
 
 // CreateResponse model

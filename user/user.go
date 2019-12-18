@@ -44,18 +44,13 @@ type AuthenticationResponse struct {
 	Token *token.Response `json:"token"`
 }
 
-// CreateResponse model
-type CreateResponse struct {
-	User  *Response    `json:"user"`
-	Token *token.Token `json:"token"`
-}
-
 // Response is preferred over writing an entire User instance as JSON
 type Response struct {
 	ID                     uuid.UUID              `json:"id"`
 	CreatedAt              time.Time              `json:"created_at"`
 	Name                   string                 `json:"name"`
 	Email                  string                 `json:"email"`
+	Permissions            common.Permission      `json:"permissions,omitempty"`
 	PrivacyPolicyAgreedAt  *time.Time             `json:"privacy_policy_agreed_at"`
 	TermsOfServiceAgreedAt *time.Time             `json:"terms_of_service_agreed_at"`
 	Metadata               *EphemeralUserMetadata `json:"metadata,omitempty"`
@@ -199,11 +194,11 @@ func (u *User) hasAnyPermission(permissions ...common.Permission) bool {
 }
 
 // Create and persist a user
-func (u *User) Create(createAuth0User bool) (bool, interface{}) {
+func (u *User) Create(createAuth0User bool) bool {
 	db := dbconf.DatabaseConnection()
 
 	if !u.validate() {
-		return false, nil
+		return false
 	}
 
 	if db.NewRecord(u) {
@@ -230,27 +225,24 @@ func (u *User) Create(createAuth0User bool) (bool, interface{}) {
 							Message: common.StringOrNil(err.Error()),
 						})
 						tx.Rollback()
-						return false, nil
+						return false
 					}
 				}
 
 				tx.Commit()
 				if success && (u.ApplicationID == nil || *u.ApplicationID == uuid.Nil) {
-					payload, _ := json.Marshal(u)
+					payload, _ := json.Marshal(u.AsResponse())
 					natsutil.NatsPublish(natsSiaUserNotificationSubject, payload)
 				}
 
-				return success, &CreateResponse{
-					User:  u.AsResponse(),
-					Token: nil,
-				}
+				return success
 			}
 		}
 
 		tx.Rollback()
 	}
 
-	return false, nil
+	return false
 }
 
 // Update an existing user
@@ -432,6 +424,7 @@ func (u *User) AsResponse() *Response {
 		Name:                   *u.Name,
 		Email:                  *u.Email,
 		Metadata:               u.EphemeralMetadata,
+		Permissions:            u.Permissions,
 		PrivacyPolicyAgreedAt:  u.PrivacyPolicyAgreedAt,
 		TermsOfServiceAgreedAt: u.TermsOfServiceAgreedAt,
 	}

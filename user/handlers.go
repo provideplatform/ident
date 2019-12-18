@@ -141,10 +141,17 @@ func userDetailsHandler(c *gin.Context) {
 }
 
 func createUserHandler(c *gin.Context) {
+	// the following token.InContext method is a no-op now that createUserHandler is registered before AuthMiddleware;
+	// current workaround is to use provide.AuthorizedSubjectID() to manually read an application bearer token if one exists
+	var bearerApplicationID *uuid.UUID
 	bearer := token.InContext(c)
-	if bearer != nil || (bearer.ApplicationID == nil && !bearer.HasAnyPermission(common.CreateUser, common.Sudo)) {
+	if bearer != nil && (bearer.ApplicationID == nil && !bearer.HasAnyPermission(common.CreateUser, common.Sudo)) {
 		provide.RenderError("forbidden", 403, c)
 		return
+	} else if bearer != nil {
+		bearerApplicationID = bearer.ApplicationID
+	} else {
+		bearerApplicationID = provide.AuthorizedSubjectID(c, "application")
 	}
 
 	buf, err := c.GetRawData()
@@ -173,7 +180,7 @@ func createUserHandler(c *gin.Context) {
 	}
 
 	if bearer != nil {
-		user.ApplicationID = bearer.ApplicationID
+		user.ApplicationID = bearerApplicationID
 	} else if appID, appIDOk := params["application_id"].(string); appIDOk {
 		appUUID, err := uuid.FromString(appID)
 		if err != nil {
@@ -189,7 +196,7 @@ func createUserHandler(c *gin.Context) {
 	}
 
 	if _, permissionsOk := params["permissions"]; permissionsOk && (bearer == nil || !bearer.HasAnyPermission(common.UpdateUser, common.Sudo)) {
-		provide.RenderError("insufficient permissions to modifiy user permissions", 403, c)
+		provide.RenderError("unable to assert arbitrary user permissions", 403, c)
 		return
 	}
 
@@ -200,10 +207,9 @@ func createUserHandler(c *gin.Context) {
 	}
 
 	createAuth0User := !common.IsAuth0(c) && common.Auth0IntegrationEnabled
-	success, resp := user.Create(createAuth0User)
 
-	if success {
-		provide.Render(resp, 201, c)
+	if user.Create(createAuth0User) {
+		provide.Render(user.AsResponse(), 201, c)
 	} else {
 		obj := map[string]interface{}{}
 		obj["errors"] = user.Errors

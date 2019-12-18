@@ -45,8 +45,7 @@ func syncAuth0UsersAndLegacyTokens(db *gorm.DB) error {
 			if createdAtErr != nil {
 				usr.CreatedAt = createdAt
 			}
-			success, _ := usr.Create(false)
-			if success {
+			if usr.Create(false) {
 				common.Log.Debugf("imported user %s", email)
 			} else {
 				common.Log.Warningf("failed to import user: %s", email)

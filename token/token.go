@@ -20,6 +20,7 @@ const defaultRefreshTokenTTL = time.Hour * 24
 const defaultAccessTokenTTL = time.Minute * 60
 const defaultTokenType = "bearer"
 
+const extendedApplicationClaimsKey = "extended"
 const wildcardApplicationResource = "*"
 
 var defaultApplicationResources = map[string]common.Permission{
@@ -58,7 +59,7 @@ type Token struct {
 	Permissions          common.Permission `sql:"-" json:"permissions,omitempty"`
 	TTL                  *int              `sql:"-" json:"-"` // number of seconds this token will be valid; used internally
 	Data                 *json.RawMessage  `sql:"-" json:"data,omitempty"`
-	Resources            *json.RawMessage  `sql:"-" json:"-,omitempty"`
+	Resources            *json.RawMessage  `sql:"-" json:"-"`
 }
 
 // Response represents the token portion of the response to a successful authentication request
@@ -247,7 +248,7 @@ func VendApplicationToken(tx *gorm.DB, applicationID *uuid.UUID, resources map[s
 
 	t := &Token{
 		ApplicationID: applicationID,
-		Permissions:   common.DefaultUserPermission,
+		Permissions:   common.DefaultApplicationResourcePermission,
 		Resources:     &resourcesJSON,
 	}
 
@@ -418,7 +419,9 @@ func (t *Token) encodeJWTAppClaims() map[string]interface{} {
 
 	appResources := t.ParseResources()
 	if appResources != nil {
-		appClaims["resources"] = appResources
+		appClaims[extendedApplicationClaimsKey] = map[string]interface{}{
+			"permissions": appResources,
+		}
 	}
 
 	appData := t.ParseData()
