@@ -27,28 +27,37 @@ const (
 	// RevokeResourceAuthorization generic permission
 	RevokeResourceAuthorization Permission = 0x40
 
-	// Ident-specific permissions begin at 2^7
+	// Publish permission
+	Publish Permission = 0x80
+
+	// Subscribe permission
+	Subscribe Permission = 0x100
+
+	// Reserved permission - placeholder for future use
+	Reserved Permission = 0x200
+
+	// Ident-specific permissions begin at 2^10
 
 	// ListApplications permission
-	ListApplications Permission = 0x80
+	ListApplications Permission = 0x400
 
 	// CreateApplication permission
-	CreateApplication Permission = 0x100
+	CreateApplication Permission = 0x800
 
 	// UpdateApplication permission
-	UpdateApplication Permission = 0x200
+	UpdateApplication Permission = 0x1000
 
 	// DeleteApplication permission
-	DeleteApplication Permission = 0x400
+	DeleteApplication Permission = 0x2000
 
 	// ListApplicationTokens permission
-	// ListApplicationTokens Permission = 0x800
+	// ListApplicationTokens Permission = 0x4000
 
 	// CreateApplicationToken permission
-	// CreateApplicationToken Permission = 0x1000
+	// CreateApplicationToken Permission = 0x8000
 
 	// DeleteApplicationToken permission
-	// DeleteApplicationToken Permission = 0x2000
+	// DeleteApplicationToken Permission = 0x10000
 
 	// Privileged permissions begin at 2^20
 
@@ -78,10 +87,10 @@ const (
 )
 
 // DefaultUserPermission is the default mask to use if permissions are not explicitly set upon user creation
-const DefaultUserPermission Permission = Authenticate | ListApplications | CreateApplication | UpdateApplication
+const DefaultUserPermission Permission = Authenticate | Publish | Subscribe | ListApplications | CreateApplication | UpdateApplication
 
 // DefaultApplicationResourcePermission is the default mask to use for an application subresource if permissions are not explicitly set application token creation
-const DefaultApplicationResourcePermission Permission = ListResources | CreateResource | UpdateResource | DeleteResource | GrantResourceAuthorization | RevokeResourceAuthorization
+const DefaultApplicationResourcePermission Permission = ListResources | CreateResource | UpdateResource | DeleteResource | GrantResourceAuthorization | RevokeResourceAuthorization | Publish | Subscribe
 
 // DefaultAuth0RequestPermission is the ephemeral permission mask to apply to Auth0 requests
 const DefaultAuth0RequestPermission = ListUsers | CreateUser
