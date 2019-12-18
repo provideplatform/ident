@@ -109,7 +109,9 @@ func runAPI() {
 	r.Use(provide.TrackAPICalls())
 
 	application.InstallApplicationAPI(r)
+	application.InstallApplicationOrganizationsAPI(r)
 	organization.InstallOrganizationAPI(r)
+	organization.InstallOrganizationUsersAPI(r)
 	token.InstallTokenAPI(r)
 	user.InstallUserAPI(r)
 	kyc.InstallKYCAPI(r)

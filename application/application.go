@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
 	natsutil "github.com/kthomas/go-natsutil"
 	"github.com/kthomas/go-pgputil"
@@ -46,6 +47,13 @@ func ApplicationsByUserID(userID *uuid.UUID, hidden bool) []Application {
 	var apps []Application
 	db.Where("user_id = ? AND hidden = ?", userID.String(), hidden).Find(&apps)
 	return apps
+}
+
+// OrganizationListQuery returns a db query which joins the organization applications and returns the query for pagination
+func (app *Application) OrganizationListQuery(db *gorm.DB) *gorm.DB {
+	query := db.Select("o.id, o.created_at, o.user_id, o.name, o.description, o.permissions")
+	query = query.Joins("organizations as o, applications_organizations as ao ON ao.organization_id = o.id, ao.application_id = applications.id")
+	return query.Where("ao.application_id = ?", app.ID).Order("applications.name desc")
 }
 
 // DecryptedConfig returns the decrypted application config

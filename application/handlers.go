@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
+	"github.com/provideapp/ident/organization"
 	"github.com/provideapp/ident/token"
 	provide "github.com/provideservices/provide-go"
 )
@@ -19,6 +20,14 @@ func InstallApplicationAPI(r *gin.Engine) {
 	r.DELETE("/api/v1/applications/:id", deleteApplicationHandler)
 
 	r.GET("/api/v1/applications/:id/tokens", applicationTokensListHandler)
+}
+
+// InstallApplicationOrganizationsAPI installs the handlers using the given gin Engine
+func InstallApplicationOrganizationsAPI(r *gin.Engine) {
+	r.GET("/api/v1/applications/:id/organizations", applicationOrganizationsListHandler)
+	r.POST("/api/v1/applications/:id/organizations", createApplicationOrganizationHandler)
+	r.PUT("/api/v1/applications/:id/organizations/:orgId", updateApplicationOrganizationHandler)
+	r.DELETE("/api/v1/applications/:id/organizations/:orgId", deleteApplicationOrganizationHandler)
 }
 
 func applicationsListHandler(c *gin.Context) {
@@ -183,6 +192,51 @@ func updateApplicationHandler(c *gin.Context) {
 }
 
 func deleteApplicationHandler(c *gin.Context) {
+	provide.RenderError("not implemented", 501, c)
+}
+
+func applicationOrganizationsListHandler(c *gin.Context) {
+	bearer := token.InContext(c)
+	userID := bearer.UserID
+	appID := bearer.ApplicationID
+
+	if (userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) {
+		provide.RenderError("unauthorized", 401, c)
+		return
+	}
+
+	if appID != nil && (*appID).String() != c.Param("id") {
+		provide.RenderError("forbidden", 403, c)
+		return
+	}
+
+	db := dbconf.DatabaseConnection()
+
+	var app = &Application{}
+	db.Where("id = ?", c.Param("id")).Find(&app)
+	if app == nil || app.ID == uuid.Nil {
+		provide.RenderError("application not found", 404, c)
+		return
+	}
+	if userID != nil && *userID != app.UserID {
+		provide.RenderError("forbidden", 403, c)
+		return
+	}
+
+	var orgs []*organization.Organization
+	provide.Paginate(c, app.OrganizationListQuery(db), &token.Token{}).Find(&orgs)
+	provide.Render(orgs, 200, c)
+}
+
+func createApplicationOrganizationHandler(c *gin.Context) {
+	provide.RenderError("not implemented", 501, c)
+}
+
+func updateApplicationOrganizationHandler(c *gin.Context) {
+	provide.RenderError("not implemented", 501, c)
+}
+
+func deleteApplicationOrganizationHandler(c *gin.Context) {
 	provide.RenderError("not implemented", 501, c)
 }
 
