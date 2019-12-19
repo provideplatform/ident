@@ -7,6 +7,7 @@ import (
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
+	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/token"
 	"github.com/provideapp/ident/user"
 	provide "github.com/provideservices/provide-go"
@@ -29,10 +30,13 @@ func InstallOrganizationUsersAPI(r *gin.Engine) {
 	r.DELETE("/api/v1/organizations/:id/users/:userId", deleteOrganizationUserHandler)
 }
 
-func resolveOrganization(db *gorm.DB, appID *uuid.UUID) *gorm.DB {
+func resolveOrganization(db *gorm.DB, orgID, appID *uuid.UUID) *gorm.DB {
 	query := db.Joins("applications_organizations as ao ON ao.organization_id = organizations.id")
 	if appID != nil {
 		query = query.Where("ao.application_id = ?", appID)
+	}
+	if orgID != nil {
+		query = query.Where("ao.organization_id = ?", orgID)
 	}
 	return query
 }
@@ -49,7 +53,7 @@ func organizationsListHandler(c *gin.Context) {
 	var orgs []*Organization
 
 	query := dbconf.DatabaseConnection()
-	query = resolveOrganization(query, applicationID)
+	query = resolveOrganization(query, nil, applicationID)
 	provide.Paginate(c, query, &Organization{}).Find(&orgs)
 	provide.Render(orgs, 200, c)
 }
@@ -119,9 +123,15 @@ func organizationUsersListHandler(c *gin.Context) {
 		return
 	}
 
+	organizationID, err := uuid.FromString(c.Param("id"))
+	if err != nil {
+		provide.RenderError(err.Error(), 422, c)
+		return
+	}
+
 	org := &Organization{}
 	query := dbconf.DatabaseConnection()
-	query = resolveOrganization(query, applicationID).Find(&org)
+	query = resolveOrganization(query, &organizationID, applicationID).Find(&org)
 
 	if org == nil || org.ID == uuid.Nil {
 		provide.RenderError("unauthorized", 401, c)
@@ -134,7 +144,79 @@ func organizationUsersListHandler(c *gin.Context) {
 }
 
 func createOrganizationUserHandler(c *gin.Context) {
-	provide.RenderError("not implemented", 501, c)
+	bearer := token.InContext(c)
+	userID := bearer.UserID
+
+	if userID == nil || *userID == uuid.Nil {
+		provide.RenderError("unauthorized", 401, c)
+		return
+	}
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+	params := map[string]interface{}{}
+	err = json.Unmarshal(buf, &params)
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	organizationID, err := uuid.FromString(c.Param("id"))
+	if err != nil {
+		provide.RenderError(err.Error(), 422, c)
+		return
+	}
+
+	if userID == nil {
+		if userIDStr, userIDStrOk := params["user_id"].(string); userIDStrOk {
+			usrID, err := uuid.FromString(userIDStr)
+			if err != nil {
+				provide.RenderError(err.Error(), 422, c)
+				return
+			}
+			userID = &usrID
+		}
+	}
+
+	var permissions common.Permission
+	orgPermissions, permissionsOk := params["permissions"].(common.Permission)
+	if permissionsOk && !bearer.HasAnyExtendedPermission(organizationResourceKey, common.CreateResource, common.GrantResourceAuthorization) {
+		provide.RenderError("unable to assert arbitrary organization user permissions", 403, c)
+		return
+	} else if permissionsOk {
+		permissions = orgPermissions
+	} else {
+		permissions = common.Publish | common.Subscribe | common.DefaultApplicationResourcePermission
+	}
+
+	db := dbconf.DatabaseConnection()
+
+	org := &Organization{}
+	resolveOrganization(dbconf.DatabaseConnection(), &organizationID, nil).Find(&org)
+	if org == nil || org.ID == uuid.Nil {
+		provide.RenderError("unable to add organization user; organization not found", 404, c)
+		return
+	}
+
+	usr := &user.User{}
+	db.Where("id = ?", userID).Find(&usr)
+	if usr == nil || usr.ID == uuid.Nil {
+		provide.RenderError("unable to add organization user; user not found", 404, c)
+		return
+	}
+
+	usr.Permissions = permissions
+
+	if org.addUser(usr) {
+		provide.Render(org, 201, c)
+	} else {
+		obj := map[string]interface{}{}
+		obj["errors"] = org.Errors
+		provide.Render(obj, 422, c)
+	}
 }
 
 func updateOrganizationUserHandler(c *gin.Context) {
@@ -142,5 +224,64 @@ func updateOrganizationUserHandler(c *gin.Context) {
 }
 
 func deleteOrganizationUserHandler(c *gin.Context) {
-	provide.RenderError("not implemented", 501, c)
+	bearer := token.InContext(c)
+	userID := bearer.UserID
+
+	if userID == nil || *userID == uuid.Nil {
+		provide.RenderError("unauthorized", 401, c)
+		return
+	}
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+	params := map[string]interface{}{}
+	err = json.Unmarshal(buf, &params)
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	organizationID, err := uuid.FromString(c.Param("id"))
+	if err != nil {
+		provide.RenderError(err.Error(), 422, c)
+		return
+	}
+
+	if userID == nil {
+		if userIDStr, userIDStrOk := params["user_id"].(string); userIDStrOk {
+			usrID, err := uuid.FromString(userIDStr)
+			if err != nil {
+				provide.RenderError(err.Error(), 422, c)
+				return
+			}
+			userID = &usrID
+		}
+	}
+
+	db := dbconf.DatabaseConnection()
+
+	org := &Organization{}
+	resolveOrganization(dbconf.DatabaseConnection(), &organizationID, nil).Find(&org)
+	if org == nil || org.ID == uuid.Nil {
+		provide.RenderError("unable to remove organization user; organization not found", 404, c)
+		return
+	}
+
+	usr := &user.User{}
+	db.Where("id = ?", userID).Find(&usr)
+	if usr == nil || usr.ID == uuid.Nil {
+		provide.RenderError("unable to remove organization user; user not found", 404, c)
+		return
+	}
+
+	if org.removeUser(usr) {
+		provide.Render(org, 201, c)
+	} else {
+		obj := map[string]interface{}{}
+		obj["errors"] = org.Errors
+		provide.Render(obj, 422, c)
+	}
 }

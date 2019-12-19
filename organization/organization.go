@@ -12,6 +12,7 @@ import (
 )
 
 const natsSiaOrganizationNotificationSubject = "sia.user.notification"
+const organizationResourceKey = "organization"
 
 // Organization model
 type Organization struct {

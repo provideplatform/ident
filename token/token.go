@@ -110,10 +110,10 @@ func (t *Token) ParseData() map[string]interface{} {
 // ParseExtendedPermissions parses and returns the extended permissions mapping for
 // resources which contains the resource subject name i.e., the `sub` part of the
 // encoded subject `<sub>:<id>` mapped to the generic permission mask for that resource
-func (t *Token) ParseExtendedPermissions() map[string]interface{} {
-	var extendedPermissions map[string]interface{}
+func (t *Token) ParseExtendedPermissions() map[string]common.Permission {
+	var extendedPermissions map[string]common.Permission
 	if t.ExtendedPermissions != nil {
-		extendedPermissions = map[string]interface{}{}
+		extendedPermissions = map[string]common.Permission{}
 		err := json.Unmarshal(*t.ExtendedPermissions, &extendedPermissions)
 		if err != nil {
 			common.Log.Warningf("failed to unmarshal extended permissions; %s", err.Error())
@@ -156,6 +156,25 @@ func (t *Token) HasPermission(permission common.Permission) bool {
 func (t *Token) HasAnyPermission(permissions ...common.Permission) bool {
 	for _, p := range permissions {
 		if t.HasPermission(p) {
+			return true
+		}
+	}
+	return false
+}
+
+// HasExtendedPermission returns true if the named resource contains the given extended permission
+func (t *Token) HasExtendedPermission(resource string, permission common.Permission) bool {
+	extendedPermissions := t.ParseExtendedPermissions()
+	if resourcePermissions, resourcePermissionsOk := extendedPermissions[resource]; resourcePermissionsOk {
+		return resourcePermissions.Has(permission)
+	}
+	return false
+}
+
+// HasAnyExtendedPermission returns true if the named resource contains any of the given extended permissions
+func (t *Token) HasAnyExtendedPermission(resource string, permissions ...common.Permission) bool {
+	for _, p := range permissions {
+		if t.HasExtendedPermission(resource, p) {
 			return true
 		}
 	}

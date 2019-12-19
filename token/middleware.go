@@ -1,6 +1,7 @@
 package token
 
 import (
+	"encoding/json"
 	"strings"
 	"time"
 
@@ -151,6 +152,16 @@ func authorize(c *gin.Context) *Token {
 				token.Permissions = common.Permission(permissions)
 			} else {
 				common.Log.Warningf("valid bearer authorization was permissionless")
+			}
+
+			if extendedClaims, extendedClaimsOk := appclaims[extendedApplicationClaimsKey].(map[string]interface{}); extendedClaimsOk {
+				if extendedPermissions, extendedPermissionsOk := extendedClaims["permissions"].(map[string]interface{}); extendedPermissionsOk {
+					rawExtPermissions, _ := json.Marshal(extendedPermissions)
+					extPermissionsJSON := json.RawMessage(rawExtPermissions)
+					token.ExtendedPermissions = &extPermissionsJSON
+				} else {
+					common.Log.Warningf("extended bearer authorization was permissionless")
+				}
 			}
 		}
 	}
