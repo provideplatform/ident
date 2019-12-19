@@ -220,7 +220,7 @@ func createUserHandler(c *gin.Context) {
 
 func updateUserHandler(c *gin.Context) {
 	bearer := token.InContext(c)
-	if bearer == nil || (bearer.UserID != nil && bearer.UserID.String() != c.Param("id") || !bearer.HasAnyPermission(common.UpdateUser, common.Sudo)) {
+	if bearer == nil || (bearer.UserID != nil && bearer.UserID.String() != c.Param("id") && !bearer.HasAnyPermission(common.UpdateUser, common.Sudo)) {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
