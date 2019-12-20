@@ -197,21 +197,21 @@ func createOrganizationUserHandler(c *gin.Context) {
 	org := &Organization{}
 	resolveOrganization(dbconf.DatabaseConnection(), &organizationID, nil).Find(&org)
 	if org == nil || org.ID == uuid.Nil {
-		provide.RenderError("unable to add organization user; organization not found", 404, c)
+		provide.RenderError("organization not found", 404, c)
 		return
 	}
 
 	usr := &user.User{}
 	db.Where("id = ?", userID).Find(&usr)
 	if usr == nil || usr.ID == uuid.Nil {
-		provide.RenderError("unable to add organization user; user not found", 404, c)
+		provide.RenderError("user not found", 404, c)
 		return
 	}
 
 	usr.Permissions = permissions
 
-	if org.addUser(usr) {
-		provide.Render(org, 201, c)
+	if org.addUser(db, usr) {
+		provide.Render(nil, 204, c)
 	} else {
 		obj := map[string]interface{}{}
 		obj["errors"] = org.Errors
@@ -266,19 +266,19 @@ func deleteOrganizationUserHandler(c *gin.Context) {
 	org := &Organization{}
 	resolveOrganization(dbconf.DatabaseConnection(), &organizationID, nil).Find(&org)
 	if org == nil || org.ID == uuid.Nil {
-		provide.RenderError("unable to remove organization user; organization not found", 404, c)
+		provide.RenderError("organization not found", 404, c)
 		return
 	}
 
 	usr := &user.User{}
 	db.Where("id = ?", userID).Find(&usr)
 	if usr == nil || usr.ID == uuid.Nil {
-		provide.RenderError("unable to remove organization user; user not found", 404, c)
+		provide.RenderError("user not found", 404, c)
 		return
 	}
 
-	if org.removeUser(usr) {
-		provide.Render(org, 201, c)
+	if org.removeUser(db, usr) {
+		provide.Render(nil, 204, c)
 	} else {
 		obj := map[string]interface{}{}
 		obj["errors"] = org.Errors

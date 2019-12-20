@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
+	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/organization"
 	"github.com/provideapp/ident/token"
 	provide "github.com/provideservices/provide-go"
@@ -229,7 +230,77 @@ func applicationOrganizationsListHandler(c *gin.Context) {
 }
 
 func createApplicationOrganizationHandler(c *gin.Context) {
-	provide.RenderError("not implemented", 501, c)
+	bearer := token.InContext(c)
+	appID := bearer.ApplicationID
+
+	if appID == nil || *appID == uuid.Nil {
+		provide.RenderError("unauthorized", 401, c)
+		return
+	}
+
+	if appID != nil && appID.String() != c.Param("id") {
+		provide.RenderError("forbidden", 403, c)
+		return
+	}
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+	params := map[string]interface{}{}
+	err = json.Unmarshal(buf, &params)
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	var organizationID *uuid.UUID
+	if orgIDStr, orgIDOk := params["organization_id"].(string); orgIDOk {
+		orgID, err := uuid.FromString(orgIDStr)
+		if err != nil {
+			provide.RenderError(err.Error(), 422, c)
+			return
+		}
+		organizationID = &orgID
+	}
+
+	var permissions common.Permission
+	orgPermissions, permissionsOk := params["permissions"].(common.Permission)
+	if permissionsOk && !bearer.HasAnyExtendedPermission(applicationResourceKey, common.CreateResource, common.GrantResourceAuthorization) {
+		provide.RenderError("unable to assert arbitrary application organization permissions", 403, c)
+		return
+	} else if permissionsOk {
+		permissions = orgPermissions
+	} else {
+		permissions = common.Publish | common.Subscribe | common.DefaultApplicationResourcePermission
+	}
+
+	db := dbconf.DatabaseConnection()
+
+	var app = &Application{}
+	db.Where("id = ?", c.Param("id")).Find(&app)
+	if app == nil || app.ID == uuid.Nil {
+		provide.RenderError("application not found", 404, c)
+		return
+	}
+
+	org := &organization.Organization{}
+	db.Where("id = ?", organizationID).Find(&org)
+	if org == nil || org.ID == uuid.Nil {
+		provide.RenderError("organization not found", 404, c)
+		return
+	}
+
+	org.Permissions = permissions
+
+	if app.addOrganization(db, org) {
+		provide.Render(nil, 204, c)
+	} else {
+		obj := map[string]interface{}{}
+		obj["errors"] = org.Errors
+		provide.Render(obj, 422, c)
+	}
 }
 
 func updateApplicationOrganizationHandler(c *gin.Context) {
@@ -237,7 +308,64 @@ func updateApplicationOrganizationHandler(c *gin.Context) {
 }
 
 func deleteApplicationOrganizationHandler(c *gin.Context) {
-	provide.RenderError("not implemented", 501, c)
+	bearer := token.InContext(c)
+	appID := bearer.ApplicationID
+
+	if appID == nil || *appID == uuid.Nil {
+		provide.RenderError("unauthorized", 401, c)
+		return
+	}
+
+	if appID != nil && appID.String() != c.Param("id") {
+		provide.RenderError("forbidden", 403, c)
+		return
+	}
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+	params := map[string]interface{}{}
+	err = json.Unmarshal(buf, &params)
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	var organizationID *uuid.UUID
+	if orgIDStr, orgIDOk := params["organization_id"].(string); orgIDOk {
+		orgID, err := uuid.FromString(orgIDStr)
+		if err != nil {
+			provide.RenderError(err.Error(), 422, c)
+			return
+		}
+		organizationID = &orgID
+	}
+
+	db := dbconf.DatabaseConnection()
+
+	var app = &Application{}
+	db.Where("id = ?", c.Param("id")).Find(&app)
+	if app == nil || app.ID == uuid.Nil {
+		provide.RenderError("application not found", 404, c)
+		return
+	}
+
+	org := &organization.Organization{}
+	db.Where("id = ?", organizationID).Find(&org)
+	if org == nil || org.ID == uuid.Nil {
+		provide.RenderError("organization not found", 404, c)
+		return
+	}
+
+	if app.removeOrganization(db, org) {
+		provide.Render(nil, 204, c)
+	} else {
+		obj := map[string]interface{}{}
+		obj["errors"] = org.Errors
+		provide.Render(obj, 422, c)
+	}
 }
 
 func applicationTokensListHandler(c *gin.Context) {
@@ -250,7 +378,7 @@ func applicationTokensListHandler(c *gin.Context) {
 		return
 	}
 
-	if appID != nil && (*appID).String() != c.Param("id") {
+	if appID != nil && appID.String() != c.Param("id") {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}

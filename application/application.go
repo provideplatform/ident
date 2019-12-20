@@ -16,6 +16,7 @@ import (
 	provide "github.com/provideservices/provide-go"
 )
 
+const applicationResourceKey = "application"
 const natsSiaApplicationNotificationSubject = "sia.application.notification"
 
 // Application model which is initially owned by the user who created it
@@ -136,10 +137,18 @@ func (app *Application) sanitizeConfig() {
 	app.setEncryptedConfig(encryptedConfig)
 }
 
-func (app *Application) addOrganization(org *organization.Organization) bool {
+func (app *Application) addOrganization(tx *gorm.DB, org *organization.Organization) bool {
+	var db *gorm.DB
+	if tx != nil {
+		db = tx
+	} else {
+		db = dbconf.DatabaseConnection()
+	}
+
 	common.Log.Debugf("adding organization %s to application: %s", org.ID, app.ID)
-	result := dbconf.DatabaseConnection().Model(&app).Association("Organizations").Append(&org)
-	success := result.Error != nil
+	result := db.Exec("INSERT INTO applications_organizations (application_id, organization_id) VALUES (?, ?)", app.ID, org.ID)
+	// result := dbconf.DatabaseConnection().Model(&app).Association("Organizations").Append(&org)
+	success := result.RowsAffected == 1
 	if success {
 		common.Log.Debugf("added organization %s to application: %s", org.ID, app.ID)
 	} else {
@@ -148,10 +157,18 @@ func (app *Application) addOrganization(org *organization.Organization) bool {
 	return success
 }
 
-func (app *Application) removeOrganization(org *organization.Organization) bool {
+func (app *Application) removeOrganization(tx *gorm.DB, org *organization.Organization) bool {
+	var db *gorm.DB
+	if tx != nil {
+		db = tx
+	} else {
+		db = dbconf.DatabaseConnection()
+	}
+
 	common.Log.Debugf("removing organization %s from application: %s", org.ID, app.ID)
-	result := dbconf.DatabaseConnection().Model(&app).Association("Organizations").Delete(&org)
-	success := result.Error != nil
+	result := db.Exec("DELETE FROM applications_organizations WHERE application_id = ? AND organization_id = ?", app.ID, org.ID)
+	// result := dbconf.DatabaseConnection().Model(&app).Association("Organizations").Delete(&org)
+	success := result.RowsAffected == 1
 	if success {
 		common.Log.Debugf("removed organization %s from application: %s", org.ID, app.ID)
 	} else {

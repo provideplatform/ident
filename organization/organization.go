@@ -3,8 +3,9 @@ package organization
 import (
 	"encoding/json"
 
+	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
-	natsutil "github.com/kthomas/go-natsutil"
+	"github.com/kthomas/go-natsutil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/user"
@@ -40,26 +41,42 @@ func (o *Organization) hasAnyPermission(permissions ...common.Permission) bool {
 	return false
 }
 
-func (o *Organization) addUser(usr *user.User) bool {
+func (o *Organization) addUser(tx *gorm.DB, usr *user.User) bool {
+	var db *gorm.DB
+	if tx != nil {
+		db = tx
+	} else {
+		db = dbconf.DatabaseConnection()
+	}
+
 	common.Log.Debugf("adding user %s to organization: %s", usr.ID, o.ID)
-	result := dbconf.DatabaseConnection().Model(&o).Association("Users").Append(&usr)
-	success := result.Error != nil
+	result := db.Exec("INSERT INTO organizations_users (organization_id, user_id) VALUES (?, ?)", o.ID, usr.ID)
+	// result := db.Model(&o).Association("Users").Append(&usr)
+	success := result.RowsAffected == 1
 	if success {
 		common.Log.Debugf("added user %s to organization: %s", usr.ID, o.ID)
 	} else {
-		common.Log.Warningf("failed to add user %s to organization: %s", usr.ID, o.ID)
+		common.Log.Warningf("failed to add user %s to organization: %s; %s", usr.ID, o.ID, result.Error.Error())
 	}
 	return success
 }
 
-func (o *Organization) removeUser(usr *user.User) bool {
+func (o *Organization) removeUser(tx *gorm.DB, usr *user.User) bool {
+	var db *gorm.DB
+	if tx != nil {
+		db = tx
+	} else {
+		db = dbconf.DatabaseConnection()
+	}
+
 	common.Log.Debugf("removing user %s from organization: %s", usr.ID, o.ID)
-	result := dbconf.DatabaseConnection().Model(o).Association("Users").Delete(&usr)
-	success := result.Error != nil
+	result := db.Exec("DELETE FROM organizations_users WHERE organization_id = ? AND user_id = ?", o.ID, usr.ID)
+	// result := db.Model(o).Association("Users").Delete(&usr)
+	success := result.RowsAffected == 1
 	if success {
 		common.Log.Debugf("removed user %s from organization: %s", usr.ID, o.ID)
 	} else {
-		common.Log.Warningf("failed to remove user %s from organization: %s", usr.ID, o.ID)
+		common.Log.Warningf("failed to remove user %s from organization: %s; %s", usr.ID, o.ID, result.Error.Error())
 	}
 	return success
 }
@@ -93,9 +110,11 @@ func (o *Organization) Create() bool {
 					usr := &user.User{}
 					db.Where("id = ?", o.UserID).Find(&usr)
 					if usr != nil && usr.ID != uuid.Nil {
-						if o.addUser(usr) {
+						if o.addUser(tx, usr) {
+							common.Log.Debugf("associated user %s with organization: %s", *usr.Name, *o.Name)
 							tx.Commit()
 						} else {
+							common.Log.Warningf("failed to associate user %s with organization: %s", *usr.Name, *o.Name)
 							tx.Rollback()
 							return false
 						}
