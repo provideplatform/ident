@@ -174,7 +174,7 @@ func (t *Token) HasExtendedPermission(resource string, permission common.Permiss
 // HasAnyExtendedPermission returns true if the named resource contains any of the given extended permissions
 func (t *Token) HasAnyExtendedPermission(resource string, permissions ...common.Permission) bool {
 	for _, p := range permissions {
-		if t.HasExtendedPermission(resource, p) {
+		if t.HasExtendedPermission(resource, p) || t.HasExtendedPermission(wildcardApplicationResource, p) {
 			return true
 		}
 	}
