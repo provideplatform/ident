@@ -238,11 +238,6 @@ func updateUserHandler(c *gin.Context) {
 		return
 	}
 
-	if _, permissionsOk := params["permissions"]; permissionsOk && !bearer.HasAnyPermission(common.UpdateUser, common.Sudo) {
-		provide.RenderError("insufficient permissions to modifiy user permissions", 403, c)
-		return
-	}
-
 	rehashPassword := false
 	if _, pwok := params["password"].(string); pwok {
 		rehashPassword = true
@@ -252,6 +247,11 @@ func updateUserHandler(c *gin.Context) {
 	dbconf.DatabaseConnection().Where("id = ?", c.Param("id")).Find(&user)
 	if user.ID == uuid.Nil {
 		provide.RenderError("user not found", 404, c)
+		return
+	}
+
+	if permissions, permissionsOk := params["permissions"]; permissionsOk && (!bearer.HasAnyPermission(common.UpdateUser, common.Sudo) && permissions != user.Permissions) {
+		provide.RenderError("insufficient permissions to modifiy user permissions", 403, c)
 		return
 	}
 
