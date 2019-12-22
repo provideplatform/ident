@@ -250,7 +250,7 @@ func updateUserHandler(c *gin.Context) {
 		return
 	}
 
-	if permissions, permissionsOk := params["permissions"]; permissionsOk && (!bearer.HasAnyPermission(common.UpdateUser, common.Sudo) || permissions != user.Permissions) {
+	if permissions, permissionsOk := params["permissions"].(float64); permissionsOk && (!bearer.HasAnyPermission(common.UpdateUser, common.Sudo) || common.Permission(permissions) != user.Permissions) {
 		provide.RenderError("insufficient permissions to modifiy user permissions", 403, c)
 		return
 	}
