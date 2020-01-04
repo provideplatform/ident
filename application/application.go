@@ -239,6 +239,8 @@ func (app *Application) Update() bool {
 		return false
 	}
 
+	app.sanitizeConfig()
+
 	result := db.Save(&app)
 	errors := result.GetErrors()
 	if len(errors) > 0 {
