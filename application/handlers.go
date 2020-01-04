@@ -58,6 +58,8 @@ func applicationsListHandler(c *gin.Context) {
 		query = query.Where("type = ?", c.Query("type"))
 	}
 
+	query = query.Order("created_at DESC")
+
 	provide.Paginate(c, query, &Application{}).Find(&apps)
 	for _, app := range apps {
 		mergedConfig := app.mergedConfig()
