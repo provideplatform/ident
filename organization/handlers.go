@@ -30,7 +30,7 @@ func InstallOrganizationUsersAPI(r *gin.Engine) {
 	r.DELETE("/api/v1/organizations/:id/users/:userId", deleteOrganizationUserHandler)
 }
 
-func resolveOrganization(db *gorm.DB, orgID, appID *uuid.UUID) *gorm.DB {
+func resolveOrganization(db *gorm.DB, orgID, appID, userID *uuid.UUID) *gorm.DB {
 	query := db.Joins("applications_organizations as ao ON ao.organization_id = organizations.id")
 	if appID != nil {
 		query = query.Where("ao.application_id = ?", appID)
@@ -38,14 +38,18 @@ func resolveOrganization(db *gorm.DB, orgID, appID *uuid.UUID) *gorm.DB {
 	if orgID != nil {
 		query = query.Where("ao.organization_id = ?", orgID)
 	}
+	if userID != nil {
+		query = db.Joins("organizations_users as ou ON ou.organization_id = organizations.id").Where("ou.user_id = ?", userID)
+	}
 	return query
 }
 
 func organizationsListHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 	applicationID := bearer.ApplicationID
+	userID := bearer.UserID
 
-	if applicationID == nil || *applicationID == uuid.Nil {
+	if (userID == nil || *userID == uuid.Nil) && (applicationID == nil || *applicationID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -53,7 +57,7 @@ func organizationsListHandler(c *gin.Context) {
 	var orgs []*Organization
 
 	query := dbconf.DatabaseConnection()
-	query = resolveOrganization(query, nil, applicationID)
+	query = resolveOrganization(query, nil, applicationID, userID)
 	provide.Paginate(c, query, &Organization{}).Find(&orgs)
 	provide.Render(orgs, 200, c)
 }
@@ -131,7 +135,7 @@ func organizationUsersListHandler(c *gin.Context) {
 
 	org := &Organization{}
 	query := dbconf.DatabaseConnection()
-	query = resolveOrganization(query, &organizationID, applicationID).Find(&org)
+	query = resolveOrganization(query, &organizationID, applicationID, nil).Find(&org)
 
 	if org == nil || org.ID == uuid.Nil {
 		provide.RenderError("unauthorized", 401, c)
@@ -195,7 +199,7 @@ func createOrganizationUserHandler(c *gin.Context) {
 	db := dbconf.DatabaseConnection()
 
 	org := &Organization{}
-	resolveOrganization(dbconf.DatabaseConnection(), &organizationID, nil).Find(&org)
+	resolveOrganization(dbconf.DatabaseConnection(), &organizationID, nil, nil).Find(&org)
 	if org == nil || org.ID == uuid.Nil {
 		provide.RenderError("organization not found", 404, c)
 		return
@@ -264,7 +268,7 @@ func deleteOrganizationUserHandler(c *gin.Context) {
 	db := dbconf.DatabaseConnection()
 
 	org := &Organization{}
-	resolveOrganization(dbconf.DatabaseConnection(), &organizationID, nil).Find(&org)
+	resolveOrganization(dbconf.DatabaseConnection(), &organizationID, nil, nil).Find(&org)
 	if org == nil || org.ID == uuid.Nil {
 		provide.RenderError("organization not found", 404, c)
 		return
