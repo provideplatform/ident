@@ -39,7 +39,7 @@ func resolveOrganization(db *gorm.DB, orgID, appID, userID *uuid.UUID) *gorm.DB 
 		query = query.Where("ao.organization_id = ?", orgID)
 	}
 	if userID != nil {
-		query = db.Joins("organizations_users as ou ON ou.organization_id = organizations.id").Where("ou.user_id = ?", userID)
+		query = query.Joins("organizations_users as ou ON ou.organization_id = organizations.id").Where("ou.user_id = ?", userID)
 	}
 	return query
 }
