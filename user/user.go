@@ -29,7 +29,7 @@ type User struct {
 	provide.Model
 	ApplicationID          *uuid.UUID             `sql:"type:uuid" json:"application_id,omitempty"`
 	Name                   *string                `sql:"not null" json:"name"`
-	Email                  *string                `sql:"not null" json:"email"`
+	Email                  *string                `sql:"not null" json:"email,omitempty"`
 	Permissions            common.Permission      `sql:"not null" json:"permissions,omitempty"`
 	EphemeralMetadata      *EphemeralUserMetadata `sql:"-" json:"metadata,omitempty"`
 	Password               *string                `json:"-"`
