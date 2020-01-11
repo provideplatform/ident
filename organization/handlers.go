@@ -44,6 +44,15 @@ func resolveOrganization(db *gorm.DB, orgID, appID, userID *uuid.UUID) *gorm.DB 
 	return query
 }
 
+func resolveOrganizationUsers(db *gorm.DB, orgID uuid.UUID, appID *uuid.UUID) *gorm.DB {
+	query := db.Select("users.id, users.created_at, users.user_id, users.email, ou.permissions")
+	query = query.Joins("JOIN organizations_users as ou ON ou.user_id = users.id")
+	if appID != nil {
+		query = query.Joins("JOIN applications_organizations as ao ON ao.organization_id = ou.organization_id").Where("ao.application_id = ?", appID)
+	}
+	return query
+}
+
 func organizationsListHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 	applicationID := bearer.ApplicationID
@@ -136,9 +145,7 @@ func organizationUsersListHandler(c *gin.Context) {
 
 	org := &Organization{}
 	query := dbconf.DatabaseConnection()
-	query = resolveOrganization(query, &organizationID, applicationID, userID)
-
-	query.Find(&org)
+	resolveOrganization(query, &organizationID, applicationID, userID).Find(&org)
 
 	if org == nil || org.ID == uuid.Nil {
 		provide.RenderError("unauthorized", 401, c)
@@ -146,7 +153,7 @@ func organizationUsersListHandler(c *gin.Context) {
 	}
 
 	var users []*user.User
-	provide.Paginate(c, query, &user.User{}).Find(&users)
+	provide.Paginate(c, resolveOrganizationUsers(query, organizationID, applicationID), &user.User{}).Find(&users)
 	provide.Render(users, 200, c)
 }
 
