@@ -227,7 +227,7 @@ func applicationOrganizationsListHandler(c *gin.Context) {
 	}
 
 	var orgs []*organization.Organization
-	provide.Paginate(c, app.OrganizationListQuery(db), &token.Token{}).Find(&orgs)
+	provide.Paginate(c, app.OrganizationListQuery(db), &organization.Organization{}).Find(&orgs)
 	provide.Render(orgs, 200, c)
 }
 

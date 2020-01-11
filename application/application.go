@@ -52,9 +52,9 @@ func ApplicationsByUserID(userID *uuid.UUID, hidden bool) []Application {
 
 // OrganizationListQuery returns a db query which joins the organization applications and returns the query for pagination
 func (app *Application) OrganizationListQuery(db *gorm.DB) *gorm.DB {
-	query := db.Select("o.id, o.created_at, o.user_id, o.name, o.description, o.permissions")
-	query = query.Joins("JOIN organizations as o, applications_organizations as ao ON ao.organization_id = o.id, ao.application_id = applications.id")
-	return query.Where("ao.application_id = ?", app.ID).Order("applications.name desc")
+	query := db.Select("organizations.id, organizations.created_at, organizations.user_id, organizations.name, organizations.description, ao.permissions")
+	query = query.Joins("JOIN applications_organizations as ao ON ao.organization_id = organizations.id")
+	return query.Where("ao.application_id = ?", app.ID).Order("organizations.name desc")
 }
 
 // DecryptedConfig returns the decrypted application config
