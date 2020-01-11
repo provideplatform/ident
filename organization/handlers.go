@@ -120,9 +120,10 @@ func deleteOrganizationHandler(c *gin.Context) {
 
 func organizationUsersListHandler(c *gin.Context) {
 	bearer := token.InContext(c)
+	userID := bearer.UserID
 	applicationID := bearer.ApplicationID
 
-	if applicationID == nil || *applicationID == uuid.Nil {
+	if (userID == nil || *userID == uuid.Nil) && (applicationID == nil || *applicationID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -135,7 +136,9 @@ func organizationUsersListHandler(c *gin.Context) {
 
 	org := &Organization{}
 	query := dbconf.DatabaseConnection()
-	query = resolveOrganization(query, &organizationID, applicationID, nil).Find(&org)
+	query = resolveOrganization(query, &organizationID, applicationID, userID)
+
+	query.Find(&org)
 
 	if org == nil || org.ID == uuid.Nil {
 		provide.RenderError("unauthorized", 401, c)
@@ -143,7 +146,7 @@ func organizationUsersListHandler(c *gin.Context) {
 	}
 
 	var users []*user.User
-	provide.Paginate(c, query.Model(&org).Related(&users, "Users"), &user.User{}).Find(&users)
+	provide.Paginate(c, query, &user.User{}).Find(&users)
 	provide.Render(users, 200, c)
 }
 
