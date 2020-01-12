@@ -517,7 +517,7 @@ func vendInvitationTokenHandler(c *gin.Context) {
 	}
 
 	if invite.Create() {
-		provide.Render(invite.Token, 202, c)
+		provide.Render(nil, 204, c)
 	} else {
 		obj := map[string]interface{}{}
 		obj["errors"] = invite.Errors
