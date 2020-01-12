@@ -1,13 +1,9 @@
 package token
 
 import (
-	"encoding/json"
 	"strings"
-	"time"
 
-	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
-	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/ident/common"
 	provide "github.com/provideservices/provide-go"
 )
@@ -58,113 +54,11 @@ func AuthMiddleware() gin.HandlerFunc {
 // given bearer token is a valid, non-expired JWT, the returned Token instance
 // is ephemeral. If the authorization attempt fails, nil is returned.
 func authorize(c *gin.Context) *Token {
-	jwtToken, err := common.ParseAuthorizationHeader(c, nil)
+	authorization := strings.Split(c.GetHeader("authorization"), "bearer ")
+	token, err := Parse(authorization[len(authorization)-1])
 	if err != nil {
-		authorization := strings.Split(c.GetHeader("authorization"), "bearer ")
-		token := FindLegacyToken(authorization[len(authorization)-1])
-		if token != nil {
-			common.Log.Debugf("legacy API token authorized: %s", token.ID) // this is the id in the DB, not the token itself so it's safe to log
-			return token
-		}
-		common.Log.Debugf("failed to parse bearer authorization header; %s", err.Error()) // this is the id in the DB, not the token itself so it's safe to log
+		common.Log.Warningf("bearer token authorization failed; %s", err.Error())
 		return nil
 	}
-
-	var token *Token
-	if claims, ok := jwtToken.Claims.(jwt.MapClaims); ok {
-		appclaims, appclaimsOk := claims[common.JWTApplicationClaimsKey].(map[string]interface{})
-
-		var appID *uuid.UUID
-		var userID *uuid.UUID
-
-		var sub string
-		if subclaim, subclaimOk := claims["sub"].(string); subclaimOk {
-			sub = subclaim
-		}
-
-		subprts := strings.Split(sub, ":")
-		if len(subprts) != 2 {
-			common.Log.Warningf("valid bearer authorization contained invalid sub claim: %s", sub)
-			return nil
-		}
-		subUUID, err := uuid.FromString(subprts[1])
-		if err != nil {
-			common.Log.Warningf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
-			return nil
-		}
-
-		switch subprts[0] {
-		case "application":
-			appID = &subUUID
-		case "token":
-			// this is a refresh token and can only authorize new access tokens on behalf of a user_id specified in the application claims
-			if appclaimsOk {
-				if claimedUserID, claimedUserIDOk := appclaims["user_id"].(string); claimedUserIDOk {
-					subUUID, err := uuid.FromString(claimedUserID)
-					if err != nil {
-						common.Log.Warningf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
-						return nil
-					}
-
-					userID = &subUUID
-					common.Log.Debugf("authorized refresh token for creation of new access token on behalf of user: %s", userID)
-				}
-			}
-		case "user":
-			userID = &subUUID
-		}
-
-		var iat *time.Time
-		if claims["iat"] != nil {
-			iat = parseJWTTimestampClaim(claims, "iat")
-		}
-
-		var exp *time.Time
-		if claims["exp"] != nil {
-			exp = parseJWTTimestampClaim(claims, "exp")
-		}
-
-		var nbf *time.Time
-		if claims["nbf"] != nil {
-			nbf = parseJWTTimestampClaim(claims, "nbf")
-		}
-
-		token = &Token{
-			Token:         &jwtToken.Raw,
-			IssuedAt:      iat,
-			ExpiresAt:     exp,
-			NotBefore:     nbf,
-			Subject:       common.StringOrNil(sub),
-			UserID:        userID,
-			ApplicationID: appID,
-		}
-
-		if aud, audOk := claims["aud"].(string); audOk {
-			token.Audience = &aud
-		}
-
-		if iss, issOk := claims["iss"].(string); issOk {
-			token.Issuer = &iss
-		}
-
-		if appclaimsOk {
-			if permissions, permissionsOk := appclaims["permissions"].(float64); permissionsOk {
-				token.Permissions = common.Permission(permissions)
-			} else {
-				common.Log.Warningf("valid bearer authorization was permissionless")
-			}
-
-			if extendedClaims, extendedClaimsOk := appclaims[extendedApplicationClaimsKey].(map[string]interface{}); extendedClaimsOk {
-				if extendedPermissions, extendedPermissionsOk := extendedClaims["permissions"].(map[string]interface{}); extendedPermissionsOk {
-					rawExtPermissions, _ := json.Marshal(extendedPermissions)
-					extPermissionsJSON := json.RawMessage(rawExtPermissions)
-					token.ExtendedPermissions = &extPermissionsJSON
-				} else {
-					common.Log.Warningf("extended bearer authorization was permissionless")
-				}
-			}
-		}
-	}
-
 	return token
 }

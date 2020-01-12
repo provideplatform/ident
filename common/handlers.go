@@ -16,7 +16,7 @@ const errorStatus = "error"
 
 // ParseAuthorizationHeader parses a bearer authorization header expecting to find a valid JWT issued and signed by us;
 // in the event no valid JWT is found, this method is currently backward compatible with "older" (non-JWT) API tokens.
-func ParseAuthorizationHeader(c *gin.Context, keyfunc *func(_jwtToken *jwt.Token) (interface{}, error)) (*jwt.Token, error) {
+func ParseAuthorizationHeader(c *gin.Context, keyfunc *func(_jwtToken *jwt.Token) (interface{}, error)) (*jwt.Token, error) { // FIXME-- deprecated...
 	authorization := c.GetHeader(authorizationHeader)
 	if authorization == "" {
 		return nil, errors.New("no authorization header provided")
