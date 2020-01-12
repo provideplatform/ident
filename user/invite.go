@@ -28,6 +28,51 @@ type Invite struct {
 	Token  *token.Token     `sql:"-" json:"-"`
 }
 
+// AcceptInvite accepts an invitation given the previously signed token
+func AcceptInvite(signedToken string) (*Invite, error) {
+	token, err := token.Parse(signedToken)
+	if err != nil {
+		common.Log.Warningf("failed accept invitation using given token; %s", err.Error())
+		return nil, err
+	}
+
+	data := token.ParseData()
+	common.Log.Debugf("parsed valid invitation token; subject: %s", *token.Subject)
+
+	name, _ := data["name"].(string)
+	email, _ := data["email"].(string)
+	permissions, _ := data["permissions"].(common.Permission)
+
+	var invitorUUID *uuid.UUID
+	if invitorID, invitorIDOk := data["invitor_id"].(string); invitorIDOk {
+		senderUUID, err := uuid.FromString(invitorID)
+		if err != nil {
+			common.Log.Warningf("failed to accept invitation using given token; invalid invitor id; %s", err.Error())
+			return nil, err
+		}
+		invitorUUID = &senderUUID
+	}
+
+	var organizationUUID *uuid.UUID
+	if organizationID, organizationIDOk := data["organization_id"].(string); organizationIDOk {
+		orgUUID, err := uuid.FromString(organizationID)
+		if err != nil {
+			common.Log.Warningf("failed to accept invitation using given token; invalid organization_ id; %s", err.Error())
+			return nil, err
+		}
+		organizationUUID = &orgUUID
+	}
+
+	return &Invite{
+		ApplicationID:  token.ApplicationID,
+		Name:           common.StringOrNil(name),
+		Email:          common.StringOrNil(email),
+		InvitorID:      invitorUUID,
+		OrganizationID: organizationUUID,
+		Permissions:    permissions,
+	}, nil
+}
+
 // Create the invite
 func (i *Invite) Create() bool {
 	token, err := i.vendToken()

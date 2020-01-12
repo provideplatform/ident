@@ -3,6 +3,7 @@ package token
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
@@ -73,6 +74,150 @@ type Response struct {
 	Token        *string    `json:"token,omitempty"` // token
 	PublicKey    *string    `json:"public_key,omitempty"`
 	Permissions  *uint32    `json:"permissions,omitempty"`
+}
+
+// Parse a previously signed token and initialize the Token representation
+func Parse(token string) (*Token, error) {
+	jwtToken, err := jwt.Parse(token, func(_jwtToken *jwt.Token) (interface{}, error) {
+		if _, ok := _jwtToken.Method.(*jwt.SigningMethodRSA); !ok {
+			return nil, fmt.Errorf("failed to parse bearer authorization header; unexpected JWT signing algo: %s", _jwtToken.Method.Alg())
+		}
+		if common.JWTPublicKey != nil {
+			return common.JWTPublicKey, nil
+		}
+		return nil, nil
+	})
+
+	var tkn *Token
+
+	if err != nil {
+		tkn = FindLegacyToken(token)
+		if tkn != nil {
+			common.Log.Debugf("legacy API token authorized: %s", tkn.ID) // this is the id in the DB, not the token itself so it's safe to log
+			return tkn, nil
+		}
+		return nil, fmt.Errorf("failed to parse given bearer token as valid JWT; %s", err.Error())
+	}
+
+	if claims, ok := jwtToken.Claims.(jwt.MapClaims); ok {
+		appclaims, appclaimsOk := claims[common.JWTApplicationClaimsKey].(map[string]interface{})
+
+		var appID *uuid.UUID
+		var userID *uuid.UUID
+
+		var sub string
+		if subclaim, subclaimOk := claims["sub"].(string); subclaimOk {
+			sub = subclaim
+		}
+
+		subprts := strings.Split(sub, ":")
+		if len(subprts) != 2 {
+			return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s", sub)
+		}
+
+		subUUID, err := uuid.FromString(subprts[1])
+		if err != nil && subprts[0] != "invite" {
+			return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
+		}
+
+		switch subprts[0] {
+		case "application":
+			appID = &subUUID
+		case "invite":
+			// this is an invitation token and can only authorize user creation, optionally on behalf of an application_id and/or organization_id specified in the application claims
+			common.Log.Debugf("parsed valid bearer authorization containing invitation subject: %s", sub)
+		case "token":
+			// this is a refresh token and can only authorize new access tokens on behalf of a user_id specified in the application claims
+			if appclaimsOk {
+				if claimedUserID, claimedUserIDOk := appclaims["user_id"].(string); claimedUserIDOk {
+					subUUID, err := uuid.FromString(claimedUserID)
+					if err != nil {
+						return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
+					}
+
+					userID = &subUUID
+					common.Log.Debugf("authorized refresh token for creation of new access token on behalf of user: %s", userID)
+				}
+			}
+		case "user":
+			userID = &subUUID
+		}
+
+		var iat *time.Time
+		if claims["iat"] != nil {
+			iat = parseJWTTimestampClaim(claims, "iat")
+		}
+
+		var exp *time.Time
+		if claims["exp"] != nil {
+			exp = parseJWTTimestampClaim(claims, "exp")
+		}
+
+		var nbf *time.Time
+		if claims["nbf"] != nil {
+			nbf = parseJWTTimestampClaim(claims, "nbf")
+		}
+
+		tkn = &Token{
+			Token:         &jwtToken.Raw,
+			IssuedAt:      iat,
+			ExpiresAt:     exp,
+			NotBefore:     nbf,
+			Subject:       common.StringOrNil(sub),
+			UserID:        userID,
+			ApplicationID: appID,
+		}
+
+		if aud, audOk := claims["aud"].(string); audOk {
+			tkn.Audience = &aud
+		}
+
+		if iss, issOk := claims["iss"].(string); issOk {
+			tkn.Issuer = &iss
+		}
+
+		if appclaimsOk {
+			if appIDClaim, appIDClaimOk := appclaims["application_id"].(string); appIDClaimOk && tkn.ApplicationID == nil {
+				appUUID, err := uuid.FromString(appIDClaim)
+				if err != nil {
+					return nil, fmt.Errorf("valid bearer authorization contained invalid application_id app claim: %s; %s", sub, err.Error())
+				}
+				tkn.ApplicationID = &appUUID
+			}
+
+			if userIDClaim, userIDClaimOk := appclaims["user_id"].(string); userIDClaimOk && tkn.UserID == nil {
+				userUUID, err := uuid.FromString(userIDClaim)
+				if err != nil {
+					return nil, fmt.Errorf("valid bearer authorization contained invalid user_id app claim: %s; %s", sub, err.Error())
+				}
+				tkn.UserID = &userUUID
+			}
+
+			if permissions, permissionsOk := appclaims["permissions"].(float64); permissionsOk {
+				tkn.Permissions = common.Permission(permissions)
+			} else {
+				common.Log.Warningf("valid bearer authorization was permissionless")
+			}
+
+			if extendedClaims, extendedClaimsOk := appclaims[extendedApplicationClaimsKey].(map[string]interface{}); extendedClaimsOk {
+				if extendedPermissions, extendedPermissionsOk := extendedClaims["permissions"].(map[string]interface{}); extendedPermissionsOk {
+					rawExtPermissions, _ := json.Marshal(extendedPermissions)
+					extPermissionsJSON := json.RawMessage(rawExtPermissions)
+					tkn.ExtendedPermissions = &extPermissionsJSON
+				} else {
+					common.Log.Warningf("extended bearer authorization was permissionless")
+				}
+			}
+
+			if dataClaim, dataClaimOk := appclaims["data"].(map[string]interface{}); dataClaimOk {
+				dataJSON, _ := json.Marshal(dataClaim)
+				dataJSONRaw := json.RawMessage(dataJSON)
+				tkn.Data = &dataJSONRaw
+			}
+		}
+	}
+
+	return tkn, nil
 }
 
 // FindLegacyToken - lookup a legacy token

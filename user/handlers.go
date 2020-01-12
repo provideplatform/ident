@@ -177,6 +177,28 @@ func createUserHandler(c *gin.Context) {
 		return
 	}
 
+	if invitationToken, invitationTokenOk := params["invitation_token"].(string); invitationTokenOk {
+		invite, err := AcceptInvite(invitationToken)
+		if err != nil {
+			provide.RenderError(err.Error(), 400, c)
+			return
+		}
+
+		if user.Email == nil {
+			user.Email = invite.Email
+		}
+
+		if user.Name == nil {
+			user.Name = invite.Name
+		}
+
+		if invite.OrganizationID != nil {
+			defer func() {
+				common.Log.Warningf("TODO: associate user with org id: %s", invite.OrganizationID)
+			}()
+		}
+	}
+
 	if user.Email == nil {
 		provide.RenderError("email address required", 422, c)
 		return
