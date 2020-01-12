@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	natsutil "github.com/kthomas/go-natsutil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/token"
@@ -12,6 +13,7 @@ import (
 )
 
 const defaultInvitationTokenTimeout = time.Hour * 48
+const natsDispatchInvitationSubject = "invitation.dispatch"
 
 // Invite model
 type Invite struct {
@@ -110,6 +112,9 @@ func (i *Invite) vendToken() (*token.Token, error) {
 			return nil, err
 		}
 	}
+
+	payload, _ := json.Marshal(token)
+	natsutil.NatsPublish(natsDispatchInvitationSubject, payload)
 
 	return token, nil
 }
