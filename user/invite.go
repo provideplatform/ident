@@ -28,7 +28,10 @@ type Invite struct {
 	Token  *token.Token     `sql:"-" json:"-"`
 }
 
-// AcceptInvite accepts an invitation given the previously signed token
+// AcceptInvite parses an invitation given the previously signed token; it doesn't actually
+// accept the invitation by creating a user or associating the user with an application or
+// organization at this time, rather it returns an Invite instance which has been verified
+// as capable of being accepted by the caller
 func AcceptInvite(signedToken string) (*Invite, error) {
 	token, err := token.Parse(signedToken)
 	if err != nil {
