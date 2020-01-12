@@ -30,6 +30,7 @@ func init() {
 	}
 
 	pgputil.RequirePGP()
+	common.RequireJWT()
 }
 
 func main() {
