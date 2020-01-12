@@ -1,6 +1,7 @@
 package token
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -58,6 +59,14 @@ func authorize(c *gin.Context) *Token {
 	token, err := Parse(authorization[len(authorization)-1])
 	if err != nil {
 		common.Log.Warningf("bearer token authorization failed; %s", err.Error())
+		return nil
+	}
+	if token.UserID == nil && token.ApplicationID == nil {
+		subject := "< not provided >"
+		if token.Subject != nil {
+			subject = fmt.Sprintf("%s", *token.Subject)
+		}
+		common.Log.Warningf("bearer token authorization failed; invalid authorization subject: %s", subject)
 		return nil
 	}
 	return token
