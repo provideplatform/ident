@@ -13,7 +13,6 @@ import (
 )
 
 const defaultInvitationTokenTimeout = time.Hour * 48
-const natsDispatchInvitationSubject = "invitation.dispatch"
 
 // Invite model
 type Invite struct {
