@@ -21,9 +21,11 @@ type Invite struct {
 	Name             *string           `sql:"-" json:"name,omitempty"`
 	Email            *string           `sql:"-" json:"email,omitempty"`
 	InvitorID        *uuid.UUID        `sql:"-" json:"invitor_id,omitempty"`
+	InvitorName      *string           `sql:"-" json:"invitor_name,omitempty"`
 	OrganizationID   *uuid.UUID        `sql:"-" json:"organization_id,omitempty"`
 	OrganizationName *string           `sql:"-" json:"organization_name,omitempty"`
 	Permissions      common.Permission `sql:"-" json:"permissions,omitempty"`
+	Params           *json.RawMessage  `sql:"-" json:"params,omitempty"`
 
 	Errors []*provide.Error `sql:"-" json:"-"`
 	Token  *token.Token     `sql:"-" json:"-"`
@@ -88,14 +90,28 @@ func (i *Invite) Create() bool {
 	return i.Token != nil
 }
 
+func (i *Invite) parseParams() map[string]interface{} {
+	params := map[string]interface{}{}
+	if i.Params != nil {
+		err := json.Unmarshal(*i.Params, &params)
+		if err != nil {
+			common.Log.Warningf("failed to unmarshal invite params; %s", err.Error())
+			return nil
+		}
+	}
+	return params
+}
+
 func (i *Invite) vendToken() (*token.Token, error) {
 	dataJSON, _ := json.Marshal(map[string]interface{}{
 		"application_id":    i.ApplicationID,
 		"name":              i.Name,
 		"email":             i.Email,
 		"invitor_id":        i.InvitorID,
+		"invitor_name":      i.InvitorName,
 		"organization_id":   i.OrganizationID,
 		"organization_name": i.OrganizationName,
+		"params":            i.parseParams(),
 	})
 	data := json.RawMessage(dataJSON)
 

@@ -14,6 +14,7 @@ import (
 const natsDispatchInvitationSubject = "ident.invitation.dispatch"
 const natsDispatchInvitationMaxInFlight = 2048
 const dispatchInvitationAckWait = time.Second * 30
+const natsDispatchInvitationTimeout = int64(time.Minute * 5)
 
 func init() {
 	var waitGroup sync.WaitGroup
@@ -61,7 +62,5 @@ func consumeDispatchInvitationSubscriptionsMsg(msg *stan.Msg) {
 	}
 
 	common.Log.Debugf("dispatch invitation: %s", *token.Token)
-
-	// common.Log.Debugf("dispatched invitation to email: %s", *invite.Email)
 	msg.Ack()
 }
