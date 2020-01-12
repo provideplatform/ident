@@ -369,6 +369,13 @@ func (t *Token) validate() bool {
 			t.Subject = sub
 		}
 	}
+
+	if t.Subject == nil {
+		t.Errors = append(t.Errors, &provide.Error{
+			Message: common.StringOrNil("token must have a sub claim"),
+		})
+	}
+
 	return len(t.Errors) == 0
 }
 

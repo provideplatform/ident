@@ -15,7 +15,7 @@ const defaultInvitationTokenTimeout = time.Hour * 48
 
 // Invite model
 type Invite struct {
-	provide.Model
+	// provide.Model
 	ApplicationID    *uuid.UUID        `sql:"-" json:"application_id,omitempty"`
 	Name             *string           `sql:"-" json:"name,omitempty"`
 	Email            *string           `sql:"-" json:"email,omitempty"`
@@ -24,7 +24,8 @@ type Invite struct {
 	OrganizationName *string           `sql:"-" json:"organization_name,omitempty"`
 	Permissions      common.Permission `sql:"-" json:"permissions,omitempty"`
 
-	Token *token.Token `sql:"-" json:"-"`
+	Errors []*provide.Error `sql:"-" json:"-"`
+	Token  *token.Token     `sql:"-" json:"-"`
 }
 
 // Create the invite
@@ -52,6 +53,7 @@ func (i *Invite) vendToken() (*token.Token, error) {
 	token := &token.Token{
 		Data:        &data,
 		Permissions: i.Permissions,
+		Subject:     common.StringOrNil(fmt.Sprintf("invite:%s", *i.Email)),
 	}
 	if !token.Vend() {
 		if len(token.Errors) > 0 {
