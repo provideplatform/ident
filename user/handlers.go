@@ -30,6 +30,8 @@ func InstallUserAPI(r *gin.Engine) {
 	r.GET("/api/v1/users/:id", userDetailsHandler)
 	r.PUT("/api/v1/users/:id", updateUserHandler)
 	r.DELETE("/api/v1/users/:id", deleteUserHandler)
+
+	r.POST("/api/v1/invitations", vendInvitationTokenHandler)
 }
 
 func authenticationHandler(c *gin.Context) {
@@ -439,6 +441,64 @@ func userResetPasswordHandler(c *gin.Context) {
 	} else {
 		obj := map[string]interface{}{}
 		obj["errors"] = user.Errors
+		provide.Render(obj, 422, c)
+	}
+}
+
+func vendInvitationTokenHandler(c *gin.Context) {
+	bearer := token.InContext(c)
+	userID := bearer.UserID
+
+	if userID == nil || *userID == uuid.Nil {
+		provide.RenderError("unauthorized", 401, c)
+		return
+	}
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	params := map[string]interface{}{}
+	err = json.Unmarshal(buf, &params)
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	invite := &Invite{}
+	err = json.Unmarshal(buf, &invite)
+	if err != nil {
+		provide.RenderError(err.Error(), 422, c)
+		return
+	}
+
+	if invite.Email == nil {
+		provide.RenderError("email address required", 422, c)
+		return
+	}
+
+	invite.InvitorID = userID
+	// TODO: load invitor permissions in the appropriate context; i.e., in the ApplicationID context if it is set
+
+	if _, permissionsOk := params["permissions"]; permissionsOk && !bearer.HasAnyPermission(common.UpdateUser, common.Sudo) {
+		provide.RenderError("unable to assert arbitrary user permissions", 403, c)
+		return
+	}
+
+	if Exists(*invite.Email, invite.ApplicationID) {
+		// FIXME-- check existing user against organization_id if one is provided alongside an application_id
+		msg := fmt.Sprintf("user exists: %s", *invite.Email)
+		provide.RenderError(msg, 409, c)
+		return
+	}
+
+	if invite.Create() {
+		provide.Render(invite.Token, 202, c)
+	} else {
+		obj := map[string]interface{}{}
+		obj["errors"] = invite.Errors
 		provide.Render(obj, 422, c)
 	}
 }
