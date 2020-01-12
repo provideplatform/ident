@@ -60,7 +60,7 @@ func consumeDispatchInvitationSubscriptionsMsg(msg *stan.Msg) {
 		return
 	}
 
-	common.Log.Debugf("dispatch invitation: %s", token)
+	common.Log.Debugf("dispatch invitation: %s", *token.Token)
 
 	// common.Log.Debugf("dispatched invitation to email: %s", *invite.Email)
 	msg.Ack()
