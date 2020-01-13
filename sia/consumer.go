@@ -92,6 +92,11 @@ type SiaModel struct {
 }
 
 func init() {
+	if !common.ConsumeNATSStreamingSubscriptions {
+		common.Log.Debug("sia package consumer configured to skip NATS streaming subscription setup")
+		return
+	}
+
 	var waitGroup sync.WaitGroup
 
 	createNatsSiaUserNotificationSubscriptions(&waitGroup)

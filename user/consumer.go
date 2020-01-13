@@ -17,6 +17,11 @@ const dispatchInvitationAckWait = time.Second * 30
 const natsDispatchInvitationTimeout = int64(time.Minute * 5)
 
 func init() {
+	if !common.ConsumeNATSStreamingSubscriptions {
+		common.Log.Debug("user package consumer configured to skip NATS streaming subscription setup")
+		return
+	}
+
 	var waitGroup sync.WaitGroup
 
 	createNatsDispatchInvitationSubscriptions(&waitGroup)

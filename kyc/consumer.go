@@ -35,6 +35,11 @@ const natsDispatchKYCApplicationWebhookTimeout = int64(time.Minute * 5)
 var instantKYCEnabled = strings.ToLower(os.Getenv("INSTANT_KYC")) == "true"
 
 func init() {
+	if !common.ConsumeNATSStreamingSubscriptions {
+		common.Log.Debug("kyc package consumer configured to skip NATS streaming subscription setup")
+		return
+	}
+
 	var waitGroup sync.WaitGroup
 
 	createNatsCheckKYCApplicationStatusSubscriptions(&waitGroup)
