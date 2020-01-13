@@ -242,7 +242,7 @@ func createUserHandler(c *gin.Context) {
 		}
 	}
 
-	if user.Create(tx, createAuth0User) {
+	if success {
 		tx.Commit()
 		provide.Render(user.AsResponse(), 201, c)
 	} else {
