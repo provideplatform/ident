@@ -89,7 +89,10 @@ const (
 // DefaultUserPermission is the default mask to use if permissions are not explicitly set upon user creation
 const DefaultUserPermission Permission = Authenticate | Publish | Subscribe | ListApplications | CreateApplication | UpdateApplication
 
-// DefaultApplicationResourcePermission is the default mask to use for an application subresource if permissions are not explicitly set application token creation
+// DefaultApplicationOrganizationPermission is the default mask to use for an application organization if permissions are not explicitly set upon application organization creation
+const DefaultApplicationOrganizationPermission Permission = Publish | Subscribe | DefaultApplicationResourcePermission
+
+// DefaultApplicationResourcePermission is the default mask to use for an application subresource if permissions are not explicitly set upon application token creation
 const DefaultApplicationResourcePermission Permission = ListResources | CreateResource | UpdateResource | DeleteResource | GrantResourceAuthorization | RevokeResourceAuthorization | Publish | Subscribe
 
 // DefaultAuth0RequestPermission is the ephemeral permission mask to apply to Auth0 requests

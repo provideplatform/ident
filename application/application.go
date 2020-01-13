@@ -137,7 +137,7 @@ func (app *Application) sanitizeConfig() {
 	app.setEncryptedConfig(encryptedConfig)
 }
 
-func (app *Application) addOrganization(tx *gorm.DB, org *organization.Organization) bool {
+func (app *Application) addOrganization(tx *gorm.DB, org organization.Organization, permissions common.Permission) bool {
 	var db *gorm.DB
 	if tx != nil {
 		db = tx
@@ -146,8 +146,7 @@ func (app *Application) addOrganization(tx *gorm.DB, org *organization.Organizat
 	}
 
 	common.Log.Debugf("adding organization %s to application: %s", org.ID, app.ID)
-	result := db.Exec("INSERT INTO applications_organizations (application_id, organization_id) VALUES (?, ?)", app.ID, org.ID)
-	// result := dbconf.DatabaseConnection().Model(&app).Association("Organizations").Append(&org)
+	result := db.Exec("INSERT INTO applications_organizations (application_id, organization_id, permissions) VALUES (?, ?, ?)", app.ID, org.ID, permissions)
 	success := result.RowsAffected == 1
 	if success {
 		common.Log.Debugf("added organization %s to application: %s", org.ID, app.ID)
@@ -167,12 +166,30 @@ func (app *Application) removeOrganization(tx *gorm.DB, org *organization.Organi
 
 	common.Log.Debugf("removing organization %s from application: %s", org.ID, app.ID)
 	result := db.Exec("DELETE FROM applications_organizations WHERE application_id = ? AND organization_id = ?", app.ID, org.ID)
-	// result := dbconf.DatabaseConnection().Model(&app).Association("Organizations").Delete(&org)
 	success := result.RowsAffected == 1
 	if success {
 		common.Log.Debugf("removed organization %s from application: %s", org.ID, app.ID)
 	} else {
 		common.Log.Warningf("failed to remove organization %s from application: %s", org.ID, app.ID)
+	}
+	return success
+}
+
+func (app *Application) updateOrganization(tx *gorm.DB, org *organization.Organization, permissions common.Permission) bool {
+	var db *gorm.DB
+	if tx != nil {
+		db = tx
+	} else {
+		db = dbconf.DatabaseConnection()
+	}
+
+	common.Log.Debugf("updating organization %s for application: %s", org.ID, app.ID)
+	result := db.Exec("UPDATE applications_organizations SET permissions = ? WHERE application_id = ? AND organization_id = ?", permissions, app.ID, org.ID)
+	success := result.RowsAffected == 1
+	if success {
+		common.Log.Debugf("updated organization %s for application: %s", org.ID, app.ID)
+	} else {
+		common.Log.Warningf("failed to update organization %s for application: %s", org.ID, app.ID)
 	}
 	return success
 }

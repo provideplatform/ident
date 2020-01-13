@@ -62,10 +62,12 @@ func applicationsListHandler(c *gin.Context) {
 
 	provide.Paginate(c, query, &Application{}).Find(&apps)
 	for _, app := range apps {
-		mergedConfig := app.mergedConfig()
-		mergedConfigJSON, _ := json.Marshal(mergedConfig)
-		_mergedConfigJSON := json.RawMessage(mergedConfigJSON)
-		*app.Config = _mergedConfigJSON
+		var cfg map[string]interface{}
+		// FIXME -- check authorized user permissions in this application context; only expose app.mergedConfig() to authorized parties
+		cfg = app.mergedConfig()
+		cfgJSON, _ := json.Marshal(cfg)
+		_cfgJSON := json.RawMessage(cfgJSON)
+		*app.Config = _cfgJSON
 	}
 	provide.Render(apps, 200, c)
 }
@@ -250,6 +252,7 @@ func createApplicationOrganizationHandler(c *gin.Context) {
 		provide.RenderError(err.Error(), 400, c)
 		return
 	}
+
 	params := map[string]interface{}{}
 	err = json.Unmarshal(buf, &params)
 	if err != nil {
@@ -275,7 +278,7 @@ func createApplicationOrganizationHandler(c *gin.Context) {
 	} else if permissionsOk {
 		permissions = orgPermissions
 	} else {
-		permissions = common.Publish | common.Subscribe | common.DefaultApplicationResourcePermission
+		permissions = common.DefaultApplicationOrganizationPermission
 	}
 
 	db := dbconf.DatabaseConnection()
@@ -294,9 +297,7 @@ func createApplicationOrganizationHandler(c *gin.Context) {
 		return
 	}
 
-	org.Permissions = permissions
-
-	if app.addOrganization(db, org) {
+	if app.addOrganization(db, *org, permissions) {
 		provide.Render(nil, 204, c)
 	} else {
 		obj := map[string]interface{}{}

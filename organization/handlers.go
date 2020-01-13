@@ -105,14 +105,51 @@ func createOrganizationHandler(c *gin.Context) {
 	}
 	org.UserID = userID
 
+	var invite *user.Invite
+	var permissions common.Permission
+
+	if invitationToken, invitationTokenOk := params["invitation_token"].(string); invitationTokenOk {
+		invite, err = user.AcceptInvite(invitationToken)
+		if err != nil {
+			provide.RenderError(err.Error(), 400, c)
+			return
+		}
+
+		if invite.OrganizationID != nil {
+			provide.RenderError("invitation contained specific organization_id", 400, c)
+			return
+		}
+
+		if invite.UserID != nil && userID != nil && invite.UserID.String() != userID.String() {
+			provide.RenderError("invitation user_id did not match authorized user", 403, c)
+			return
+		}
+
+		if invite.Permissions != nil {
+			permissions = *invite.Permissions
+		} else {
+			permissions = common.DefaultApplicationResourcePermission
+		}
+	}
+
 	if _, permissionsOk := params["permissions"]; permissionsOk {
 		provide.RenderError("unable to assert arbitrary organization permissions", 403, c)
 		return
 	}
 
-	if org.Create() {
+	tx := dbconf.DatabaseConnection().Begin()
+	success := org.Create(tx)
+	if success {
+		if invite.ApplicationID != nil {
+			success = org.addApplicationAssociation(tx, *invite.ApplicationID, permissions)
+		}
+	}
+
+	if success {
+		tx.Commit()
 		provide.Render(org, 201, c)
 	} else {
+		tx.Rollback()
 		obj := map[string]interface{}{}
 		obj["errors"] = org.Errors
 		provide.Render(obj, 422, c)
@@ -171,6 +208,7 @@ func createOrganizationUserHandler(c *gin.Context) {
 		provide.RenderError(err.Error(), 400, c)
 		return
 	}
+
 	params := map[string]interface{}{}
 	err = json.Unmarshal(buf, &params)
 	if err != nil {
@@ -195,15 +233,42 @@ func createOrganizationUserHandler(c *gin.Context) {
 		}
 	}
 
+	var invite *user.Invite
 	var permissions common.Permission
+
+	if invitationToken, invitationTokenOk := params["invitation_token"].(string); invitationTokenOk {
+		invite, err = user.AcceptInvite(invitationToken)
+		if err != nil {
+			provide.RenderError(err.Error(), 400, c)
+			return
+		}
+
+		if invite.OrganizationID == nil {
+			provide.RenderError("invitation did not specify organization_id", 403, c)
+			return
+		}
+
+		if invite.OrganizationID.String() != organizationID.String() {
+			provide.RenderError("invitation organization_id did not match authorized organization", 403, c)
+			return
+		}
+
+		if invite.UserID != nil && userID != nil && invite.UserID.String() != userID.String() {
+			provide.RenderError("invitation user_id did not match authorized user", 403, c)
+			return
+		}
+	}
+
 	orgPermissions, permissionsOk := params["permissions"].(common.Permission)
 	if permissionsOk && !bearer.HasAnyExtendedPermission(organizationResourceKey, common.CreateResource, common.GrantResourceAuthorization) {
 		provide.RenderError("unable to assert arbitrary organization user permissions", 403, c)
 		return
 	} else if permissionsOk {
 		permissions = orgPermissions
+	} else if invite.Permissions != nil {
+		permissions = *invite.Permissions
 	} else {
-		permissions = common.Publish | common.Subscribe | common.DefaultApplicationResourcePermission
+		permissions = common.DefaultApplicationOrganizationPermission
 	}
 
 	db := dbconf.DatabaseConnection()
@@ -222,7 +287,7 @@ func createOrganizationUserHandler(c *gin.Context) {
 		return
 	}
 
-	if org.addUser(db, usr, permissions) {
+	if org.addUser(db, *usr, permissions) {
 		provide.Render(nil, 204, c)
 	} else {
 		obj := map[string]interface{}{}

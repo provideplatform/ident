@@ -17,15 +17,16 @@ const defaultInvitationTokenTimeout = time.Hour * 48
 // Invite model
 type Invite struct {
 	// provide.Model
-	ApplicationID    *uuid.UUID        `sql:"-" json:"application_id,omitempty"`
-	Name             *string           `sql:"-" json:"name,omitempty"`
-	Email            *string           `sql:"-" json:"email,omitempty"`
-	InvitorID        *uuid.UUID        `sql:"-" json:"invitor_id,omitempty"`
-	InvitorName      *string           `sql:"-" json:"invitor_name,omitempty"`
-	OrganizationID   *uuid.UUID        `sql:"-" json:"organization_id,omitempty"`
-	OrganizationName *string           `sql:"-" json:"organization_name,omitempty"`
-	Permissions      common.Permission `sql:"-" json:"permissions,omitempty"`
-	Params           *json.RawMessage  `sql:"-" json:"params,omitempty"`
+	ApplicationID    *uuid.UUID         `sql:"-" json:"application_id,omitempty"`
+	UserID           *uuid.UUID         `sql:"-" json:"user_id,omitempty"`
+	Name             *string            `sql:"-" json:"name,omitempty"`
+	Email            *string            `sql:"-" json:"email,omitempty"`
+	InvitorID        *uuid.UUID         `sql:"-" json:"invitor_id,omitempty"`
+	InvitorName      *string            `sql:"-" json:"invitor_name,omitempty"`
+	OrganizationID   *uuid.UUID         `sql:"-" json:"organization_id,omitempty"`
+	OrganizationName *string            `sql:"-" json:"organization_name,omitempty"`
+	Permissions      *common.Permission `sql:"-" json:"permissions,omitempty"`
+	Params           *json.RawMessage   `sql:"-" json:"params,omitempty"`
 
 	Errors []*provide.Error `sql:"-" json:"-"`
 	Token  *token.Token     `sql:"-" json:"-"`
@@ -47,7 +48,11 @@ func AcceptInvite(signedToken string) (*Invite, error) {
 
 	name, _ := data["name"].(string)
 	email, _ := data["email"].(string)
-	permissions, _ := data["permissions"].(common.Permission)
+	var permissions *common.Permission
+	if claimedPermissions, claimedPermissionsOk := data["permissions"].(float64); claimedPermissionsOk {
+		perms := common.Permission(claimedPermissions)
+		permissions = &perms
+	}
 
 	var invitorUUID *uuid.UUID
 	if invitorID, invitorIDOk := data["invitor_id"].(string); invitorIDOk {
@@ -58,6 +63,7 @@ func AcceptInvite(signedToken string) (*Invite, error) {
 		}
 		invitorUUID = &senderUUID
 	}
+	invitorName, _ := data["invitor_name"].(string)
 
 	var organizationUUID *uuid.UUID
 	if organizationID, organizationIDOk := data["organization_id"].(string); organizationIDOk {
@@ -71,9 +77,11 @@ func AcceptInvite(signedToken string) (*Invite, error) {
 
 	return &Invite{
 		ApplicationID:  token.ApplicationID,
+		UserID:         token.UserID,
 		Name:           common.StringOrNil(name),
 		Email:          common.StringOrNil(email),
 		InvitorID:      invitorUUID,
+		InvitorName:    common.StringOrNil(invitorName),
 		OrganizationID: organizationUUID,
 		Permissions:    permissions,
 	}, nil
@@ -105,6 +113,7 @@ func (i *Invite) parseParams() map[string]interface{} {
 func (i *Invite) vendToken() (*token.Token, error) {
 	dataJSON, _ := json.Marshal(map[string]interface{}{
 		"application_id":    i.ApplicationID,
+		"user_id":           i.UserID,
 		"name":              i.Name,
 		"email":             i.Email,
 		"invitor_id":        i.InvitorID,
@@ -116,10 +125,13 @@ func (i *Invite) vendToken() (*token.Token, error) {
 	data := json.RawMessage(dataJSON)
 
 	token := &token.Token{
-		Data:        &data,
-		Permissions: i.Permissions,
-		Subject:     common.StringOrNil(fmt.Sprintf("invite:%s", *i.Email)),
+		Data:    &data,
+		Subject: common.StringOrNil(fmt.Sprintf("invite:%s", *i.Email)),
 	}
+	if i.Permissions != nil {
+		token.Permissions = *i.Permissions
+	}
+
 	if !token.Vend() {
 		if len(token.Errors) > 0 {
 			err := fmt.Errorf("failed to vend token for inivtation; %s", *token.Errors[0].Message)

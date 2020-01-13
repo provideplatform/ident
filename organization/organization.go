@@ -41,7 +41,26 @@ func (o *Organization) hasAnyPermission(permissions ...common.Permission) bool {
 	return false
 }
 
-func (o *Organization) addUser(tx *gorm.DB, usr *user.User, permissions common.Permission) bool {
+func (o *Organization) addApplicationAssociation(tx *gorm.DB, appID uuid.UUID, permissions common.Permission) bool {
+	var db *gorm.DB
+	if tx != nil {
+		db = tx
+	} else {
+		db = dbconf.DatabaseConnection()
+	}
+
+	common.Log.Debugf("adding organization %s to application: %s", o.ID, appID)
+	result := db.Exec("INSERT INTO applications_organizations (application_id, organization_id, permissions) VALUES (?, ?, ?)", appID, o.ID, permissions)
+	success := result.RowsAffected == 1
+	if success {
+		common.Log.Debugf("added organization %s to application: %s", o.ID, appID)
+	} else {
+		common.Log.Warningf("failed to add organization %s to application: %s", o.ID, appID)
+	}
+	return success
+}
+
+func (o *Organization) addUser(tx *gorm.DB, usr user.User, permissions common.Permission) bool {
 	var db *gorm.DB
 	if tx != nil {
 		db = tx
@@ -51,7 +70,6 @@ func (o *Organization) addUser(tx *gorm.DB, usr *user.User, permissions common.P
 
 	common.Log.Debugf("adding user %s to organization: %s", usr.ID, o.ID)
 	result := db.Exec("INSERT INTO organizations_users (organization_id, user_id, permissions) VALUES (?, ?, ?)", o.ID, usr.ID, permissions)
-	// result := db.Model(&o).Association("Users").Append(&usr)
 	success := result.RowsAffected == 1
 	if success {
 		common.Log.Debugf("added user %s to organization: %s", usr.ID, o.ID)
@@ -71,7 +89,6 @@ func (o *Organization) removeUser(tx *gorm.DB, usr *user.User) bool {
 
 	common.Log.Debugf("removing user %s from organization: %s", usr.ID, o.ID)
 	result := db.Exec("DELETE FROM organizations_users WHERE organization_id = ? AND user_id = ?", o.ID, usr.ID)
-	// result := db.Model(o).Association("Users").Delete(&usr)
 	success := result.RowsAffected == 1
 	if success {
 		common.Log.Debugf("removed user %s from organization: %s", usr.ID, o.ID)
@@ -81,9 +98,33 @@ func (o *Organization) removeUser(tx *gorm.DB, usr *user.User) bool {
 	return success
 }
 
+func (o *Organization) updateUser(tx *gorm.DB, usr *user.User, permissions common.Permission) bool {
+	var db *gorm.DB
+	if tx != nil {
+		db = tx
+	} else {
+		db = dbconf.DatabaseConnection()
+	}
+
+	common.Log.Debugf("updating user %s for organization: %s", usr.ID, o.ID)
+	result := db.Exec("UPDATE organizations_users SET permissions = ? WHERE organization_id = ? AND user_id = ?", permissions, o.ID, usr.ID)
+	success := result.RowsAffected == 1
+	if success {
+		common.Log.Debugf("updated user %s for organization: %s", usr.ID, o.ID)
+	} else {
+		common.Log.Warningf("failed to update user %s for organization: %s; %s", usr.ID, o.ID, result.Error.Error())
+	}
+	return success
+}
+
 // Create and persist a user
-func (o *Organization) Create() bool {
-	db := dbconf.DatabaseConnection()
+func (o *Organization) Create(tx *gorm.DB) bool {
+	var db *gorm.DB
+	if tx != nil {
+		db = tx
+	} else {
+		db = dbconf.DatabaseConnection()
+	}
 
 	if !o.validate() {
 		return false
@@ -110,7 +151,7 @@ func (o *Organization) Create() bool {
 					usr := &user.User{}
 					db.Where("id = ?", o.UserID).Find(&usr)
 					if usr != nil && usr.ID != uuid.Nil {
-						if o.addUser(tx, usr, common.DefaultApplicationResourcePermission) {
+						if o.addUser(tx, *usr, common.DefaultApplicationResourcePermission) {
 							common.Log.Debugf("associated user %s with organization: %s", *usr.Name, *o.Name)
 							tx.Commit()
 						} else {
