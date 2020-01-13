@@ -75,8 +75,20 @@ func AcceptInvite(signedToken string) (*Invite, error) {
 		organizationUUID = &orgUUID
 	}
 
+	applicationUUID := token.ApplicationID
+	if applicationUUID == nil {
+		if applicationID, applicationIDOk := data["application_id"].(string); applicationIDOk {
+			appUUID, err := uuid.FromString(applicationID)
+			if err != nil {
+				common.Log.Warningf("failed to accept invitation using given token; invalid organization_ id; %s", err.Error())
+				return nil, err
+			}
+			applicationUUID = &appUUID
+		}
+	}
+
 	return &Invite{
-		ApplicationID:  token.ApplicationID,
+		ApplicationID:  applicationUUID,
 		UserID:         token.UserID,
 		Name:           common.StringOrNil(name),
 		Email:          common.StringOrNil(email),
