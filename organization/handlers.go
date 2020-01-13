@@ -190,8 +190,10 @@ func organizationUsersListHandler(c *gin.Context) {
 		return
 	}
 
+	usersQuery := resolveOrganizationUsers(query, organizationID, applicationID).Order("users.created_at ASC")
+
 	var users []*user.User
-	provide.Paginate(c, resolveOrganizationUsers(query, organizationID, applicationID), &user.User{}).Find(&users)
+	provide.Paginate(c, usersQuery, &user.User{}).Find(&users)
 	provide.Render(users, 200, c)
 }
 
