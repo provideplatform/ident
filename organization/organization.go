@@ -41,7 +41,7 @@ func (o *Organization) hasAnyPermission(permissions ...common.Permission) bool {
 	return false
 }
 
-func (o *Organization) addUser(tx *gorm.DB, usr *user.User) bool {
+func (o *Organization) addUser(tx *gorm.DB, usr *user.User, permissions common.Permission) bool {
 	var db *gorm.DB
 	if tx != nil {
 		db = tx
@@ -50,7 +50,7 @@ func (o *Organization) addUser(tx *gorm.DB, usr *user.User) bool {
 	}
 
 	common.Log.Debugf("adding user %s to organization: %s", usr.ID, o.ID)
-	result := db.Exec("INSERT INTO organizations_users (organization_id, user_id) VALUES (?, ?)", o.ID, usr.ID)
+	result := db.Exec("INSERT INTO organizations_users (organization_id, user_id, permissions) VALUES (?, ?, ?)", o.ID, usr.ID, permissions)
 	// result := db.Model(&o).Association("Users").Append(&usr)
 	success := result.RowsAffected == 1
 	if success {
@@ -110,7 +110,7 @@ func (o *Organization) Create() bool {
 					usr := &user.User{}
 					db.Where("id = ?", o.UserID).Find(&usr)
 					if usr != nil && usr.ID != uuid.Nil {
-						if o.addUser(tx, usr) {
+						if o.addUser(tx, usr, common.DefaultApplicationResourcePermission) {
 							common.Log.Debugf("associated user %s with organization: %s", *usr.Name, *o.Name)
 							tx.Commit()
 						} else {

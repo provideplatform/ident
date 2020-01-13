@@ -222,9 +222,7 @@ func createOrganizationUserHandler(c *gin.Context) {
 		return
 	}
 
-	usr.Permissions = permissions
-
-	if org.addUser(db, usr) {
+	if org.addUser(db, usr, permissions) {
 		provide.Render(nil, 204, c)
 	} else {
 		obj := map[string]interface{}{}
