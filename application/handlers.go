@@ -45,9 +45,10 @@ func applicationsListHandler(c *gin.Context) {
 		hidden = true
 	}
 
-	query := dbconf.DatabaseConnection()
-
 	var apps []Application
+
+	query := dbconf.DatabaseConnection()
+	query = query.Select("applications.*")
 	query = query.Where("applications.hidden = ?", hidden)
 
 	query = query.Joins("INNER JOIN applications_organizations as ao ON ao.application_id = applications.id INNER JOIN organizations_users as ou ON ou.organization_id = ao.organization_id")
@@ -61,7 +62,7 @@ func applicationsListHandler(c *gin.Context) {
 		query = query.Where("applications.type = ?", c.Query("type"))
 	}
 
-	query = query.Order("applications.created_at DESC")
+	query = query.Order("applications.created_at DESC").Group("id")
 
 	provide.Paginate(c, query, &Application{}).Find(&apps)
 	for _, app := range apps {
