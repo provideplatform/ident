@@ -197,8 +197,13 @@ func (u *User) hasAnyPermission(permissions ...common.Permission) bool {
 }
 
 // Create and persist a user
-func (u *User) Create(createAuth0User bool) bool {
-	db := dbconf.DatabaseConnection()
+func (u *User) Create(tx *gorm.DB, createAuth0User bool) bool {
+	var db *gorm.DB
+	if tx != nil {
+		db = tx
+	} else {
+		db = dbconf.DatabaseConnection()
+	}
 
 	if !u.validate() {
 		return false
@@ -282,6 +287,25 @@ func (u *User) Update() bool {
 	}
 
 	tx.Commit()
+	return success
+}
+
+func (u *User) addOrganizationAssociation(tx *gorm.DB, orgID uuid.UUID, permissions common.Permission) bool {
+	var db *gorm.DB
+	if tx != nil {
+		db = tx
+	} else {
+		db = dbconf.DatabaseConnection()
+	}
+
+	common.Log.Debugf("adding user %s to organization: %s", u.ID, orgID)
+	result := db.Exec("INSERT INTO organizations_users (organization_id, user_id, permissions) VALUES (?, ?, ?)", orgID, u.ID, permissions)
+	success := result.RowsAffected == 1
+	if success {
+		common.Log.Debugf("added user %s to organization: %s", u.ID, orgID)
+	} else {
+		common.Log.Warningf("failed to add user %s to organization: %s", u.ID, orgID)
+	}
 	return success
 }
 

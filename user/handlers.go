@@ -177,8 +177,10 @@ func createUserHandler(c *gin.Context) {
 		return
 	}
 
+	var invite *Invite
+
 	if invitationToken, invitationTokenOk := params["invitation_token"].(string); invitationTokenOk {
-		invite, err := AcceptInvite(invitationToken)
+		invite, err = AcceptInvite(invitationToken)
 		if err != nil {
 			provide.RenderError(err.Error(), 400, c)
 			return
@@ -190,12 +192,6 @@ func createUserHandler(c *gin.Context) {
 
 		if user.Name == nil {
 			user.Name = invite.Name
-		}
-
-		if invite.OrganizationID != nil {
-			defer func() {
-				common.Log.Warningf("TODO: associate user with org id: %s", invite.OrganizationID)
-			}()
 		}
 	}
 
@@ -233,9 +229,24 @@ func createUserHandler(c *gin.Context) {
 
 	createAuth0User := !common.IsAuth0(c) && common.Auth0IntegrationEnabled
 
-	if user.Create(createAuth0User) {
+	tx := dbconf.DatabaseConnection().Begin()
+
+	success := user.Create(tx, createAuth0User)
+	if success {
+		if invite.OrganizationID != nil {
+			orgPermissions := common.DefaultApplicationResourcePermission
+			if invite.Permissions != nil {
+				orgPermissions = *invite.Permissions
+			}
+			success = user.addOrganizationAssociation(tx, *invite.OrganizationID, orgPermissions)
+		}
+	}
+
+	if user.Create(tx, createAuth0User) {
+		tx.Commit()
 		provide.Render(user.AsResponse(), 201, c)
 	} else {
+		tx.Rollback()
 		obj := map[string]interface{}{}
 		obj["errors"] = user.Errors
 		provide.Render(obj, 422, c)
