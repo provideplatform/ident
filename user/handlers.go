@@ -501,7 +501,10 @@ func vendInvitationTokenHandler(c *gin.Context) {
 		return
 	}
 
+	invitor := Find(userID)
+
 	invite.InvitorID = userID
+	invite.InvitorName = invitor.Name
 	// TODO: load invitor permissions in the appropriate context; i.e., in the ApplicationID context if it is set
 
 	if _, permissionsOk := params["permissions"]; permissionsOk && !bearer.HasAnyPermission(common.UpdateUser, common.Sudo) {
