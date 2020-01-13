@@ -124,6 +124,8 @@ func (o *Organization) Create(tx *gorm.DB) bool {
 		db = tx
 	} else {
 		db = dbconf.DatabaseConnection()
+		db = db.Begin()
+		defer db.RollbackUnlessCommitted()
 	}
 
 	if !o.validate() {
@@ -131,8 +133,7 @@ func (o *Organization) Create(tx *gorm.DB) bool {
 	}
 
 	if db.NewRecord(o) {
-		tx := db.Begin()
-		result := tx.Create(&o)
+		result := db.Create(&o)
 		rowsAffected := result.RowsAffected
 		errors := result.GetErrors()
 		if len(errors) > 0 {
@@ -151,16 +152,17 @@ func (o *Organization) Create(tx *gorm.DB) bool {
 					usr := &user.User{}
 					db.Where("id = ?", o.UserID).Find(&usr)
 					if usr != nil && usr.ID != uuid.Nil {
-						if o.addUser(tx, *usr, common.DefaultApplicationResourcePermission) {
+						if o.addUser(db, *usr, common.DefaultApplicationResourcePermission) {
 							common.Log.Debugf("associated user %s with organization: %s", *usr.Name, *o.Name)
-							tx.Commit()
+							if tx == nil {
+								db.Commit()
+							}
 						} else {
 							common.Log.Warningf("failed to associate user %s with organization: %s", *usr.Name, *o.Name)
-							tx.Rollback()
 							return false
 						}
-					} else {
-						tx.Commit()
+					} else if tx == nil {
+						db.Commit()
 					}
 				}
 
@@ -172,8 +174,6 @@ func (o *Organization) Create(tx *gorm.DB) bool {
 				return success
 			}
 		}
-
-		tx.Rollback()
 	}
 
 	return false

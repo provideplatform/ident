@@ -229,7 +229,8 @@ func createUserHandler(c *gin.Context) {
 
 	createAuth0User := !common.IsAuth0(c) && common.Auth0IntegrationEnabled
 
-	tx := dbconf.DatabaseConnection().Begin()
+	db := dbconf.DatabaseConnection()
+	tx := db.Begin()
 
 	success := user.Create(tx, createAuth0User)
 	if success {

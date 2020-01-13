@@ -203,6 +203,8 @@ func (u *User) Create(tx *gorm.DB, createAuth0User bool) bool {
 		db = tx
 	} else {
 		db = dbconf.DatabaseConnection()
+		db = db.Begin()
+		defer db.RollbackUnlessCommitted()
 	}
 
 	if !u.validate() {
@@ -210,8 +212,7 @@ func (u *User) Create(tx *gorm.DB, createAuth0User bool) bool {
 	}
 
 	if db.NewRecord(u) {
-		tx := db.Begin()
-		result := tx.Create(&u)
+		result := db.Create(&u)
 		rowsAffected := result.RowsAffected
 		errors := result.GetErrors()
 		if len(errors) > 0 {
@@ -232,12 +233,14 @@ func (u *User) Create(tx *gorm.DB, createAuth0User bool) bool {
 						u.Errors = append(u.Errors, &provide.Error{
 							Message: common.StringOrNil(err.Error()),
 						})
-						tx.Rollback()
 						return false
 					}
 				}
 
-				tx.Commit()
+				if tx == nil {
+					db.Commit()
+				}
+
 				if success && (u.ApplicationID == nil || *u.ApplicationID == uuid.Nil) {
 					payload, _ := json.Marshal(u.AsResponse())
 					natsutil.NatsPublish(natsSiaUserNotificationSubject, payload)
@@ -246,8 +249,6 @@ func (u *User) Create(tx *gorm.DB, createAuth0User bool) bool {
 				return success
 			}
 		}
-
-		tx.Rollback()
 	}
 
 	return false
@@ -305,6 +306,14 @@ func (u *User) addOrganizationAssociation(tx *gorm.DB, orgID uuid.UUID, permissi
 		common.Log.Debugf("added user %s to organization: %s", u.ID, orgID)
 	} else {
 		common.Log.Warningf("failed to add user %s to organization: %s", u.ID, orgID)
+		errors := result.GetErrors()
+		if len(errors) > 0 {
+			for _, err := range errors {
+				u.Errors = append(u.Errors, &provide.Error{
+					Message: common.StringOrNil(err.Error()),
+				})
+			}
+		}
 	}
 	return success
 }

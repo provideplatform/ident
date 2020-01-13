@@ -137,7 +137,8 @@ func createOrganizationHandler(c *gin.Context) {
 		return
 	}
 
-	tx := dbconf.DatabaseConnection().Begin()
+	db := dbconf.DatabaseConnection()
+	tx := db.Begin()
 	success := org.Create(tx)
 	if success {
 		if invite.ApplicationID != nil {
