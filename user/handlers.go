@@ -240,6 +240,12 @@ func createUserHandler(c *gin.Context) {
 				orgPermissions = *invite.Permissions
 			}
 			success = user.addOrganizationAssociation(tx, *invite.OrganizationID, orgPermissions)
+		} else if invite.ApplicationID != nil {
+			appPermissions := common.DefaultApplicationResourcePermission
+			if invite.Permissions != nil {
+				appPermissions = *invite.Permissions
+			}
+			success = user.addApplicationAssociation(tx, *invite.ApplicationID, appPermissions)
 		}
 	}
 

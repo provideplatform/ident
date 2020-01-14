@@ -291,6 +291,33 @@ func (u *User) Update() bool {
 	return success
 }
 
+func (u *User) addApplicationAssociation(tx *gorm.DB, appID uuid.UUID, permissions common.Permission) bool {
+	var db *gorm.DB
+	if tx != nil {
+		db = tx
+	} else {
+		db = dbconf.DatabaseConnection()
+	}
+
+	common.Log.Debugf("adding user %s to application: %s", u.ID, appID)
+	result := db.Exec("INSERT INTO applications_users (application_id, user_id, permissions) VALUES (?, ?, ?)", appID, u.ID, permissions)
+	success := result.RowsAffected == 1
+	if success {
+		common.Log.Debugf("added user %s to application: %s", u.ID, appID)
+	} else {
+		common.Log.Warningf("failed to add user %s to application: %s", u.ID, appID)
+		errors := result.GetErrors()
+		if len(errors) > 0 {
+			for _, err := range errors {
+				u.Errors = append(u.Errors, &provide.Error{
+					Message: common.StringOrNil(err.Error()),
+				})
+			}
+		}
+	}
+	return success
+}
+
 func (u *User) addOrganizationAssociation(tx *gorm.DB, orgID uuid.UUID, permissions common.Permission) bool {
 	var db *gorm.DB
 	if tx != nil {
