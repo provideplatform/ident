@@ -34,7 +34,7 @@ type Application struct {
 	Hidden          bool             `sql:"not null;default:false" json:"hidden"` // soft-delete mechanism
 
 	Organizations []*organization.Organization `gorm:"many2many:applications_organizations" json:"-"`
-	Users         []*user.User                 `gorm:"many2many:applications_users" json:"-"`
+	Users         []*user.User                 `gorm:"many2many:applications_users" json:"-"` // not to be confused with `User.ApplicationID`
 }
 
 // CreateResponse model
@@ -261,9 +261,15 @@ func (app *Application) updateUser(tx *gorm.DB, usr user.User, permissions commo
 }
 
 // Create and persist an application
-func (app *Application) Create() (*CreateResponse, error) {
-	db := dbconf.DatabaseConnection()
-	tx := db.Begin()
+func (app *Application) Create(tx *gorm.DB) (*CreateResponse, error) {
+	var db *gorm.DB
+	if tx != nil {
+		db = tx
+	} else {
+		db = dbconf.DatabaseConnection()
+		db = db.Begin()
+		defer db.RollbackUnlessCommitted()
+	}
 
 	if !app.validate() {
 		return nil, errors.New(*app.Errors[0].Message)
@@ -271,8 +277,8 @@ func (app *Application) Create() (*CreateResponse, error) {
 
 	app.sanitizeConfig()
 
-	if tx.NewRecord(app) {
-		result := tx.Create(&app)
+	if db.NewRecord(app) {
+		result := db.Create(&app)
 		rowsAffected := result.RowsAffected
 		errors := result.GetErrors()
 		if len(errors) > 0 {
@@ -286,12 +292,15 @@ func (app *Application) Create() (*CreateResponse, error) {
 		if !db.NewRecord(app) {
 			success := rowsAffected > 0
 			if success {
-				tkn, err := token.VendApplicationToken(tx, &app.ID, nil) // FIXME-- support extended permissions
+				tkn, err := token.VendApplicationToken(db, &app.ID, nil) // FIXME-- support extended permissions
 				if err != nil {
-					tx.Rollback()
 					return nil, err
 				}
-				tx.Commit()
+
+				usr := user.Find(&app.UserID)
+				if usr != nil && app.addUser(db, *usr, common.DefaultApplicationResourcePermission) {
+					db.Commit()
+				}
 
 				payload, _ := json.Marshal(app)
 				natsutil.NatsPublish(natsSiaApplicationNotificationSubject, payload)
@@ -304,7 +313,6 @@ func (app *Application) Create() (*CreateResponse, error) {
 		}
 	}
 
-	tx.Rollback()
 	return nil, errors.New("failed to create application")
 }
 

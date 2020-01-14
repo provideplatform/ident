@@ -124,7 +124,7 @@ func createApplicationHandler(c *gin.Context) {
 		}
 	}
 
-	resp, err := app.Create()
+	resp, err := app.Create(nil)
 	if err == nil {
 		mergedConfig := resp.Application.mergedConfig()
 		mergedConfigJSON, _ := json.Marshal(mergedConfig)
