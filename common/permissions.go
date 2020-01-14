@@ -9,8 +9,8 @@ const (
 	// Authenticate permission
 	Authenticate Permission = 0x1
 
-	// ListResources generic permission
-	ListResources Permission = 0x2
+	// ReadResources generic permission
+	ReadResources Permission = 0x2
 
 	// CreateResource generic permission
 	CreateResource Permission = 0x4
@@ -93,7 +93,7 @@ const DefaultUserPermission Permission = Authenticate | Publish | Subscribe | Li
 const DefaultApplicationOrganizationPermission Permission = Publish | Subscribe | DefaultApplicationResourcePermission
 
 // DefaultApplicationResourcePermission is the default mask to use for an application subresource if permissions are not explicitly set upon application token creation
-const DefaultApplicationResourcePermission Permission = ListResources | CreateResource | UpdateResource | DeleteResource | GrantResourceAuthorization | RevokeResourceAuthorization | Publish | Subscribe
+const DefaultApplicationResourcePermission Permission = ReadResources | CreateResource | UpdateResource | DeleteResource | GrantResourceAuthorization | RevokeResourceAuthorization | Publish | Subscribe
 
 // DefaultAuth0RequestPermission is the ephemeral permission mask to apply to Auth0 requests
 const DefaultAuth0RequestPermission = ListUsers | CreateUser

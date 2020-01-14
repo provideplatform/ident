@@ -164,25 +164,31 @@ func applicationDetailsHandler(c *gin.Context) {
 		return
 	}
 
-	if appID != nil && (*appID).String() != c.Param("id") {
+	if appID != nil && appID.String() != c.Param("id") {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
 
+	db := dbconf.DatabaseConnection()
+
 	var app = &Application{}
-	dbconf.DatabaseConnection().Where("id = ?", c.Param("id")).Find(&app)
+	db.Where("id = ?", c.Param("id")).Find(&app)
 	if app == nil || app.ID == uuid.Nil {
 		provide.RenderError("application not found", 404, c)
 		return
 	}
 
-	if userID != nil && *userID != app.UserID {
+	appUser := resolveAppUser(db, app, userID)
+	if appUser == nil && userID != nil && userID.String() != app.UserID.String() {
+		provide.RenderError("forbidden", 403, c)
+		return
+	} else if appUser != nil && !appUser.Permissions.Has(common.ReadResources) {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
 
 	var cfg map[string]interface{}
-	if userID.String() == app.UserID.String() {
+	if userID != nil && userID.String() == app.UserID.String() {
 		cfg = app.mergedConfig()
 	} else {
 		cfg = app.ParseConfig()
@@ -267,7 +273,7 @@ func applicationTokensListHandler(c *gin.Context) {
 	if appUser == nil && userID != nil && *userID != app.UserID {
 		provide.RenderError("forbidden", 403, c)
 		return
-	} else if appUser != nil && !appUser.Permissions.Has(common.ListResources) {
+	} else if appUser != nil && !appUser.Permissions.Has(common.ReadResources) {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
