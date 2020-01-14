@@ -32,14 +32,14 @@ type Invite struct {
 	Token  *token.Token     `sql:"-" json:"-"`
 }
 
-// AcceptInvite parses an invitation given the previously signed token; it doesn't actually
+// ParseInvite parses an invitation given the previously signed token; it doesn't actually
 // accept the invitation by creating a user or associating the user with an application or
 // organization at this time, rather it returns an Invite instance which has been verified
 // as capable of being accepted by the caller
-func AcceptInvite(signedToken string) (*Invite, error) {
+func ParseInvite(signedToken string) (*Invite, error) {
 	token, err := token.Parse(signedToken)
 	if err != nil {
-		common.Log.Warningf("failed accept invitation using given token; %s", err.Error())
+		common.Log.Warningf("failed to parse invitation token; %s", err.Error())
 		return nil, err
 	}
 
@@ -58,33 +58,33 @@ func AcceptInvite(signedToken string) (*Invite, error) {
 	if invitorID, invitorIDOk := data["invitor_id"].(string); invitorIDOk {
 		senderUUID, err := uuid.FromString(invitorID)
 		if err != nil {
-			common.Log.Warningf("failed to accept invitation using given token; invalid invitor id; %s", err.Error())
+			common.Log.Warningf("failed to parse invitation token; invalid invitor id; %s", err.Error())
 			return nil, err
 		}
 		invitorUUID = &senderUUID
 	}
 	invitorName, _ := data["invitor_name"].(string)
 
-	var organizationUUID *uuid.UUID
-	if organizationID, organizationIDOk := data["organization_id"].(string); organizationIDOk {
-		orgUUID, err := uuid.FromString(organizationID)
-		if err != nil {
-			common.Log.Warningf("failed to accept invitation using given token; invalid organization_ id; %s", err.Error())
-			return nil, err
-		}
-		organizationUUID = &orgUUID
-	}
-
 	applicationUUID := token.ApplicationID
 	if applicationUUID == nil {
 		if applicationID, applicationIDOk := data["application_id"].(string); applicationIDOk {
 			appUUID, err := uuid.FromString(applicationID)
 			if err != nil {
-				common.Log.Warningf("failed to accept invitation using given token; invalid organization_ id; %s", err.Error())
+				common.Log.Warningf("failed to parse invitation token; invalid application_id; %s", err.Error())
 				return nil, err
 			}
 			applicationUUID = &appUUID
 		}
+	}
+
+	var organizationUUID *uuid.UUID
+	if organizationID, organizationIDOk := data["organization_id"].(string); organizationIDOk {
+		orgUUID, err := uuid.FromString(organizationID)
+		if err != nil {
+			common.Log.Warningf("failed to parse invitation token; invalid organization_ id; %s", err.Error())
+			return nil, err
+		}
+		organizationUUID = &orgUUID
 	}
 
 	return &Invite{

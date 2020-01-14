@@ -2,11 +2,13 @@ package user
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/ident/common"
@@ -70,11 +72,31 @@ func authenticationHandler(c *gin.Context) {
 					}
 					appID = &appUUID
 				}
-				resp, err := AuthenticateUser(email, pw, appID, scope)
+
+				db := dbconf.DatabaseConnection()
+				resp, err := AuthenticateUser(db, email, pw, appID, scope)
 				if err != nil {
 					provide.RenderError(err.Error(), 401, c)
 					return
 				}
+
+				if invitationToken, invitationTokenOk := params["invitation_token"].(string); invitationTokenOk {
+					invite, err := ParseInvite(invitationToken)
+					if err != nil {
+						provide.RenderError(err.Error(), 422, c)
+						return
+					}
+
+					user := Find(&resp.User.ID)
+					if user != nil && invite != nil {
+						err = processUserInvite(db, *user, *invite)
+						if err != nil {
+							provide.RenderError(err.Error(), 422, c)
+							return
+						}
+					}
+				}
+
 				provide.Render(resp, 201, c)
 				return
 			} else if bearer.ApplicationID != nil {
@@ -86,6 +108,7 @@ func authenticationHandler(c *gin.Context) {
 				provide.Render(resp, 201, c)
 				return
 			}
+
 			msg := fmt.Sprintf("password required to attempt user authentication; email address: %s", email)
 			provide.RenderError(msg, 422, c)
 			return
@@ -180,7 +203,7 @@ func createUserHandler(c *gin.Context) {
 	var invite *Invite
 
 	if invitationToken, invitationTokenOk := params["invitation_token"].(string); invitationTokenOk {
-		invite, err = AcceptInvite(invitationToken)
+		invite, err = ParseInvite(invitationToken)
 		if err != nil {
 			provide.RenderError(err.Error(), 400, c)
 			return
@@ -233,19 +256,13 @@ func createUserHandler(c *gin.Context) {
 	tx := db.Begin()
 
 	success := user.Create(tx, createAuth0User)
-	if success {
-		if invite.OrganizationID != nil {
-			orgPermissions := common.DefaultApplicationResourcePermission
-			if invite.Permissions != nil {
-				orgPermissions = *invite.Permissions
-			}
-			success = user.addOrganizationAssociation(tx, *invite.OrganizationID, orgPermissions)
-		} else if invite.ApplicationID != nil {
-			appPermissions := common.DefaultApplicationResourcePermission
-			if invite.Permissions != nil {
-				appPermissions = *invite.Permissions
-			}
-			success = user.addApplicationAssociation(tx, *invite.ApplicationID, appPermissions)
+	if success && invite != nil {
+		err = processUserInvite(tx, *user, *invite)
+		if err != nil {
+			success = false
+			user.Errors = append(user.Errors, &provide.Error{
+				Message: common.StringOrNil(err.Error()),
+			})
 		}
 	}
 
@@ -258,6 +275,32 @@ func createUserHandler(c *gin.Context) {
 		obj["errors"] = user.Errors
 		provide.Render(obj, 422, c)
 	}
+}
+
+func processUserInvite(tx *gorm.DB, user User, invite Invite) error {
+	success := false
+
+	if invite.OrganizationID != nil {
+		orgPermissions := common.DefaultApplicationResourcePermission
+		if invite.Permissions != nil {
+			orgPermissions = *invite.Permissions
+		}
+		success = user.addOrganizationAssociation(tx, *invite.OrganizationID, orgPermissions)
+		if !success {
+			return errors.New("failed to process user invitation; organization association failed")
+		}
+	} else if invite.ApplicationID != nil {
+		appPermissions := common.DefaultApplicationResourcePermission
+		if invite.Permissions != nil {
+			appPermissions = *invite.Permissions
+		}
+		success = user.addApplicationAssociation(tx, *invite.ApplicationID, appPermissions)
+		if !success {
+			return errors.New("failed to process user invitation; application association failed")
+		}
+	}
+
+	return nil
 }
 
 func updateUserHandler(c *gin.Context) {

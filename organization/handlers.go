@@ -109,7 +109,7 @@ func createOrganizationHandler(c *gin.Context) {
 	var permissions common.Permission
 
 	if invitationToken, invitationTokenOk := params["invitation_token"].(string); invitationTokenOk {
-		invite, err = user.AcceptInvite(invitationToken)
+		invite, err = user.ParseInvite(invitationToken)
 		if err != nil {
 			provide.RenderError(err.Error(), 400, c)
 			return
@@ -240,7 +240,7 @@ func createOrganizationUserHandler(c *gin.Context) {
 	var permissions common.Permission
 
 	if invitationToken, invitationTokenOk := params["invitation_token"].(string); invitationTokenOk {
-		invite, err = user.AcceptInvite(invitationToken)
+		invite, err = user.ParseInvite(invitationToken)
 		if err != nil {
 			provide.RenderError(err.Error(), 400, c)
 			return

@@ -91,15 +91,22 @@ func Exists(email string, applicationID *uuid.UUID) bool {
 
 // AuthenticateUser attempts to authenticate by email address and password;
 // i.e., this is equivalent to grant_type=password under the OAuth 2 spec
-func AuthenticateUser(email, password string, applicationID *uuid.UUID, scope *string) (*AuthenticationResponse, error) {
+func AuthenticateUser(tx *gorm.DB, email, password string, applicationID *uuid.UUID, scope *string) (*AuthenticationResponse, error) {
+	var db *gorm.DB
+	if tx != nil {
+		db = tx
+	} else {
+		db = dbconf.DatabaseConnection()
+	}
+
 	var user = &User{}
-	db := dbconf.DatabaseConnection()
 	query := db.Where("email = ?", strings.ToLower(email))
 	if applicationID != nil && *applicationID != uuid.Nil {
 		query = query.Where("application_id = ?", applicationID)
 	} else {
 		query = query.Where("application_id IS NULL")
 	}
+
 	query.First(&user)
 	if user != nil && user.ID != uuid.Nil {
 		if !user.hasPermission(common.Authenticate) {
@@ -112,22 +119,26 @@ func AuthenticateUser(email, password string, applicationID *uuid.UUID, scope *s
 	} else {
 		return nil, fmt.Errorf("invalid email")
 	}
+
 	token := &token.Token{
 		UserID:      &user.ID,
 		Scope:       scope,
 		Permissions: user.Permissions,
 	}
+
 	if !token.Vend() {
 		var err error
 		if len(token.Errors) > 0 {
 			err = fmt.Errorf("failed to create token for authenticated user: %s; %s", *user.Email, *token.Errors[0].Message)
 			common.Log.Warningf(err.Error())
 		}
+
 		return &AuthenticationResponse{
 			User:  user.AsResponse(),
 			Token: nil,
 		}, err
 	}
+
 	return &AuthenticationResponse{
 		User:  user.AsResponse(),
 		Token: token.AsResponse(),
