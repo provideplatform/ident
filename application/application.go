@@ -165,7 +165,7 @@ func (app *Application) addOrganization(tx *gorm.DB, org organization.Organizati
 	return success
 }
 
-func (app *Application) removeOrganization(tx *gorm.DB, org *organization.Organization) bool {
+func (app *Application) removeOrganization(tx *gorm.DB, org organization.Organization) bool {
 	var db *gorm.DB
 	if tx != nil {
 		db = tx
@@ -184,7 +184,7 @@ func (app *Application) removeOrganization(tx *gorm.DB, org *organization.Organi
 	return success
 }
 
-func (app *Application) updateOrganization(tx *gorm.DB, org *organization.Organization, permissions common.Permission) bool {
+func (app *Application) updateOrganization(tx *gorm.DB, org organization.Organization, permissions common.Permission) bool {
 	var db *gorm.DB
 	if tx != nil {
 		db = tx

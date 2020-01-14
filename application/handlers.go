@@ -413,7 +413,7 @@ func deleteApplicationOrganizationHandler(c *gin.Context) {
 		return
 	}
 
-	if app.removeOrganization(db, org) {
+	if app.removeOrganization(db, *org) {
 		provide.Render(nil, 204, c)
 	} else {
 		obj := map[string]interface{}{}
