@@ -13,6 +13,7 @@ import (
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/organization"
 	"github.com/provideapp/ident/token"
+	"github.com/provideapp/ident/user"
 	provide "github.com/provideservices/provide-go"
 )
 
@@ -33,6 +34,7 @@ type Application struct {
 	Hidden          bool             `sql:"not null;default:false" json:"hidden"` // soft-delete mechanism
 
 	Organizations []*organization.Organization `gorm:"many2many:applications_organizations" json:"-"`
+	Users         []*user.User                 `gorm:"many2many:applications_users" json:"-"`
 }
 
 // CreateResponse model
@@ -50,11 +52,18 @@ func ApplicationsByUserID(userID *uuid.UUID, hidden bool) []Application {
 	return apps
 }
 
-// OrganizationListQuery returns a db query which joins the organization applications and returns the query for pagination
-func (app *Application) OrganizationListQuery(db *gorm.DB) *gorm.DB {
+// OrganizationsListQuery returns a db query which joins the organization applications and returns the query for pagination
+func (app *Application) OrganizationsListQuery(db *gorm.DB) *gorm.DB {
 	query := db.Select("organizations.id, organizations.created_at, organizations.user_id, organizations.name, organizations.description, ao.permissions")
 	query = query.Joins("JOIN applications_organizations as ao ON ao.organization_id = organizations.id")
 	return query.Where("ao.application_id = ?", app.ID).Order("organizations.name desc")
+}
+
+// UsersListQuery returns a db query which joins the application users and returns the query for pagination
+func (app *Application) UsersListQuery(db *gorm.DB) *gorm.DB {
+	query := db.Select("users.id, users.created_at, users.name, au.permissions as permissions")
+	query = query.Joins("JOIN applications_users as au ON au.user_id = users.id").Where("au.application_id = ?", app.ID)
+	return query
 }
 
 // DecryptedConfig returns the decrypted application config
@@ -190,6 +199,63 @@ func (app *Application) updateOrganization(tx *gorm.DB, org *organization.Organi
 		common.Log.Debugf("updated organization %s for application: %s", org.ID, app.ID)
 	} else {
 		common.Log.Warningf("failed to update organization %s for application: %s", org.ID, app.ID)
+	}
+	return success
+}
+
+func (app *Application) addUser(tx *gorm.DB, usr user.User, permissions common.Permission) bool {
+	var db *gorm.DB
+	if tx != nil {
+		db = tx
+	} else {
+		db = dbconf.DatabaseConnection()
+	}
+
+	common.Log.Debugf("adding user %s to application: %s", usr.ID, app.ID)
+	result := db.Exec("INSERT INTO applications_users (application_id, user_id, permissions) VALUES (?, ?, ?)", app.ID, usr.ID, permissions)
+	success := result.RowsAffected == 1
+	if success {
+		common.Log.Debugf("added user %s to application: %s", usr.ID, app.ID)
+	} else {
+		common.Log.Warningf("failed to add user %s to application: %s", usr.ID, app.ID)
+	}
+	return success
+}
+
+func (app *Application) removeUser(tx *gorm.DB, usr user.User) bool {
+	var db *gorm.DB
+	if tx != nil {
+		db = tx
+	} else {
+		db = dbconf.DatabaseConnection()
+	}
+
+	common.Log.Debugf("removing user %s from application: %s", usr.ID, app.ID)
+	result := db.Exec("DELETE FROM applications_users WHERE application_id = ? AND user_id = ?", app.ID, usr.ID)
+	success := result.RowsAffected == 1
+	if success {
+		common.Log.Debugf("removed user %s from application: %s", usr.ID, app.ID)
+	} else {
+		common.Log.Warningf("failed to remove user %s from application: %s", usr.ID, app.ID)
+	}
+	return success
+}
+
+func (app *Application) updateUser(tx *gorm.DB, usr user.User, permissions common.Permission) bool {
+	var db *gorm.DB
+	if tx != nil {
+		db = tx
+	} else {
+		db = dbconf.DatabaseConnection()
+	}
+
+	common.Log.Debugf("updating user %s for application: %s", usr.ID, app.ID)
+	result := db.Exec("UPDATE applications_users SET permissions = ? WHERE application_id = ? AND user_id = ?", permissions, app.ID, usr.ID)
+	success := result.RowsAffected == 1
+	if success {
+		common.Log.Debugf("updated user %s for application: %s", usr.ID, app.ID)
+	} else {
+		common.Log.Warningf("failed to update user %s for application: %s", usr.ID, app.ID)
 	}
 	return success
 }

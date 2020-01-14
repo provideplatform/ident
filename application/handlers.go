@@ -9,6 +9,7 @@ import (
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/organization"
 	"github.com/provideapp/ident/token"
+	"github.com/provideapp/ident/user"
 	provide "github.com/provideservices/provide-go"
 )
 
@@ -29,6 +30,14 @@ func InstallApplicationOrganizationsAPI(r *gin.Engine) {
 	r.POST("/api/v1/applications/:id/organizations", createApplicationOrganizationHandler)
 	r.PUT("/api/v1/applications/:id/organizations/:orgId", updateApplicationOrganizationHandler)
 	r.DELETE("/api/v1/applications/:id/organizations/:orgId", deleteApplicationOrganizationHandler)
+}
+
+// InstallApplicationUsersAPI installs the handlers using the given gin Engine
+func InstallApplicationUsersAPI(r *gin.Engine) {
+	r.GET("/api/v1/applications/:id/users", applicationUsersListHandler)
+	r.POST("/api/v1/applications/:id/users", createApplicationUserHandler)
+	r.PUT("/api/v1/applications/:id/users/:userId", updateApplicationUserHandler)
+	r.DELETE("/api/v1/applications/:id/users/:userId", deleteApplicationUserHandler)
 }
 
 func applicationsListHandler(c *gin.Context) {
@@ -208,6 +217,40 @@ func deleteApplicationHandler(c *gin.Context) {
 	provide.RenderError("not implemented", 501, c)
 }
 
+func applicationTokensListHandler(c *gin.Context) {
+	bearer := token.InContext(c)
+	userID := bearer.UserID
+	appID := bearer.ApplicationID
+
+	if (userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) {
+		provide.RenderError("unauthorized", 401, c)
+		return
+	}
+
+	if appID != nil && appID.String() != c.Param("id") {
+		provide.RenderError("forbidden", 403, c)
+		return
+	}
+
+	var app = &Application{}
+	dbconf.DatabaseConnection().Where("id = ?", c.Param("id")).Find(&app)
+	if app == nil || app.ID == uuid.Nil {
+		provide.RenderError("application not found", 404, c)
+		return
+	}
+	if userID != nil && *userID != app.UserID {
+		provide.RenderError("forbidden", 403, c)
+		return
+	}
+
+	query := dbconf.DatabaseConnection()
+
+	var tokens []*token.Token
+	query = query.Where("application_id = ?", app.ID)
+	provide.Paginate(c, query, &token.Token{}).Find(&tokens)
+	provide.Render(tokens, 200, c)
+}
+
 func applicationOrganizationsListHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 	userID := bearer.UserID
@@ -237,7 +280,7 @@ func applicationOrganizationsListHandler(c *gin.Context) {
 	}
 
 	var orgs []*organization.Organization
-	provide.Paginate(c, app.OrganizationListQuery(db), &organization.Organization{}).Find(&orgs)
+	provide.Paginate(c, app.OrganizationsListQuery(db), &organization.Organization{}).Find(&orgs)
 	provide.Render(orgs, 200, c)
 }
 
@@ -379,7 +422,7 @@ func deleteApplicationOrganizationHandler(c *gin.Context) {
 	}
 }
 
-func applicationTokensListHandler(c *gin.Context) {
+func applicationUsersListHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 	userID := bearer.UserID
 	appID := bearer.ApplicationID
@@ -389,26 +432,164 @@ func applicationTokensListHandler(c *gin.Context) {
 		return
 	}
 
-	if appID != nil && appID.String() != c.Param("id") {
+	if appID != nil && (*appID).String() != c.Param("id") {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
 
+	db := dbconf.DatabaseConnection()
+
 	var app = &Application{}
-	dbconf.DatabaseConnection().Where("id = ?", c.Param("id")).Find(&app)
+	db.Where("id = ?", c.Param("id")).Find(&app)
 	if app == nil || app.ID == uuid.Nil {
 		provide.RenderError("application not found", 404, c)
 		return
 	}
+
 	if userID != nil && *userID != app.UserID {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
 
-	query := dbconf.DatabaseConnection()
+	var users []*user.User
+	provide.Paginate(c, app.UsersListQuery(db), &user.User{}).Find(&users)
+	provide.Render(users, 200, c)
+}
 
-	var tokens []*token.Token
-	query = query.Where("application_id = ?", app.ID)
-	provide.Paginate(c, query, &token.Token{}).Find(&tokens)
-	provide.Render(tokens, 200, c)
+func createApplicationUserHandler(c *gin.Context) {
+	bearer := token.InContext(c)
+	appID := bearer.ApplicationID
+
+	if appID == nil || *appID == uuid.Nil {
+		provide.RenderError("unauthorized", 401, c)
+		return
+	}
+
+	if appID != nil && appID.String() != c.Param("id") {
+		provide.RenderError("forbidden", 403, c)
+		return
+	}
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	params := map[string]interface{}{}
+	err = json.Unmarshal(buf, &params)
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	var userID *uuid.UUID
+	if appIDStr, appIDOk := params["user_id"].(string); appIDOk {
+		appID, err := uuid.FromString(appIDStr)
+		if err != nil {
+			provide.RenderError(err.Error(), 422, c)
+			return
+		}
+		userID = &appID
+	}
+
+	var permissions common.Permission
+	appPermissions, permissionsOk := params["permissions"].(common.Permission)
+	if permissionsOk && !bearer.HasAnyExtendedPermission(applicationResourceKey, common.CreateResource, common.GrantResourceAuthorization) {
+		provide.RenderError("unable to assert arbitrary application user permissions", 403, c)
+		return
+	} else if permissionsOk {
+		permissions = appPermissions
+	} else {
+		permissions = common.DefaultApplicationResourcePermission
+	}
+
+	db := dbconf.DatabaseConnection()
+
+	var app = &Application{}
+	db.Where("id = ?", c.Param("id")).Find(&app)
+	if app == nil || app.ID == uuid.Nil {
+		provide.RenderError("application not found", 404, c)
+		return
+	}
+
+	usr := &user.User{}
+	db.Where("id = ?", userID).Find(&usr)
+	if usr == nil || usr.ID == uuid.Nil {
+		provide.RenderError("user not found", 404, c)
+		return
+	}
+
+	if app.addUser(db, *usr, permissions) {
+		provide.Render(nil, 204, c)
+	} else {
+		obj := map[string]interface{}{}
+		obj["errors"] = usr.Errors
+		provide.Render(obj, 422, c)
+	}
+}
+
+func updateApplicationUserHandler(c *gin.Context) {
+	provide.RenderError("not implemented", 501, c)
+}
+
+func deleteApplicationUserHandler(c *gin.Context) {
+	bearer := token.InContext(c)
+	appID := bearer.ApplicationID
+
+	if appID == nil || *appID == uuid.Nil {
+		provide.RenderError("unauthorized", 401, c)
+		return
+	}
+
+	if appID != nil && appID.String() != c.Param("id") {
+		provide.RenderError("forbidden", 403, c)
+		return
+	}
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+	params := map[string]interface{}{}
+	err = json.Unmarshal(buf, &params)
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	var userID *uuid.UUID
+	if userIDStr, userIDOk := params["user_id"].(string); userIDOk {
+		appID, err := uuid.FromString(userIDStr)
+		if err != nil {
+			provide.RenderError(err.Error(), 422, c)
+			return
+		}
+		userID = &appID
+	}
+
+	db := dbconf.DatabaseConnection()
+
+	var app = &Application{}
+	db.Where("id = ?", c.Param("id")).Find(&app)
+	if app == nil || app.ID == uuid.Nil {
+		provide.RenderError("application not found", 404, c)
+		return
+	}
+
+	usr := &user.User{}
+	db.Where("id = ?", userID).Find(&usr)
+	if usr == nil || usr.ID == uuid.Nil {
+		provide.RenderError("user not found", 404, c)
+		return
+	}
+
+	if app.removeUser(db, *usr) {
+		provide.Render(nil, 204, c)
+	} else {
+		obj := map[string]interface{}{}
+		obj["errors"] = usr.Errors
+		provide.Render(obj, 422, c)
+	}
 }
