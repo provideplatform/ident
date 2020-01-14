@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/badoux/checkmail"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
@@ -16,6 +17,11 @@ import (
 
 const authorizationGrantRefreshToken = "refresh_token"
 const authorizationScopeOfflineAccess = "offline_access"
+
+const authorizationSubjectApplication = "application"
+const authorizationSubjectInvite = "invite"
+const authorizationSubjectToken = "token"
+const authorizationSubjectUser = "user"
 
 const defaultRefreshTokenTTL = time.Hour * 24
 const defaultAccessTokenTTL = time.Minute * 60
@@ -116,17 +122,25 @@ func Parse(token string) (*Token, error) {
 		}
 
 		subUUID, err := uuid.FromString(subprts[1])
-		if err != nil && subprts[0] != "invite" {
-			return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
+		if err != nil {
+			if subprts[0] == authorizationSubjectInvite {
+				err := checkmail.ValidateFormat(subprts[1])
+				if err != nil {
+					return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
+				}
+			} else {
+				return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
+			}
 		}
 
 		switch subprts[0] {
-		case "application":
+		case authorizationSubjectApplication:
 			appID = &subUUID
-		case "invite":
-			// this is an invitation token and can only authorize user creation, optionally on behalf of an application_id and/or organization_id specified in the application claims
+		case authorizationSubjectInvite:
+			// this is an invitation token and can only authorize certain actions within a user creation or authentication transaction;
+			// such actions may be made on behalf of an application_id and/or organization_id specified in the invitation application claims
 			common.Log.Debugf("parsed valid bearer authorization containing invitation subject: %s", sub)
-		case "token":
+		case authorizationSubjectToken:
 			// this is a refresh token and can only authorize new access tokens on behalf of a user_id specified in the application claims
 			if appclaimsOk {
 				if claimedUserID, claimedUserIDOk := appclaims["user_id"].(string); claimedUserIDOk {
@@ -139,7 +153,7 @@ func Parse(token string) (*Token, error) {
 					common.Log.Debugf("authorized refresh token for creation of new access token on behalf of user: %s", userID)
 				}
 			}
-		case "user":
+		case authorizationSubjectUser:
 			userID = &subUUID
 		}
 
