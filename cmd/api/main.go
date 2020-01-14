@@ -110,6 +110,7 @@ func runAPI() {
 
 	application.InstallApplicationAPI(r)
 	application.InstallApplicationOrganizationsAPI(r)
+	application.InstallApplicationUsersAPI(r)
 	organization.InstallOrganizationAPI(r)
 	organization.InstallOrganizationUsersAPI(r)
 	token.InstallTokenAPI(r)
