@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/ident/common"
@@ -38,6 +39,19 @@ func InstallApplicationUsersAPI(r *gin.Engine) {
 	r.POST("/api/v1/applications/:id/users", createApplicationUserHandler)
 	r.PUT("/api/v1/applications/:id/users/:userId", updateApplicationUserHandler)
 	r.DELETE("/api/v1/applications/:id/users/:userId", deleteApplicationUserHandler)
+}
+
+func resolveAppUser(db *gorm.DB, app *Application, userID *uuid.UUID) *user.User {
+	if userID == nil {
+		return nil
+	}
+	appUser := &user.User{}
+	appUserQuery := app.UsersListQuery(db)
+	appUserQuery.Where("au.user_id = ?", userID).Find(&appUser)
+	if appUser == nil || appUser.ID == uuid.Nil {
+		return nil
+	}
+	return appUser
 }
 
 func applicationsListHandler(c *gin.Context) {
@@ -233,21 +247,26 @@ func applicationTokensListHandler(c *gin.Context) {
 		return
 	}
 
-	var app = &Application{}
-	dbconf.DatabaseConnection().Where("id = ?", c.Param("id")).Find(&app)
+	db := dbconf.DatabaseConnection()
+
+	app := &Application{}
+	db.Where("id = ?", c.Param("id")).Find(&app)
 	if app == nil || app.ID == uuid.Nil {
 		provide.RenderError("application not found", 404, c)
 		return
 	}
-	if userID != nil && *userID != app.UserID {
+
+	appUser := resolveAppUser(db, app, userID)
+	if appUser == nil && userID != nil && *userID != app.UserID {
+		provide.RenderError("forbidden", 403, c)
+		return
+	} else if appUser != nil && !appUser.Permissions.Has(common.ListResources) {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
 
-	query := dbconf.DatabaseConnection()
-
 	var tokens []*token.Token
-	query = query.Where("application_id = ?", app.ID)
+	query := db.Where("application_id = ?", app.ID)
 	provide.Paginate(c, query, &token.Token{}).Find(&tokens)
 	provide.Render(tokens, 200, c)
 }
