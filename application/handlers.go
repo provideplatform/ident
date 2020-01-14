@@ -61,7 +61,8 @@ func applicationsListHandler(c *gin.Context) {
 	query = query.Where("applications.hidden = ?", hidden)
 
 	query = query.Joins("LEFT OUTER JOIN applications_organizations as ao ON ao.application_id = applications.id LEFT OUTER JOIN organizations_users as ou ON ou.organization_id = ao.organization_id")
-	query = query.Where("applications.user_id = ? OR (ao.organization_id = ou.organization_id AND ou.user_id = ?)", userID, userID)
+	query = query.Joins("LEFT OUTER JOIN applications_users as au ON au.application_id = applications.id")
+	query = query.Where("applications.user_id = ? OR au.user_id = ? OR (ao.organization_id = ou.organization_id AND ou.user_id = ?)", userID, userID, userID)
 
 	if c.Query("network_id") != "" {
 		query = query.Where("applications.network_id = ?", c.Query("network_id"))
