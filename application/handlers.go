@@ -175,15 +175,22 @@ func applicationDetailsHandler(c *gin.Context) {
 		provide.RenderError("application not found", 404, c)
 		return
 	}
+
 	if userID != nil && *userID != app.UserID {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
 
-	mergedConfig := app.mergedConfig()
-	mergedConfigJSON, _ := json.Marshal(mergedConfig)
-	_mergedConfigJSON := json.RawMessage(mergedConfigJSON)
-	app.Config = &_mergedConfigJSON
+	var cfg map[string]interface{}
+	if userID.String() == app.UserID.String() {
+		cfg = app.mergedConfig()
+	} else {
+		cfg = app.ParseConfig()
+	}
+
+	cfgJSON, _ := json.Marshal(cfg)
+	_cfgJSON := json.RawMessage(cfgJSON)
+	*app.Config = _cfgJSON
 
 	provide.Render(app, 200, c)
 }
