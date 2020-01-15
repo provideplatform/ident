@@ -49,11 +49,10 @@ func resolveAppUser(db *gorm.DB, app *Application, userID *uuid.UUID) *user.User
 	query := app.UsersListQuery(db)
 	query.Where("au.user_id = ?", userID).Find(&appUser)
 	if appUser == nil || appUser.ID == uuid.Nil {
-		query := db.Select("users.id, users.created_at, users.name, ao.permissions as permissions")
-		query = query.Joins("JOIN applications_organizations as ao ON ao.organization_id = organizations.id")
-		query = query.Where("ao.application_id = ?", app.ID)
-		query = query.Joins("LEFT OUTER JOIN organizations_users as ou ON ou.organization_id = ao.organization_id")
-		query = query.Where("users.id = ? OR au.user_id = ? OR (ao.organization_id = ou.organization_id AND ou.user_id = ?)", userID, userID, userID, userID)
+		query := db.Select("users.id, users.created_at, users.name, ou.permissions as permissions")
+		query = query.Joins("LEFT OUTER JOIN applications_organizations as ao ON ao.application_id = ? LEFT OUTER JOIN organizations_users as ou ON ou.organization_id = ao.organization_id", app.ID)
+		query = query.Joins("LEFT OUTER JOIN applications_users as au ON au.application_id = ?", app.ID)
+		query = query.Where("au.user_id = ? OR (ao.organization_id = ou.organization_id AND ou.user_id = ?)", userID, userID)
 		query.Find(&appUser)
 
 		if appUser == nil || appUser.ID == uuid.Nil {
