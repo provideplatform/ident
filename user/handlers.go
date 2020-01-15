@@ -568,9 +568,17 @@ func vendInvitationTokenHandler(c *gin.Context) {
 	invite.InvitorName = invitor.Name
 	// TODO: load invitor permissions in the appropriate context; i.e., in the ApplicationID context if it is set
 
-	if _, permissionsOk := params["permissions"]; permissionsOk && !bearer.HasAnyPermission(common.UpdateUser, common.Sudo) {
-		provide.RenderError("unable to assert arbitrary user permissions", 403, c)
-		return
+	_, permissionsOk := params["permissions"]
+
+	if permissionsOk {
+		if invite.ApplicationID != nil {
+			common.Log.Warningf("arbitrary permissions specified for user application invitation: %s", *invite.Email)
+		} else if invite.OrganizationID != nil {
+			common.Log.Warningf("arbitrary permissions specified for user organization invitation: %s", *invite.Email)
+		} else if !bearer.HasAnyPermission(common.UpdateUser, common.Sudo) {
+			provide.RenderError("unable to assert arbitrary user permissions", 403, c)
+			return
+		}
 	}
 
 	if Exists(*invite.Email, invite.ApplicationID) {
