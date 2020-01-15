@@ -140,7 +140,7 @@ func createOrganizationHandler(c *gin.Context) {
 	db := dbconf.DatabaseConnection()
 	tx := db.Begin()
 	success := org.Create(tx)
-	if success {
+	if success && invite != nil {
 		if invite.ApplicationID != nil {
 			success = org.addApplicationAssociation(tx, *invite.ApplicationID, permissions)
 		}
