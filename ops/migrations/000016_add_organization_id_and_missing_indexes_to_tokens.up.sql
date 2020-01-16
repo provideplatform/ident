@@ -6,4 +6,4 @@ CREATE INDEX idx_tokens_organization_id ON tokens USING btree (organization_id);
 CREATE INDEX idx_tokens_application_id_organization_id ON tokens USING btree (application_id, organization_id);
 CREATE INDEX idx_tokens_application_id_user_id ON tokens USING btree (application_id, user_id);
 
-ALTER TABLE ONLY tokens ADD CONSTRAINT tokens_organization_id_organizations_id_foreign FOREIGN KEY (organization_id) REFERENCES organization(id) ON UPDATE CASCADE ON DELETE CASCADE;
+ALTER TABLE ONLY tokens ADD CONSTRAINT tokens_organization_id_organizations_id_foreign FOREIGN KEY (organization_id) REFERENCES organizations(id) ON UPDATE CASCADE ON DELETE CASCADE;
