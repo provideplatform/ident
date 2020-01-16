@@ -12,6 +12,7 @@ import (
 const authorizationHeader = "authorization"
 
 const contextApplicationIDKey = "application_id"
+const contextOrganizationIDKey = "organization_id"
 const contextPermissionsKey = "permissions"
 const contextSubjectKey = "sub"
 const contextTokenKey = "token"
@@ -37,6 +38,9 @@ func AuthMiddleware() gin.HandlerFunc {
 
 			if token.ApplicationID != nil {
 				c.Set(contextApplicationIDKey, token.ApplicationID.String())
+			}
+			if token.OrganizationID != nil {
+				c.Set(contextOrganizationIDKey, token.OrganizationID.String())
 			}
 			if token.UserID != nil {
 				c.Set(contextUserIDKey, token.UserID.String())

@@ -74,8 +74,18 @@ func createTokenHandler(c *gin.Context) {
 	}
 
 	if appID != nil {
+		var orgID *uuid.UUID
+		if organizationID, ok := params["organization_id"].(string); ok {
+			orgUUID, err := uuid.FromString(organizationID)
+			if err == nil {
+				orgID = &orgUUID
+			}
+		} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
+			orgID = bearer.OrganizationID
+		}
+
 		db := dbconf.DatabaseConnection()
-		resp, err := VendApplicationToken(db, appID, nil) // FIXME-- support extended permissions
+		resp, err := VendApplicationToken(db, appID, orgID, nil, nil) // FIXME-- support users and extended permissions
 		if err != nil {
 			provide.RenderError(err.Error(), 401, c)
 			return

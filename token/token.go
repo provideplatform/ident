@@ -20,6 +20,7 @@ const authorizationScopeOfflineAccess = "offline_access"
 
 const authorizationSubjectApplication = "application"
 const authorizationSubjectInvite = "invite"
+const authorizationSubjectOrganization = "organization"
 const authorizationSubjectToken = "token"
 const authorizationSubjectUser = "user"
 
@@ -42,10 +43,13 @@ type Token struct {
 	// Token represents a legacy token authorization which never expires, but is hashed and
 	// persisted in the db so therefore it can be revoked; requests which contain authorization
 	// headers containing these legacy tokens also present claims, so no db lookup is required
-	Token         *string    `sql:"type:bytea" json:"token"`
-	Hash          *string    `json:"-"`
-	ApplicationID *uuid.UUID `sql:"type:uuid" json:"-"`
-	UserID        *uuid.UUID `sql:"type:uuid" json:"-"`
+	Token *string `sql:"type:bytea" json:"token"`
+	Hash  *string `json:"-"`
+
+	// Associations
+	ApplicationID  *uuid.UUID `sql:"type:uuid" json:"-"`
+	OrganizationID *uuid.UUID `sql:"type:uuid" json:"-"`
+	UserID         *uuid.UUID `sql:"type:uuid" json:"-"`
 
 	// OAuth 2 fields
 	AccessToken  *string `sql:"-" json:"access_token,omitempty"`
@@ -109,6 +113,7 @@ func Parse(token string) (*Token, error) {
 		appclaims, appclaimsOk := claims[common.JWTApplicationClaimsKey].(map[string]interface{})
 
 		var appID *uuid.UUID
+		var orgID *uuid.UUID
 		var userID *uuid.UUID
 
 		var sub string
@@ -140,6 +145,8 @@ func Parse(token string) (*Token, error) {
 			// this is an invitation token and can only authorize certain actions within a user creation or authentication transaction;
 			// such actions may be made on behalf of an application_id and/or organization_id specified in the invitation application claims
 			common.Log.Debugf("parsed valid bearer authorization containing invitation subject: %s", sub)
+		case authorizationSubjectOrganization:
+			orgID = &subUUID
 		case authorizationSubjectToken:
 			// this is a refresh token and can only authorize new access tokens on behalf of a user_id specified in the application claims
 			if appclaimsOk {
@@ -173,13 +180,14 @@ func Parse(token string) (*Token, error) {
 		}
 
 		tkn = &Token{
-			Token:         &jwtToken.Raw,
-			IssuedAt:      iat,
-			ExpiresAt:     exp,
-			NotBefore:     nbf,
-			Subject:       common.StringOrNil(sub),
-			UserID:        userID,
-			ApplicationID: appID,
+			Token:          &jwtToken.Raw,
+			IssuedAt:       iat,
+			ExpiresAt:      exp,
+			NotBefore:      nbf,
+			Subject:        common.StringOrNil(sub),
+			UserID:         userID,
+			ApplicationID:  appID,
+			OrganizationID: orgID,
 		}
 
 		if aud, audOk := claims["aud"].(string); audOk {
@@ -197,6 +205,14 @@ func Parse(token string) (*Token, error) {
 					return nil, fmt.Errorf("valid bearer authorization contained invalid application_id app claim: %s; %s", sub, err.Error())
 				}
 				tkn.ApplicationID = &appUUID
+			}
+
+			if orgIDClaim, orgIDClaimOk := appclaims["organization_id"].(string); orgIDClaimOk && tkn.OrganizationID == nil {
+				orgUUID, err := uuid.FromString(orgIDClaim)
+				if err != nil {
+					return nil, fmt.Errorf("valid bearer authorization contained invalid org_id app claim: %s; %s", sub, err.Error())
+				}
+				tkn.OrganizationID = &orgUUID
 			}
 
 			if userIDClaim, userIDClaimOk := appclaims["user_id"].(string); userIDClaimOk && tkn.UserID == nil {
@@ -244,10 +260,17 @@ func FindLegacyToken(token string) *Token {
 	return nil
 }
 
-// GetApplicationTokens - retrieve the tokens associated with the application
+// GetApplicationTokens - retrieve the tokens associated with the given application
 func GetApplicationTokens(applicationID *uuid.UUID) []*Token {
 	var tokens []*Token
 	dbconf.DatabaseConnection().Where("application_id = ?", applicationID).Find(&tokens)
+	return tokens
+}
+
+// GetOrganizationTokens - retrieve the tokens associated with the given organization
+func GetOrganizationTokens(organizationID *uuid.UUID) []*Token {
+	var tokens []*Token
+	dbconf.DatabaseConnection().Where("organization_id = ?", organizationID).Find(&tokens)
 	return tokens
 }
 
@@ -391,6 +414,7 @@ func (t *Token) vendRefreshToken() bool {
 		TokenType:           common.StringOrNil(defaultTokenType),
 		UserID:              t.UserID,
 		ApplicationID:       t.ApplicationID,
+		OrganizationID:      t.OrganizationID,
 		Audience:            t.Audience,
 		Issuer:              t.Issuer,
 		Subject:             common.StringOrNil(fmt.Sprintf("token:%s", t.ID.String())),
@@ -411,7 +435,7 @@ func (t *Token) vendRefreshToken() bool {
 // VendApplicationToken creates a new token on behalf of the application;
 // these tokens should be used for machine-to-machine applications, and so
 // are persisted as "legacy" tokens as described in the VendLegacyToken docs
-func VendApplicationToken(tx *gorm.DB, applicationID *uuid.UUID, extPermissions map[string]common.Permission) (*Token, error) {
+func VendApplicationToken(tx *gorm.DB, applicationID, organizationID, userID *uuid.UUID, extPermissions map[string]common.Permission) (*Token, error) {
 	var db *gorm.DB
 	if tx != nil {
 		db = tx
@@ -428,6 +452,8 @@ func VendApplicationToken(tx *gorm.DB, applicationID *uuid.UUID, extPermissions 
 
 	t := &Token{
 		ApplicationID:       applicationID,
+		OrganizationID:      organizationID,
+		UserID:              userID,
 		Permissions:         common.DefaultApplicationResourcePermission,
 		ExtendedPermissions: &extPermissionsJSON,
 	}
@@ -476,7 +502,7 @@ func (t *Token) validate() bool {
 			Message: common.StringOrNil("token has already been vended"),
 		})
 	}
-	if t.ApplicationID != nil && t.UserID != nil {
+	if (t.ApplicationID != nil && t.UserID != nil) || (t.OrganizationID != nil && t.UserID != nil) {
 		t.Errors = append(t.Errors, &provide.Error{
 			Message: common.StringOrNil("ambiguous token subject"),
 		})
@@ -524,6 +550,8 @@ func (t *Token) validate() bool {
 				sub = common.StringOrNil(fmt.Sprintf("user:%s", t.UserID.String()))
 			} else if t.ApplicationID != nil {
 				sub = common.StringOrNil(fmt.Sprintf("application:%s", t.ApplicationID.String()))
+			} else if t.OrganizationID != nil {
+				sub = common.StringOrNil(fmt.Sprintf("organization:%s", t.OrganizationID.String()))
 			}
 			t.Subject = sub
 		}
@@ -603,6 +631,10 @@ func (t *Token) encodeJWTAppClaims() map[string]interface{} {
 
 	if t.ApplicationID != nil {
 		appClaims["application_id"] = t.ApplicationID
+	}
+
+	if t.OrganizationID != nil {
+		appClaims["organization_id"] = t.OrganizationID
 	}
 
 	if t.UserID != nil {

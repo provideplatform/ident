@@ -292,7 +292,7 @@ func (app *Application) Create(tx *gorm.DB) (*CreateResponse, error) {
 		if !db.NewRecord(app) {
 			success := rowsAffected > 0
 			if success {
-				tkn, err := token.VendApplicationToken(db, &app.ID, nil) // FIXME-- support extended permissions
+				tkn, err := token.VendApplicationToken(db, &app.ID, nil, nil, nil)
 				if err != nil {
 					return nil, err
 				}
