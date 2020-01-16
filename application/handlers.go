@@ -361,6 +361,10 @@ func createApplicationOrganizationHandler(c *gin.Context) {
 		}
 		organizationID = &orgID
 	}
+	if organizationID == nil || *organizationID == uuid.Nil {
+		provide.RenderError("no organization_id provided", 422, c)
+		return
+	}
 
 	var permissions common.Permission
 	orgPermissions, permissionsOk := params["permissions"].(common.Permission)
@@ -436,6 +440,10 @@ func deleteApplicationOrganizationHandler(c *gin.Context) {
 			return
 		}
 		organizationID = &orgID
+	}
+	if organizationID == nil || *organizationID == uuid.Nil {
+		provide.RenderError("no organization_id provided", 422, c)
+		return
 	}
 
 	db := dbconf.DatabaseConnection()
