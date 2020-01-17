@@ -2,6 +2,7 @@ package token
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -135,141 +136,144 @@ func Parse(token string) (*Token, error) {
 		return nil, fmt.Errorf("failed to parse given bearer token as valid JWT; %s", err.Error())
 	}
 
-	if claims, ok := jwtToken.Claims.(jwt.MapClaims); ok {
-		appclaims, appclaimsOk := claims[common.JWTApplicationClaimsKey].(map[string]interface{})
+	claims, claimsOk := jwtToken.Claims.(jwt.MapClaims)
+	if !claimsOk {
+		return nil, errors.New("failed to parse claims in given bearer token")
+	}
 
-		var appID *uuid.UUID
-		var orgID *uuid.UUID
-		var userID *uuid.UUID
+	appclaims, appclaimsOk := claims[common.JWTApplicationClaimsKey].(map[string]interface{})
 
-		var sub string
-		if subclaim, subclaimOk := claims["sub"].(string); subclaimOk {
-			sub = subclaim
+	var appID *uuid.UUID
+	var orgID *uuid.UUID
+	var userID *uuid.UUID
+
+	var sub string
+	if subclaim, subclaimOk := claims["sub"].(string); subclaimOk {
+		sub = subclaim
+	}
+
+	subprts := strings.Split(sub, ":")
+	if len(subprts) != 2 {
+		return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s", sub)
+	}
+
+	subUUID, err := uuid.FromString(subprts[1])
+	if err != nil {
+		if subprts[0] == authorizationSubjectInvite {
+			err := checkmail.ValidateFormat(subprts[1])
+			if err != nil {
+				return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
+			}
+		} else {
+			return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
 		}
+	}
 
-		subprts := strings.Split(sub, ":")
-		if len(subprts) != 2 {
-			return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s", sub)
-		}
-
-		subUUID, err := uuid.FromString(subprts[1])
-		if err != nil {
-			if subprts[0] == authorizationSubjectInvite {
-				err := checkmail.ValidateFormat(subprts[1])
+	switch subprts[0] {
+	case authorizationSubjectApplication:
+		appID = &subUUID
+	case authorizationSubjectInvite:
+		// this is an invitation token and can only authorize certain actions within a user creation or authentication transaction;
+		// such actions may be made on behalf of an application_id and/or organization_id specified in the invitation application claims
+		common.Log.Debugf("parsed valid bearer authorization containing invitation subject: %s", sub)
+	case authorizationSubjectOrganization:
+		orgID = &subUUID
+	case authorizationSubjectToken:
+		// this is a refresh token and can only authorize new access tokens on behalf of a user_id specified in the application claims
+		if appclaimsOk {
+			if claimedUserID, claimedUserIDOk := appclaims["user_id"].(string); claimedUserIDOk {
+				subUUID, err := uuid.FromString(claimedUserID)
 				if err != nil {
 					return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
 				}
+
+				userID = &subUUID
+				common.Log.Debugf("authorized refresh token for creation of new access token on behalf of user: %s", userID)
+			}
+		}
+	case authorizationSubjectUser:
+		userID = &subUUID
+	}
+
+	var iat *time.Time
+	if claims["iat"] != nil {
+		iat = parseJWTTimestampClaim(claims, "iat")
+	}
+
+	var exp *time.Time
+	if claims["exp"] != nil {
+		exp = parseJWTTimestampClaim(claims, "exp")
+	}
+
+	var nbf *time.Time
+	if claims["nbf"] != nil {
+		nbf = parseJWTTimestampClaim(claims, "nbf")
+	}
+
+	tkn = &Token{
+		Token:          &jwtToken.Raw,
+		IssuedAt:       iat,
+		ExpiresAt:      exp,
+		NotBefore:      nbf,
+		Subject:        common.StringOrNil(sub),
+		UserID:         userID,
+		ApplicationID:  appID,
+		OrganizationID: orgID,
+	}
+
+	if aud, audOk := claims["aud"].(string); audOk {
+		tkn.Audience = &aud
+	}
+
+	if iss, issOk := claims["iss"].(string); issOk {
+		tkn.Issuer = &iss
+	}
+
+	if appclaimsOk {
+		if appIDClaim, appIDClaimOk := appclaims["application_id"].(string); appIDClaimOk && tkn.ApplicationID == nil {
+			appUUID, err := uuid.FromString(appIDClaim)
+			if err != nil {
+				return nil, fmt.Errorf("valid bearer authorization contained invalid application_id app claim: %s; %s", sub, err.Error())
+			}
+			tkn.ApplicationID = &appUUID
+		}
+
+		if orgIDClaim, orgIDClaimOk := appclaims["organization_id"].(string); orgIDClaimOk && tkn.OrganizationID == nil {
+			orgUUID, err := uuid.FromString(orgIDClaim)
+			if err != nil {
+				return nil, fmt.Errorf("valid bearer authorization contained invalid org_id app claim: %s; %s", sub, err.Error())
+			}
+			tkn.OrganizationID = &orgUUID
+		}
+
+		if userIDClaim, userIDClaimOk := appclaims["user_id"].(string); userIDClaimOk && tkn.UserID == nil {
+			userUUID, err := uuid.FromString(userIDClaim)
+			if err != nil {
+				return nil, fmt.Errorf("valid bearer authorization contained invalid user_id app claim: %s; %s", sub, err.Error())
+			}
+			tkn.UserID = &userUUID
+		}
+
+		if permissions, permissionsOk := appclaims["permissions"].(float64); permissionsOk {
+			tkn.Permissions = common.Permission(permissions)
+		} else {
+			common.Log.Warningf("valid bearer authorization was permissionless")
+		}
+
+		if extendedClaims, extendedClaimsOk := appclaims[extendedApplicationClaimsKey].(map[string]interface{}); extendedClaimsOk {
+			if extendedPermissions, extendedPermissionsOk := extendedClaims["permissions"].(map[string]interface{}); extendedPermissionsOk {
+				rawExtPermissions, _ := json.Marshal(extendedPermissions)
+				extPermissionsJSON := json.RawMessage(rawExtPermissions)
+				tkn.ExtendedPermissions = &extPermissionsJSON
 			} else {
-				return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
+				common.Log.Warningf("extended bearer authorization was permissionless")
 			}
 		}
 
-		switch subprts[0] {
-		case authorizationSubjectApplication:
-			appID = &subUUID
-		case authorizationSubjectInvite:
-			// this is an invitation token and can only authorize certain actions within a user creation or authentication transaction;
-			// such actions may be made on behalf of an application_id and/or organization_id specified in the invitation application claims
-			common.Log.Debugf("parsed valid bearer authorization containing invitation subject: %s", sub)
-		case authorizationSubjectOrganization:
-			orgID = &subUUID
-		case authorizationSubjectToken:
-			// this is a refresh token and can only authorize new access tokens on behalf of a user_id specified in the application claims
-			if appclaimsOk {
-				if claimedUserID, claimedUserIDOk := appclaims["user_id"].(string); claimedUserIDOk {
-					subUUID, err := uuid.FromString(claimedUserID)
-					if err != nil {
-						return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
-					}
-
-					userID = &subUUID
-					common.Log.Debugf("authorized refresh token for creation of new access token on behalf of user: %s", userID)
-				}
-			}
-		case authorizationSubjectUser:
-			userID = &subUUID
-		}
-
-		var iat *time.Time
-		if claims["iat"] != nil {
-			iat = parseJWTTimestampClaim(claims, "iat")
-		}
-
-		var exp *time.Time
-		if claims["exp"] != nil {
-			exp = parseJWTTimestampClaim(claims, "exp")
-		}
-
-		var nbf *time.Time
-		if claims["nbf"] != nil {
-			nbf = parseJWTTimestampClaim(claims, "nbf")
-		}
-
-		tkn = &Token{
-			Token:          &jwtToken.Raw,
-			IssuedAt:       iat,
-			ExpiresAt:      exp,
-			NotBefore:      nbf,
-			Subject:        common.StringOrNil(sub),
-			UserID:         userID,
-			ApplicationID:  appID,
-			OrganizationID: orgID,
-		}
-
-		if aud, audOk := claims["aud"].(string); audOk {
-			tkn.Audience = &aud
-		}
-
-		if iss, issOk := claims["iss"].(string); issOk {
-			tkn.Issuer = &iss
-		}
-
-		if appclaimsOk {
-			if appIDClaim, appIDClaimOk := appclaims["application_id"].(string); appIDClaimOk && tkn.ApplicationID == nil {
-				appUUID, err := uuid.FromString(appIDClaim)
-				if err != nil {
-					return nil, fmt.Errorf("valid bearer authorization contained invalid application_id app claim: %s; %s", sub, err.Error())
-				}
-				tkn.ApplicationID = &appUUID
-			}
-
-			if orgIDClaim, orgIDClaimOk := appclaims["organization_id"].(string); orgIDClaimOk && tkn.OrganizationID == nil {
-				orgUUID, err := uuid.FromString(orgIDClaim)
-				if err != nil {
-					return nil, fmt.Errorf("valid bearer authorization contained invalid org_id app claim: %s; %s", sub, err.Error())
-				}
-				tkn.OrganizationID = &orgUUID
-			}
-
-			if userIDClaim, userIDClaimOk := appclaims["user_id"].(string); userIDClaimOk && tkn.UserID == nil {
-				userUUID, err := uuid.FromString(userIDClaim)
-				if err != nil {
-					return nil, fmt.Errorf("valid bearer authorization contained invalid user_id app claim: %s; %s", sub, err.Error())
-				}
-				tkn.UserID = &userUUID
-			}
-
-			if permissions, permissionsOk := appclaims["permissions"].(float64); permissionsOk {
-				tkn.Permissions = common.Permission(permissions)
-			} else {
-				common.Log.Warningf("valid bearer authorization was permissionless")
-			}
-
-			if extendedClaims, extendedClaimsOk := appclaims[extendedApplicationClaimsKey].(map[string]interface{}); extendedClaimsOk {
-				if extendedPermissions, extendedPermissionsOk := extendedClaims["permissions"].(map[string]interface{}); extendedPermissionsOk {
-					rawExtPermissions, _ := json.Marshal(extendedPermissions)
-					extPermissionsJSON := json.RawMessage(rawExtPermissions)
-					tkn.ExtendedPermissions = &extPermissionsJSON
-				} else {
-					common.Log.Warningf("extended bearer authorization was permissionless")
-				}
-			}
-
-			if dataClaim, dataClaimOk := appclaims["data"].(map[string]interface{}); dataClaimOk {
-				dataJSON, _ := json.Marshal(dataClaim)
-				dataJSONRaw := json.RawMessage(dataJSON)
-				tkn.Data = &dataJSONRaw
-			}
+		if dataClaim, dataClaimOk := appclaims["data"].(map[string]interface{}); dataClaimOk {
+			dataJSON, _ := json.Marshal(dataClaim)
+			dataJSONRaw := json.RawMessage(dataJSON)
+			tkn.Data = &dataJSONRaw
 		}
 	}
 
@@ -279,7 +283,7 @@ func Parse(token string) (*Token, error) {
 // CalculateHash calculates and sets the hash on the token instance; this method exists for convenience
 // as the hash is not set by default when a token is parsed, for performance reasons
 func (t *Token) CalculateHash() {
-	if t.Token == nil {
+	if t.Token != nil {
 		t.Hash = common.StringOrNil(common.SHA256(*t.Token))
 	} else {
 		common.Log.Warningf("unable to calculate hash for nil token")
