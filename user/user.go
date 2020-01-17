@@ -72,13 +72,13 @@ func FindByEmail(email string, applicationID *uuid.UUID, organizationID *uuid.UU
 	db := dbconf.DatabaseConnection()
 
 	user := &User{}
-	query := db.Where("email = ?", email)
+	query := db.Where("users.email = ?", email)
 
 	if applicationID != nil && *applicationID != uuid.Nil {
-		query = query.Where("application_id = ?", applicationID)
 		query = query.Joins("LEFT OUTER JOIN applications_users as au ON au.user_id = users.id AND au.application_id = ?", applicationID)
+		query = query.Where("users.application_id = ?", applicationID)
 	} else {
-		query = query.Where("application_id IS NULL")
+		query = query.Where("users.application_id IS NULL")
 	}
 
 	if organizationID != nil && *organizationID != uuid.Nil {
