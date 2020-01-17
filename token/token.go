@@ -58,8 +58,9 @@ type Token struct {
 	TokenType    *string `sql:"-" json:"token_type,omitempty"`
 	Scope        *string `sql:"-" json:"scope,omitempty"`
 
-	// Ephemeral JWT claims; these are here for convenience and are not always populated,
-	// even if they exist on the underlying token
+	// Ephemeral JWT header fields and claims; these are here for convenience and are not
+	// always populated, even if they exist on the underlying token
+	Kid       *string    `sql:"-" json:"kid,omitempty"` // key fingerprint
 	Audience  *string    `sql:"-" json:"audience,omitempty"`
 	Issuer    *string    `sql:"-" json:"issuer,omitempty"`
 	IssuedAt  *time.Time `sql:"-" json:"issued_at,omitempty"`
@@ -80,10 +81,10 @@ type Response struct {
 	TokenType    *string    `json:"token_type,omitempty"`
 	AccessToken  *string    `json:"access_token,omitempty"`
 	RefreshToken *string    `json:"refresh_token,omitempty"`
+	IDToken      *string    `json:"id_token,omitempty"`
 	ExpiresIn    *int64     `json:"expires_in,omitempty"`
 	Scope        *string    `sql:"-" json:"scope,omitempty"`
 	Token        *string    `json:"token,omitempty"` // token
-	PublicKey    *string    `json:"public_key,omitempty"`
 	Permissions  *uint32    `json:"permissions,omitempty"`
 }
 
@@ -117,12 +118,26 @@ func IsRevoked(token *Token) bool {
 func Parse(token string) (*Token, error) {
 	jwtToken, err := jwt.Parse(token, func(_jwtToken *jwt.Token) (interface{}, error) {
 		if _, ok := _jwtToken.Method.(*jwt.SigningMethodRSA); !ok {
-			return nil, fmt.Errorf("failed to parse bearer authorization header; unexpected JWT signing algo: %s", _jwtToken.Method.Alg())
+			return nil, fmt.Errorf("failed to resolve a valid JWT signing key; unsupported signing alg specified in header: %s", _jwtToken.Method.Alg())
 		}
-		if common.JWTPublicKey != nil {
-			return common.JWTPublicKey, nil
+
+		var kid *string
+		if kidhdr, ok := _jwtToken.Header["kid"].(string); ok {
+			kid = &kidhdr
 		}
-		return nil, nil
+
+		publicKey, _, _ := common.ResolveJWTKeypair(kid)
+		if publicKey == nil {
+			msg := "failed to resolve a valid JWT verification key"
+			if kid != nil {
+				msg = fmt.Sprintf("%s; invalid kid specified in header: %s", msg, *kid)
+			} else {
+				msg = fmt.Sprintf("%s; no default verification key configured", msg)
+			}
+			return nil, fmt.Errorf(msg)
+		}
+
+		return publicKey, nil
 	})
 
 	var tkn *Token
@@ -219,6 +234,10 @@ func Parse(token string) (*Token, error) {
 		UserID:         userID,
 		ApplicationID:  appID,
 		OrganizationID: orgID,
+	}
+
+	if kid, kidOk := jwtToken.Header["kid"].(string); kidOk {
+		tkn.Kid = &kid
 	}
 
 	if aud, audOk := claims["aud"].(string); audOk {
@@ -367,7 +386,6 @@ func (t *Token) AsResponse() *Response {
 		TokenType:    t.TokenType,
 		ExpiresIn:    expiresIn,
 		Scope:        t.Scope,
-		PublicKey:    common.StringOrNil(common.JWTPublicKeyPEM),
 		Permissions:  &permissions,
 	}
 
@@ -460,6 +478,7 @@ func (t *Token) vendRefreshToken() bool {
 		UserID:              t.UserID,
 		ApplicationID:       t.ApplicationID,
 		OrganizationID:      t.OrganizationID,
+		Kid:                 t.Kid,
 		Audience:            t.Audience,
 		Issuer:              t.Issuer,
 		Subject:             common.StringOrNil(fmt.Sprintf("token:%s", t.ID.String())),
@@ -510,6 +529,9 @@ func VendApplicationToken(tx *gorm.DB, applicationID, organizationID, userID *uu
 	if db.NewRecord(t) {
 		// this token is hashed and persisted, in contrast with signed bearer tokens created using t.Vend()
 		common.Log.Debugf("vending API token for application; subject: %s", *t.Subject)
+
+		jti, _ := uuid.NewV4()
+		t.ID = jti
 
 		err := t.encodeJWT()
 		if err != nil {
@@ -579,6 +601,15 @@ func (t *Token) validate() bool {
 			t.Errors = append(t.Errors, &provide.Error{
 				Message: common.StringOrNil("token expiration must not preceed issuance"),
 			})
+		}
+
+		if t.Kid == nil {
+			_, privateKey, fingerprint := common.ResolveJWTKeypair(nil) // FIXME-- resolve subject-specific kid when applicable
+			if privateKey != nil {
+				t.Kid = fingerprint
+			} else {
+				common.Log.Warning("no JWT signing key resolved")
+			}
 		}
 
 		if t.Audience == nil {
@@ -703,13 +734,17 @@ func (t *Token) encodeJWT() error {
 	claims[appClaimsKey] = t.encodeJWTAppClaims()
 
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims(claims))
-	token, err := jwtToken.SignedString(common.JWTPrivateKey)
+	jwtToken.Header["kid"] = t.Kid
+
+	_, privateKey, _ := common.ResolveJWTKeypair(t.Kid)
+	token, err := jwtToken.SignedString(privateKey)
 	if err != nil {
 		common.Log.Warningf("failed to sign JWT; %s", err.Error())
 		return nil
 	}
 	t.Token = common.StringOrNil(token)
 	t.AccessToken = t.Token
+
 	return nil
 }
 

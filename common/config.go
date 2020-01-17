@@ -11,6 +11,7 @@ import (
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
+	"golang.org/x/crypto/ssh"
 
 	logger "github.com/kthomas/go-logger"
 	selfsignedcert "github.com/kthomas/go-self-signed-cert"
@@ -27,6 +28,12 @@ const defaultEmailVerificationAttempts = int(4)
 const defaultEmailVerificationTimeout = time.Millisecond * time.Duration(2500)
 
 const defaultJWTApplicationClaimsKey = "prvd"
+
+type jwtKeypair struct {
+	fingerprint string
+	publicKey   rsa.PublicKey
+	privateKey  *rsa.PrivateKey
+}
 
 var (
 	// apiAccountingAddress is the UDP network address to which API call accounting packets will be delivered
@@ -86,14 +93,8 @@ var (
 	// JWTAuthorizationTTL is the ttl in milliseconds for new token authorizations, calculated from the issued at timestamp ("iat" claim)
 	JWTAuthorizationTTL time.Duration
 
-	// JWTPublicKeyPEM is the raw PEM-encoded JWT public key used for signature verification
-	JWTPublicKeyPEM string
-
-	// JWTPublicKey is the parsed RSA JWT public key instance
-	JWTPublicKey *rsa.PublicKey
-
-	// JWTPrivateKey is the parsed RSA JWT private key instance
-	JWTPrivateKey *rsa.PrivateKey
+	// JWTKeypairs is a map of JWTKeypair instances which contains the configured RSA public/private keypairs for JWT signing and/or verification, keyed by fingerprint
+	jwtKeypairs map[string]*jwtKeypair
 
 	// PerformEmailVerification flag indicates if email deliverability should be verified when creating new users
 	PerformEmailVerification bool
@@ -136,25 +137,11 @@ func RequireAPIAccounting() {
 	}
 }
 
-// RequireJWT allows a package to conditionally require an RS256 keypair configured
-// in the ident environment via JWT_SIGNER_PRIVATE_KEY and JWT_SIGNER_PUBLIC_KEY
+// RequireJWT allows a package to conditionally require a valid JWT configuration
+// in the ident environment; at least one RS256 keypair must be configured using
+// the JWT_SIGNER_PRIVATE_KEY and JWT_SIGNER_PUBLIC_KEY environment variables
 func RequireJWT() {
-	Log.Debug("attempting to read required RS256 keypair from environment for signing JWT tokens")
-
-	jwtPrivateKeyPEM := strings.Replace(os.Getenv("JWT_SIGNER_PRIVATE_KEY"), `\n`, "\n", -1)
-	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(jwtPrivateKeyPEM))
-	if err != nil {
-		Log.Panicf("failed to parse JWT private key; %s", err.Error())
-	}
-
-	JWTPublicKeyPEM = strings.Replace(os.Getenv("JWT_SIGNER_PUBLIC_KEY"), `\n`, "\n", -1)
-	publicKey, err := jwt.ParseRSAPublicKeyFromPEM([]byte(JWTPublicKeyPEM))
-	if err != nil {
-		Log.Panicf("failed to parse JWT public key; %s", err.Error())
-	}
-
-	JWTPrivateKey = privateKey
-	JWTPublicKey = publicKey
+	Log.Debug("attempting to read required JWT configuration environment for signing JWT tokens")
 
 	if os.Getenv("JWT_APPLICATION_CLAIMS_KEY") != "" {
 		JWTApplicationClaimsKey = os.Getenv("JWT_APPLICATION_CLAIMS_KEY")
@@ -181,22 +168,91 @@ func RequireJWT() {
 	} else {
 		JWTAuthorizationTTL = defaultAuthorizationTTL
 	}
+
+	requireJWTKeypairs()
 }
 
-// RequireJWTVerifier allows a package to conditionally require RS256 signature
+// RequireJWTVerifiers allows a package to conditionally require RS256 signature
 // verification in the configured environment via JWT_SIGNER_PUBLIC_KEY; the
 // use-case for this support is when another microservice is depending on the
 // token authorization middleware provided in this package
-func RequireJWTVerifier() {
+func RequireJWTVerifiers() {
 	Log.Debug("attempting to read required public key from environment for verifying signed JWT")
 
-	JWTPublicKeyPEM = strings.Replace(os.Getenv("JWT_SIGNER_PUBLIC_KEY"), `\n`, "\n", -1)
-	publicKey, err := jwt.ParseRSAPublicKeyFromPEM([]byte(JWTPublicKeyPEM))
+	jwtPublicKeyPEM := strings.Replace(os.Getenv("JWT_SIGNER_PUBLIC_KEY"), `\n`, "\n", -1)
+	publicKey, err := jwt.ParseRSAPublicKeyFromPEM([]byte(jwtPublicKeyPEM))
 	if err != nil {
 		Log.Panicf("failed to parse JWT public key; %s", err.Error())
 	}
 
-	JWTPublicKey = publicKey
+	sshPublicKey, err := ssh.NewPublicKey(publicKey)
+	if err != nil {
+		Log.Panicf("failed to resolve JWT public key fingerprint; %s", err.Error())
+	}
+	fingerprint := ssh.FingerprintLegacyMD5(sshPublicKey)
+
+	jwtKeypairs[fingerprint] = &jwtKeypair{
+		fingerprint: fingerprint,
+		publicKey:   *publicKey,
+	}
+
+	Log.Debugf("keypair configured: %s", fingerprint)
+}
+
+func requireJWTKeypairs() {
+	Log.Debug("attempting to read required RS256 keypair(s) from environment for signing JWT tokens")
+	jwtKeypairs = map[string]*jwtKeypair{}
+
+	jwtPrivateKeyPEM := strings.Replace(os.Getenv("JWT_SIGNER_PRIVATE_KEY"), `\n`, "\n", -1)
+	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(jwtPrivateKeyPEM))
+	if err != nil {
+		Log.Panicf("failed to parse JWT private key; %s", err.Error())
+	}
+
+	jwtPublicKeyPEM := strings.Replace(os.Getenv("JWT_SIGNER_PUBLIC_KEY"), `\n`, "\n", -1)
+	publicKey, err := jwt.ParseRSAPublicKeyFromPEM([]byte(jwtPublicKeyPEM))
+	if err != nil {
+		Log.Panicf("failed to parse JWT public key; %s", err.Error())
+	}
+
+	sshPublicKey, err := ssh.NewPublicKey(publicKey)
+	if err != nil {
+		Log.Panicf("failed to resolve JWT public key fingerprint; %s", err.Error())
+	}
+	fingerprint := ssh.FingerprintLegacyMD5(sshPublicKey)
+
+	jwtKeypairs[fingerprint] = &jwtKeypair{
+		fingerprint: fingerprint,
+		publicKey:   *publicKey,
+		privateKey:  privateKey,
+	}
+}
+
+func resolveJWTFingerprints() []string {
+	fingerprints := make([]string, 0, len(jwtKeypairs))
+	for k := range jwtKeypairs {
+		fingerprints = append(fingerprints, k)
+	}
+	return fingerprints
+}
+
+// ResolveJWTKeypair returns the configured public/private signing keypair and its
+// fingerprint, if one has been configured; this impl will be upgraded soon to allow
+// many key to be configured
+func ResolveJWTKeypair(fingerprint *string) (*rsa.PublicKey, *rsa.PrivateKey, *string) {
+	if jwtKeypairs == nil || len(jwtKeypairs) == 0 {
+		return nil, nil, nil
+	}
+
+	var keypair *jwtKeypair
+
+	if fingerprint == nil {
+		keypair = jwtKeypairs[resolveJWTFingerprints()[0]]
+	} else {
+		keypair = jwtKeypairs[*fingerprint]
+	}
+
+	return &keypair.publicKey, keypair.privateKey, &keypair.fingerprint
 }
 
 func establishAPIAccountingConn() error {
