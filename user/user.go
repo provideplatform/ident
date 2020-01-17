@@ -82,7 +82,7 @@ func FindByEmail(email string, applicationID *uuid.UUID, organizationID *uuid.UU
 	}
 
 	if organizationID != nil && *organizationID != uuid.Nil {
-		if applicationID != nil {
+		if applicationID != nil && *applicationID != uuid.Nil {
 			query = query.Joins("LEFT OUTER JOIN applications_organizations as ao ON ao.organization_id = ou.organization_id")
 			query = query.Where("ao.application_id = ? AND ao.organization_id = ?", applicationID, organizationID)
 		}
