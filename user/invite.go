@@ -117,6 +117,10 @@ func (i *Invite) Create() bool {
 	return i.Token != nil
 }
 
+func (i *Invite) authorizesNewApplicationOrganization() bool {
+	return i.ApplicationID != nil && i.OrganizationName != nil
+}
+
 func (i *Invite) parseParams() map[string]interface{} {
 	params := map[string]interface{}{}
 	if i.Params != nil {
