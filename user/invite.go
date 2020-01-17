@@ -2,6 +2,7 @@ package user
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -41,6 +42,10 @@ func ParseInvite(signedToken string) (*Invite, error) {
 	if err != nil {
 		common.Log.Warningf("failed to parse invitation token; %s", err.Error())
 		return nil, err
+	}
+
+	if token.IsRevoked() {
+		return nil, errors.New("parsed revoked invitation token")
 	}
 
 	data := token.ParseData()

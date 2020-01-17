@@ -111,7 +111,7 @@ func createOrganizationHandler(c *gin.Context) {
 	if invitationToken, invitationTokenOk := params["invitation_token"].(string); invitationTokenOk {
 		invite, err = user.ParseInvite(invitationToken)
 		if err != nil {
-			provide.RenderError(err.Error(), 400, c)
+			provide.RenderError(err.Error(), 422, c)
 			return
 		}
 
@@ -242,7 +242,7 @@ func createOrganizationUserHandler(c *gin.Context) {
 	if invitationToken, invitationTokenOk := params["invitation_token"].(string); invitationTokenOk {
 		invite, err = user.ParseInvite(invitationToken)
 		if err != nil {
-			provide.RenderError(err.Error(), 400, c)
+			provide.RenderError(err.Error(), 422, c)
 			return
 		}
 

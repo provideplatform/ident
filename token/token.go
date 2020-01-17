@@ -86,6 +86,32 @@ type Response struct {
 	Permissions  *uint32    `json:"permissions,omitempty"`
 }
 
+// Revocation represents a previously-issued token which has since been revoked; this primarily applies to legacy
+// API tokens (i.e., application-authorized tokens for machine-to-machine API calls that never expire), but revocations
+// can be applied to any issued token; this is particularly useful for long-lived invitation tokens whichh should be
+// invalidated after use.
+type Revocation struct {
+	Hash      *string    `sql:"not null" gorm:"primary_key" json:"-"`
+	ExpiresAt *time.Time `json:"expires_at"` // this is the token expiration timestamp
+	RevokedAt *time.Time `sql:"not null" json:"revoked_at"`
+}
+
+// TableName returns the db table name for gorm
+func (r *Revocation) TableName() string {
+	return "token_revocations"
+}
+
+// IsRevoked returns true if the given token has been revoked
+func IsRevoked(token *Token) bool {
+	if token.Hash == nil {
+		token.CalculateHash()
+	}
+
+	var totalResults uint64
+	dbconf.DatabaseConnection().Where("hash = ?", token.Hash).Count(&totalResults)
+	return totalResults == 1
+}
+
 // Parse a previously signed token and initialize the Token representation
 func Parse(token string) (*Token, error) {
 	jwtToken, err := jwt.Parse(token, func(_jwtToken *jwt.Token) (interface{}, error) {
@@ -250,6 +276,16 @@ func Parse(token string) (*Token, error) {
 	return tkn, nil
 }
 
+// CalculateHash calculates and sets the hash on the token instance; this method exists for convenience
+// as the hash is not set by default when a token is parsed, for performance reasons
+func (t *Token) CalculateHash() {
+	if t.Token == nil {
+		t.Hash = common.StringOrNil(common.SHA256(*t.Token))
+	} else {
+		common.Log.Warningf("unable to calculate hash for nil token")
+	}
+}
+
 // FindLegacyToken - lookup a legacy token
 func FindLegacyToken(token string) *Token {
 	tkn := &Token{}
@@ -272,6 +308,11 @@ func GetOrganizationTokens(organizationID *uuid.UUID) []*Token {
 	var tokens []*Token
 	dbconf.DatabaseConnection().Where("organization_id = ?", organizationID).Find(&tokens)
 	return tokens
+}
+
+// IsRevoked returns true if the token has been revoked
+func (t *Token) IsRevoked() bool {
+	return IsRevoked(t)
 }
 
 // ParseData parses and returns any data to be encoded within
@@ -475,7 +516,7 @@ func VendApplicationToken(tx *gorm.DB, applicationID, organizationID, userID *uu
 			return nil, fmt.Errorf("failed to vend token for application: %s; %s", applicationID.String(), *t.Errors[0].Message)
 		}
 
-		t.Hash = common.StringOrNil(common.SHA256(*t.Token))
+		t.CalculateHash()
 
 		result := db.Create(&t)
 		errors := result.GetErrors()
