@@ -93,16 +93,22 @@ func ParseInvite(signedToken string, strict bool) (*Invite, error) {
 		organizationUUID = &orgUUID
 	}
 
+	var organizationName *string
+	if orgName, orgNameOk := data["organization_name"].(string); orgNameOk {
+		organizationName = &orgName
+	}
+
 	return &Invite{
-		ApplicationID:  applicationUUID,
-		UserID:         token.UserID,
-		Name:           common.StringOrNil(name),
-		Email:          common.StringOrNil(email),
-		InvitorID:      invitorUUID,
-		InvitorName:    common.StringOrNil(invitorName),
-		OrganizationID: organizationUUID,
-		Permissions:    permissions,
-		Token:          token,
+		ApplicationID:    applicationUUID,
+		UserID:           token.UserID,
+		Name:             common.StringOrNil(name),
+		Email:            common.StringOrNil(email),
+		InvitorID:        invitorUUID,
+		InvitorName:      common.StringOrNil(invitorName),
+		OrganizationID:   organizationUUID,
+		OrganizationName: organizationName,
+		Permissions:      permissions,
+		Token:            token,
 	}, nil
 }
 
