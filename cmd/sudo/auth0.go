@@ -36,7 +36,7 @@ func syncAuth0UsersAndLegacyTokens(db *gorm.DB) error {
 
 		var usr *user.User
 
-		if !user.Exists(email, nil) {
+		if !user.Exists(email, nil, nil) {
 			common.Log.Debugf("importing auth0 user %s", email)
 			usr = &user.User{
 				Email:       &email,
@@ -52,7 +52,7 @@ func syncAuth0UsersAndLegacyTokens(db *gorm.DB) error {
 			}
 		} else {
 			common.Log.Debugf("skipping import of existing user %s", email)
-			usr = user.FindByEmail(email, nil)
+			usr = user.FindByEmail(email, nil, nil)
 		}
 
 		if usr != nil {

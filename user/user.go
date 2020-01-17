@@ -67,15 +67,28 @@ func Find(userID *uuid.UUID) *User {
 	return user
 }
 
-// FindByEmail returns a user for the given email address and application id
-func FindByEmail(email string, applicationID *uuid.UUID) *User {
+// FindByEmail returns a user for the given email address, application and organization id
+func FindByEmail(email string, applicationID *uuid.UUID, organizationID *uuid.UUID) *User {
 	db := dbconf.DatabaseConnection()
+
 	user := &User{}
 	query := db.Where("email = ?", email)
+
 	if applicationID != nil && *applicationID != uuid.Nil {
 		query = query.Where("application_id = ?", applicationID)
+		query = query.Joins("LEFT OUTER JOIN applications_users as au ON au.user_id = users.id AND au.application_id = ?", applicationID)
 	} else {
 		query = query.Where("application_id IS NULL")
+	}
+
+	if organizationID != nil && *organizationID != uuid.Nil {
+		if applicationID != nil {
+			query = query.Joins("LEFT OUTER JOIN applications_organizations as ao ON ao.organization_id = ou.organization_id")
+			query = query.Where("ao.application_id = ? AND ao.organization_id = ?", applicationID, organizationID)
+		}
+
+		query = query.Joins("LEFT OUTER JOIN organizations_users as ou ON ou.user_id = users.id")
+		query = query.Where("ou.organization_id = ?", organizationID)
 	}
 	query.Find(&user)
 	if user == nil || user.ID == uuid.Nil {
@@ -84,9 +97,9 @@ func FindByEmail(email string, applicationID *uuid.UUID) *User {
 	return user
 }
 
-// Exists returns true if a user exists for the given email address and app id
-func Exists(email string, applicationID *uuid.UUID) bool {
-	return FindByEmail(email, applicationID) != nil
+// Exists returns true if a user exists for the given email address, app id and org id
+func Exists(email string, applicationID *uuid.UUID, organizationID *uuid.UUID) bool {
+	return FindByEmail(email, applicationID, organizationID) != nil
 }
 
 // AuthenticateUser attempts to authenticate by email address and password;

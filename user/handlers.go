@@ -244,7 +244,7 @@ func createUserHandler(c *gin.Context) {
 		return
 	}
 
-	if Exists(*user.Email, user.ApplicationID) {
+	if Exists(*user.Email, user.ApplicationID, nil) {
 		msg := fmt.Sprintf("user exists: %s", *user.Email)
 		provide.RenderError(msg, 409, c)
 		return
@@ -587,7 +587,7 @@ func vendInvitationTokenHandler(c *gin.Context) {
 		}
 	}
 
-	if Exists(*invite.Email, invite.ApplicationID) {
+	if Exists(*invite.Email, invite.ApplicationID, invite.OrganizationID) {
 		// FIXME-- check existing user against organization_id if one is provided alongside an application_id
 		msg := fmt.Sprintf("user exists: %s", *invite.Email)
 		provide.RenderError(msg, 409, c)

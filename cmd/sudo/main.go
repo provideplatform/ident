@@ -128,7 +128,7 @@ func createUser(email string, permission common.Permission, rawjson *string) {
 }
 
 func deleteUser(email string) {
-	usr := user.FindByEmail(email, nil)
+	usr := user.FindByEmail(email, nil, nil)
 	if usr == nil {
 		exit(fmt.Sprintf("failed to delete user: %s; user does not exist", email), 1)
 	}
@@ -158,7 +158,7 @@ func syncAuth0() {
 }
 
 func vendToken(email string, ttl *int) {
-	user := user.FindByEmail(email, nil)
+	user := user.FindByEmail(email, nil, nil)
 	if user == nil {
 		exit(fmt.Sprintf("user does not exist: %s", email), 1)
 	}
