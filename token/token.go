@@ -93,7 +93,6 @@ type Response struct {
 // can be applied to any issued token; this is particularly useful for long-lived invitation tokens whichh should be
 // invalidated after use.
 type Revocation struct {
-	gorm.Model
 	Hash      *string    `sql:"not null" gorm:"primary_key" json:"-"`
 	ExpiresAt *time.Time `json:"expires_at"` // this is the token expiration timestamp
 	RevokedAt *time.Time `sql:"not null" json:"revoked_at"`
