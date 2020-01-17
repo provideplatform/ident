@@ -110,7 +110,7 @@ func IsRevoked(token *Token) bool {
 	}
 
 	var totalResults uint64
-	dbconf.DatabaseConnection().Where("hash = ?", token.Hash).Count(&totalResults)
+	dbconf.DatabaseConnection().Model(&Revocation{}).Where("hash = ?", token.Hash).Count(&totalResults)
 	return totalResults == 1
 }
 
