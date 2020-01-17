@@ -712,8 +712,11 @@ func (t *Token) Revoke(tx *gorm.DB) bool {
 	}
 
 	success := len(t.Errors) == 0
-	if success && tx == nil {
+	if success {
+		common.Log.Debugf("revoked token with subject: %s; hash: %s", *t.Subject, *t.Hash)
 		db.Commit()
+	} else {
+		common.Log.Warningf("failed to revoke token with subject: %s; hash: %s", *t.Subject, *t.Hash)
 	}
 	return success
 }
