@@ -144,6 +144,10 @@ func createOrganizationHandler(c *gin.Context) {
 		if invite.ApplicationID != nil {
 			success = org.addApplicationAssociation(tx, *invite.ApplicationID, permissions)
 		}
+
+		if success {
+			success = invite.Token.Revoke(tx)
+		}
 	}
 
 	if success {
@@ -275,9 +279,10 @@ func createOrganizationUserHandler(c *gin.Context) {
 	}
 
 	db := dbconf.DatabaseConnection()
+	tx := db.Begin()
 
 	org := &Organization{}
-	resolveOrganization(dbconf.DatabaseConnection(), &organizationID, nil, nil).Find(&org)
+	resolveOrganization(db, &organizationID, nil, nil).Find(&org)
 	if org == nil || org.ID == uuid.Nil {
 		provide.RenderError("organization not found", 404, c)
 		return
@@ -290,9 +295,16 @@ func createOrganizationUserHandler(c *gin.Context) {
 		return
 	}
 
-	if org.addUser(db, *usr, permissions) {
+	success := org.addUser(tx, *usr, permissions)
+	if success && invite != nil {
+		success = invite.Token.Revoke(tx)
+	}
+
+	if success {
+		tx.Commit()
 		provide.Render(nil, 204, c)
 	} else {
+		tx.Rollback()
 		obj := map[string]interface{}{}
 		obj["errors"] = org.Errors
 		provide.Render(obj, 422, c)

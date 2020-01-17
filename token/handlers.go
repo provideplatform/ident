@@ -131,7 +131,7 @@ func deleteTokenHandler(c *gin.Context) {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
-	if !token.Delete(db) {
+	if !token.Delete() {
 		provide.RenderError("token not deleted", 500, c)
 		return
 	}

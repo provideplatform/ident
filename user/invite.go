@@ -101,6 +101,7 @@ func ParseInvite(signedToken string) (*Invite, error) {
 		InvitorName:    common.StringOrNil(invitorName),
 		OrganizationID: organizationUUID,
 		Permissions:    permissions,
+		Token:          token,
 	}, nil
 }
 

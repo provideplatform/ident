@@ -610,11 +610,15 @@ func (t *Token) validate() bool {
 // Delete a legacy API token; effectively revokes the legacy token by permanently removing it from
 // persistent storage; subsequent attempts to authorize requests with this token will fail after
 // calling this method
-func (t *Token) Delete(db *gorm.DB) bool {
+func (t *Token) Delete() bool {
 	if t.ID == uuid.Nil {
 		common.Log.Warning("attempted to delete ephemeral token instance")
 		return false
 	}
+
+	db := dbconf.DatabaseConnection()
+	db.Begin()
+	defer db.RollbackUnlessCommitted()
 
 	result := db.Delete(&t)
 	errors := result.GetErrors()
@@ -626,6 +630,46 @@ func (t *Token) Delete(db *gorm.DB) bool {
 		}
 	}
 	success := len(t.Errors) == 0
+	if success && t.Revoke(db) {
+		db.Commit()
+	}
+	return success
+}
+
+// Revoke the token; persist a revocation
+func (t *Token) Revoke(tx *gorm.DB) bool {
+	var db *gorm.DB
+	if tx != nil {
+		db = tx
+	} else {
+		db = dbconf.DatabaseConnection()
+		db.Begin()
+		defer db.RollbackUnlessCommitted()
+	}
+
+	if t.Hash == nil {
+		t.CalculateHash()
+	}
+
+	revocation := &Revocation{
+		Hash:      t.Hash,
+		ExpiresAt: t.ExpiresAt,
+	}
+
+	result := db.Create(&revocation)
+	errors := result.GetErrors()
+	if len(errors) > 0 {
+		for _, err := range errors {
+			t.Errors = append(t.Errors, &provide.Error{
+				Message: common.StringOrNil(err.Error()),
+			})
+		}
+	}
+
+	success := len(t.Errors) == 0
+	if success && tx == nil {
+		db.Commit()
+	}
 	return success
 }
 

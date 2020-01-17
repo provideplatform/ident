@@ -300,6 +300,10 @@ func processUserInvite(tx *gorm.DB, user User, invite Invite) error {
 		}
 	}
 
+	if success {
+		success = invite.Token.Revoke(tx)
+	}
+
 	return nil
 }
 
