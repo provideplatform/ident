@@ -110,20 +110,22 @@ func deleteTokenHandler(c *gin.Context) {
 	}
 
 	db := dbconf.DatabaseConnection()
+	tx := db.Begin()
+	defer tx.RollbackUnlessCommitted()
 
 	var token = &Token{}
 
 	if bearer.HasAnyPermission(common.DeleteToken, common.Sudo) {
-		db.Where("id = ?", c.Param("id")).Find(&token)
+		tx.Where("id = ?", c.Param("id")).Find(&token)
 	} else {
-		query := db.Where("id = ?", c.Param("id"))
+		tx = tx.Where("id = ?", c.Param("id"))
 		if bearer.UserID != nil {
-			query = query.Where("user_id = ?", bearer.UserID)
+			tx = tx.Where("user_id = ?", bearer.UserID)
 		}
 		if bearer.ApplicationID != nil {
-			query = query.Where("application_id = ?", bearer.ApplicationID)
+			tx = tx.Where("application_id = ?", bearer.ApplicationID)
 		}
-		query.Find(&token)
+		tx.Find(&token)
 	}
 
 	if token.ID == uuid.Nil {
@@ -138,10 +140,12 @@ func deleteTokenHandler(c *gin.Context) {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
-	if !token.Delete() {
+	if !token.Delete(tx) {
 		provide.RenderError("token not deleted", 500, c)
 		return
 	}
+
+	tx.Commit()
 	provide.Render(nil, 204, c)
 }
 

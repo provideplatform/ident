@@ -138,7 +138,7 @@ func deleteUser(email string) {
 	userTokens := make([]*token.Token, 0)
 	db.Where("user_id = ?", usr.ID).Find(&userTokens)
 	for _, token := range userTokens {
-		if token.Delete() {
+		if token.Delete(nil) {
 			common.Log.Debugf("deleted legacy token %s for user: %s", *token.Token, *usr.Email)
 		}
 	}

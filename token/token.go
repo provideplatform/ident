@@ -93,6 +93,7 @@ type Response struct {
 // can be applied to any issued token; this is particularly useful for long-lived invitation tokens whichh should be
 // invalidated after use.
 type Revocation struct {
+	gorm.Model
 	Hash      *string    `sql:"not null" gorm:"primary_key" json:"-"`
 	ExpiresAt *time.Time `json:"expires_at"` // this is the token expiration timestamp
 	RevokedAt *time.Time `sql:"not null" json:"revoked_at"`
@@ -645,15 +646,20 @@ func (t *Token) validate() bool {
 // Delete a legacy API token; effectively revokes the legacy token by permanently removing it from
 // persistent storage; subsequent attempts to authorize requests with this token will fail after
 // calling this method
-func (t *Token) Delete() bool {
+func (t *Token) Delete(tx *gorm.DB) bool {
 	if t.ID == uuid.Nil {
 		common.Log.Warning("attempted to delete ephemeral token instance")
 		return false
 	}
 
-	db := dbconf.DatabaseConnection()
-	db.Begin()
-	defer db.RollbackUnlessCommitted()
+	var db *gorm.DB
+	if tx != nil {
+		db = tx
+	} else {
+		db = dbconf.DatabaseConnection()
+		db = db.Begin()
+		defer db.RollbackUnlessCommitted()
+	}
 
 	result := db.Delete(&t)
 	errors := result.GetErrors()
@@ -665,8 +671,11 @@ func (t *Token) Delete() bool {
 		}
 	}
 	success := len(t.Errors) == 0
-	if success && t.Revoke(db) {
-		db.Commit()
+	if success {
+		success = t.Revoke(db)
+		if success && tx == nil {
+			db.Commit()
+		}
 	}
 	return success
 }
@@ -678,7 +687,7 @@ func (t *Token) Revoke(tx *gorm.DB) bool {
 		db = tx
 	} else {
 		db = dbconf.DatabaseConnection()
-		db.Begin()
+		db = db.Begin()
 		defer db.RollbackUnlessCommitted()
 	}
 
