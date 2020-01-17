@@ -686,9 +686,11 @@ func (t *Token) Revoke(tx *gorm.DB) bool {
 		t.CalculateHash()
 	}
 
+	revokedAt := time.Now()
 	revocation := &Revocation{
 		Hash:      t.Hash,
 		ExpiresAt: t.ExpiresAt,
+		RevokedAt: &revokedAt,
 	}
 
 	result := db.Create(&revocation)
