@@ -36,16 +36,17 @@ type Invite struct {
 // ParseInvite parses an invitation given the previously signed token; it doesn't actually
 // accept the invitation by creating a user or associating the user with an application or
 // organization at this time, rather it returns an Invite instance which has been verified
-// as capable of being accepted by the caller
-func ParseInvite(signedToken string) (*Invite, error) {
+// as capable of being accepted by the caller; the strict argument, when set to true, will
+// result in this method returning an error if the parsed invitation token has been revoked
+func ParseInvite(signedToken string, strict bool) (*Invite, error) {
 	token, err := token.Parse(signedToken)
 	if err != nil {
 		common.Log.Warningf("failed to parse invitation token; %s", err.Error())
 		return nil, err
 	}
 
-	if token.IsRevoked() {
-		return nil, errors.New("parsed revoked invitation token")
+	if strict && token.IsRevoked() {
+		return nil, errors.New("invitation token revoked")
 	}
 
 	data := token.ParseData()

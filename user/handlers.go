@@ -81,7 +81,7 @@ func authenticationHandler(c *gin.Context) {
 				}
 
 				if invitationToken, invitationTokenOk := params["invitation_token"].(string); invitationTokenOk {
-					invite, err := ParseInvite(invitationToken)
+					invite, err := ParseInvite(invitationToken, false)
 					if err != nil {
 						provide.RenderError(err.Error(), 422, c)
 						return
@@ -203,7 +203,7 @@ func createUserHandler(c *gin.Context) {
 	var invite *Invite
 
 	if invitationToken, invitationTokenOk := params["invitation_token"].(string); invitationTokenOk {
-		invite, err = ParseInvite(invitationToken)
+		invite, err = ParseInvite(invitationToken, true)
 		if err != nil {
 			provide.RenderError(err.Error(), 422, c)
 			return
