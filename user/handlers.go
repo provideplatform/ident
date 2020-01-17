@@ -298,6 +298,8 @@ func processUserInvite(tx *gorm.DB, user User, invite Invite) error {
 		if !success {
 			return errors.New("failed to process user invitation; application association failed")
 		}
+	} else {
+		success = invite.authorizesNewApplicationOrganization()
 	}
 
 	if success {
