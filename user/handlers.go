@@ -300,8 +300,10 @@ func processUserInvite(tx *gorm.DB, user User, invite Invite) error {
 		}
 	}
 
-	if success && !invite.Token.Revoke(tx) {
-		return errors.New("failed to process user invitation; token revocation failed")
+	if success {
+		if !invite.Token.IsRevoked() && !invite.Token.Revoke(tx) {
+			return errors.New("failed to process user invitation; token revocation failed")
+		}
 	}
 
 	return nil
