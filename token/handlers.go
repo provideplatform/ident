@@ -104,7 +104,7 @@ func deleteTokenHandler(c *gin.Context) {
 	bearer := InContext(c)
 	userID := bearer.UserID
 	appID := bearer.ApplicationID
-	if bearer == nil || ((userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil)) || !bearer.HasAnyPermission(common.DeleteToken, common.Sudo) {
+	if bearer == nil || ((userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) && !bearer.HasAnyPermission(common.DeleteToken, common.Sudo)) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -116,7 +116,14 @@ func deleteTokenHandler(c *gin.Context) {
 	if bearer.HasAnyPermission(common.DeleteToken, common.Sudo) {
 		db.Where("id = ?", c.Param("id")).Find(&token)
 	} else {
-		db.Where("id = ? AND user_id = ?", c.Param("id"), bearer.UserID).Find(&token)
+		query := db.Where("id = ?", c.Param("id"))
+		if bearer.UserID != nil {
+			query = query.Where("user_id = ?", bearer.UserID)
+		}
+		if bearer.ApplicationID != nil {
+			query = query.Where("application_id = ?", bearer.ApplicationID)
+		}
+		query.Find(&token)
 	}
 
 	if token.ID == uuid.Nil {
