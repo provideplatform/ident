@@ -7,6 +7,7 @@ import (
 	"time"
 
 	natsutil "github.com/kthomas/go-natsutil"
+	"github.com/kthomas/go-redisutil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/token"
@@ -112,6 +113,42 @@ func ParseInvite(signedToken string, strict bool) (*Invite, error) {
 	}, nil
 }
 
+func (i *Invite) cache(key string) error {
+	rawinvites, err := redisutil.Get(key)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve cached invitations from key: %s; %s", key, err.Error())
+	}
+
+	var invitations []*Invite
+
+	if rawinvites != nil {
+		err = json.Unmarshal([]byte(*rawinvites), &invitations)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal cached invitations from key: %s; %s", key, err.Error())
+		}
+	} else {
+		invitations = make([]*Invite, 0)
+	}
+
+	invitations = append(invitations, &Invite{
+		Name:        i.Name,
+		Email:       i.Email,
+		Permissions: i.Permissions,
+	})
+
+	rawinvitesJSON, err := json.Marshal(&invitations)
+	if err != nil {
+		return fmt.Errorf("failed to cach invitations at key: %s; %s", key, err.Error())
+	}
+
+	var ttl *time.Duration
+	if i.Token != nil && i.Token.ExpiresAt != nil {
+		ttlval := time.Until(*i.Token.ExpiresAt)
+		ttl = &ttlval
+	}
+	return redisutil.Set(key, string(rawinvitesJSON), ttl)
+}
+
 // Create the invite
 func (i *Invite) Create() bool {
 	token, err := i.vendToken()
@@ -120,7 +157,18 @@ func (i *Invite) Create() bool {
 		return false
 	}
 	i.Token = token
-	return i.Token != nil
+	success := i.Token != nil
+	if success {
+		if i.ApplicationID != nil {
+			key := fmt.Sprintf("application.%s.invitations", i.ApplicationID.String())
+			redisutil.WithRedlock(key, func() error { return i.cache(key) })
+		}
+		if i.OrganizationID != nil {
+			key := fmt.Sprintf("application.%s.invitations", i.ApplicationID.String())
+			redisutil.WithRedlock(key, func() error { return i.cache(key) })
+		}
+	}
+	return success
 }
 
 func (i *Invite) authorizesNewApplicationOrganization() bool {

@@ -2,10 +2,12 @@ package organization
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
 	"github.com/kthomas/go-natsutil"
+	redisutil "github.com/kthomas/go-redisutil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/user"
@@ -177,6 +179,19 @@ func (o *Organization) Create(tx *gorm.DB) bool {
 	}
 
 	return false
+}
+
+// pendingInvitations returns the pending invitations for the organization; these are ephemeral, in-memory only
+func (o *Organization) pendingInvitations() ([]*user.Invite, error) {
+	key := fmt.Sprintf("organization.%s.invitations", o.ID.String())
+	rawinvites, err := redisutil.Get(key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve cached organization invitations from key: %s; %s", key, err.Error())
+	}
+
+	var invitations []*user.Invite
+	json.Unmarshal([]byte(*rawinvites), &invitations)
+	return invitations, nil
 }
 
 // Update an existing user

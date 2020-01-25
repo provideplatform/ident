@@ -20,6 +20,7 @@ require (
 	github.com/kthomas/go-logger v0.0.0-20190616094252-01c360658513
 	github.com/kthomas/go-natsutil v0.0.0-20191005052905-c26ab647994e
 	github.com/kthomas/go-pgputil v0.0.0-20191124055155-a2d45567ec49
+	github.com/kthomas/go-redisutil v0.0.0-20191117081122-69f1fff0cf7e
 	github.com/kthomas/go-self-signed-cert v0.0.0-20190324125449-a6356df979a5
 	github.com/kthomas/go.uuid v1.2.1-0.20190324131420-28d1fa77e9a4
 	github.com/kthomas/identitymind-golang v0.0.0-20190614063152-6d2ea7e625e1
@@ -30,8 +31,8 @@ require (
 	github.com/nats-io/nats-streaming-server v0.16.2 // indirect
 	github.com/nats-io/nuid v1.0.2-0.20191008151827-57049d7fef86 // indirect
 	github.com/nats-io/stan.go v0.5.1-0.20191007145005-74ff03f767e3
-	github.com/onsi/ginkgo v1.7.0
-	github.com/onsi/gomega v1.4.3
+	github.com/onsi/ginkgo v1.10.3
+	github.com/onsi/gomega v1.7.1
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/provideservices/provide-go v0.0.0-20191202100929-9cc66daf7156
 	github.com/t-tiger/gorm-bulk-insert v1.2.0

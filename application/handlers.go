@@ -471,6 +471,55 @@ func deleteApplicationOrganizationHandler(c *gin.Context) {
 	}
 }
 
+func applicationInvitationsListHandler(c *gin.Context) {
+	bearer := token.InContext(c)
+	userID := bearer.UserID
+	appID := bearer.ApplicationID
+
+	if (userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) {
+		provide.RenderError("unauthorized", 401, c)
+		return
+	}
+
+	if appID != nil && (*appID).String() != c.Param("id") {
+		provide.RenderError("forbidden", 403, c)
+		return
+	}
+
+	db := dbconf.DatabaseConnection()
+
+	var app = &Application{}
+	db.Where("id = ?", c.Param("id")).Find(&app)
+	if app == nil || app.ID == uuid.Nil {
+		provide.RenderError("application not found", 404, c)
+		return
+	}
+
+	if userID != nil && *userID != app.UserID {
+		provide.RenderError("forbidden", 403, c)
+		return
+	}
+
+	invitations, err := app.pendingInvitations() // FIXME-- paginate the in-memory invitations list within redis
+	if err != nil {
+		provide.RenderError(err.Error(), 500, c)
+		return
+	}
+
+	invitedUsers := make([]*user.User, 0)
+	for _, invite := range invitations {
+		usr := &user.User{
+			Name:  invite.Name,
+			Email: invite.Email,
+		}
+		if invite.Permissions != nil {
+			usr.Permissions = *invite.Permissions
+		}
+		invitedUsers = append(invitedUsers, usr)
+	}
+	provide.Render(invitedUsers, 200, c)
+}
+
 func applicationUsersListHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 	userID := bearer.UserID

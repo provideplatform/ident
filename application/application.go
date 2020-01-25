@@ -3,12 +3,14 @@ package application
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
 	natsutil "github.com/kthomas/go-natsutil"
 	"github.com/kthomas/go-pgputil"
+	redisutil "github.com/kthomas/go-redisutil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/organization"
@@ -144,6 +146,19 @@ func (app *Application) sanitizeConfig() {
 
 	app.setConfig(cfg)
 	app.setEncryptedConfig(encryptedConfig)
+}
+
+// pendingInvitations returns the pending invitations for the application; these are ephemeral, in-memory only
+func (app *Application) pendingInvitations() ([]*user.Invite, error) {
+	key := fmt.Sprintf("application.%s.invitations", app.ID.String())
+	rawinvites, err := redisutil.Get(key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve cached application invitations from key: %s; %s", key, err.Error())
+	}
+
+	var invitations []*user.Invite
+	json.Unmarshal([]byte(*rawinvites), &invitations)
+	return invitations, nil
 }
 
 func (app *Application) addOrganization(tx *gorm.DB, org organization.Organization, permissions common.Permission) bool {

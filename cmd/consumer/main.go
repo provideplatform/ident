@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/kthomas/go-pgputil"
+	"github.com/kthomas/go-redisutil"
 	"github.com/provideapp/ident/common"
 	_ "github.com/provideapp/ident/kyc"  // KYC package
 	_ "github.com/provideapp/ident/user" // User package
@@ -31,6 +32,7 @@ func init() {
 
 	pgputil.RequirePGP()
 	common.RequireJWT()
+	redisutil.RequireRedis()
 }
 
 func main() {

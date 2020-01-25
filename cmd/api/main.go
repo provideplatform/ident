@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/kthomas/go-auth0"
 	"github.com/kthomas/go-pgputil"
+	"github.com/kthomas/go-redisutil"
 
 	"github.com/provideapp/ident/application"
 	"github.com/provideapp/ident/common"
@@ -50,6 +51,7 @@ func init() {
 	pgputil.RequirePGP()
 	// common.RequireAPIAccounting()
 	consumer.RunAPIUsageDaemon()
+	redisutil.RequireRedis()
 }
 
 func main() {

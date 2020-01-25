@@ -28,6 +28,8 @@ func InstallOrganizationUsersAPI(r *gin.Engine) {
 	r.POST("/api/v1/organizations/:id/users", createOrganizationUserHandler)
 	r.PUT("/api/v1/organizations/:id/users/:userId", updateOrganizationUserHandler)
 	r.DELETE("/api/v1/organizations/:id/users/:userId", deleteOrganizationUserHandler)
+
+	r.GET("/api/v1/organizations/:id/invitations", organizationInvitationsListHandler)
 }
 
 func resolveOrganization(db *gorm.DB, orgID, appID, userID *uuid.UUID) *gorm.DB {
@@ -167,6 +169,51 @@ func updateOrganizationHandler(c *gin.Context) {
 
 func deleteOrganizationHandler(c *gin.Context) {
 	provide.RenderError("not implemented", 501, c)
+}
+
+func organizationInvitationsListHandler(c *gin.Context) {
+	bearer := token.InContext(c)
+	userID := bearer.UserID
+	applicationID := bearer.ApplicationID
+
+	if (userID == nil || *userID == uuid.Nil) && (applicationID == nil || *applicationID == uuid.Nil) {
+		provide.RenderError("unauthorized", 401, c)
+		return
+	}
+
+	organizationID, err := uuid.FromString(c.Param("id"))
+	if err != nil {
+		provide.RenderError(err.Error(), 422, c)
+		return
+	}
+
+	org := &Organization{}
+	query := dbconf.DatabaseConnection()
+	resolveOrganization(query, &organizationID, applicationID, userID).Find(&org)
+
+	if org == nil || org.ID == uuid.Nil {
+		provide.RenderError("unauthorized", 401, c)
+		return
+	}
+
+	invitations, err := org.pendingInvitations() // FIXME-- paginate the in-memory invitations list within redis
+	if err != nil {
+		provide.RenderError(err.Error(), 500, c)
+		return
+	}
+
+	invitedUsers := make([]*user.User, 0)
+	for _, invite := range invitations {
+		usr := &user.User{
+			Name:  invite.Name,
+			Email: invite.Email,
+		}
+		if invite.Permissions != nil {
+			usr.Permissions = *invite.Permissions
+		}
+		invitedUsers = append(invitedUsers, usr)
+	}
+	provide.Render(invitedUsers, 200, c)
 }
 
 func organizationUsersListHandler(c *gin.Context) {
