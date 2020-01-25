@@ -165,7 +165,7 @@ func (i *Invite) Create() bool {
 			redisutil.WithRedlock(key, func() error { return i.cache(key) })
 		}
 		if i.OrganizationID != nil {
-			key := fmt.Sprintf("application.%s.invitations", i.ApplicationID.String())
+			key := fmt.Sprintf("organization.%s.invitations", i.OrganizationID.String())
 			redisutil.WithRedlock(key, func() error { return i.cache(key) })
 		}
 	}
