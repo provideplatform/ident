@@ -142,7 +142,12 @@ func (i *Invite) cache(key string) error {
 		ttlval := time.Until(*i.Token.ExpiresAt)
 		ttl = &ttlval
 	}
-	return redisutil.Set(key, string(rawinvitesJSON), ttl)
+
+	err = redisutil.Set(key, string(rawinvitesJSON), ttl)
+	if err != nil {
+		common.Log.Warningf("failed to cach invitations at key: %s; %s", key, err.Error())
+	}
+	return err
 }
 
 // Create the invite
