@@ -221,8 +221,8 @@ github.com/kthomas/go-natsutil v0.0.0-20191005052905-c26ab647994e h1:THsrpPIJIIC
 github.com/kthomas/go-natsutil v0.0.0-20191005052905-c26ab647994e/go.mod h1:kDZfrDzKqbWkMkKAjJLa2dXMlBsJTCHB9jNusrkm0zY=
 github.com/kthomas/go-pgputil v0.0.0-20191124055155-a2d45567ec49 h1:Jwb7Dt3D7kmGQdA4Ijb5K1+T1uwyh/i5egtfBZbZ3jg=
 github.com/kthomas/go-pgputil v0.0.0-20191124055155-a2d45567ec49/go.mod h1:39B58+gxki8YxfLtqa4MVW0EGmrl2BJqHJQ/6UvTMws=
-github.com/kthomas/go-redisutil v0.0.0-20191117081122-69f1fff0cf7e h1:AzgPUN+LP9HbIUi5hCLeQ47YYBvBRzi6t+eOsK5wiy0=
-github.com/kthomas/go-redisutil v0.0.0-20191117081122-69f1fff0cf7e/go.mod h1:BiqUUMjR9DWuCDsB6KxzH/iSXuIdsjv4VDwc0wvcBoM=
+github.com/kthomas/go-redisutil v0.0.0-20200125200743-c81c9abcf1c5 h1:BKJu4ZH0LNIe5jskH2tOVXoCQECDZSYdKTkS225J0kU=
+github.com/kthomas/go-redisutil v0.0.0-20200125200743-c81c9abcf1c5/go.mod h1:BiqUUMjR9DWuCDsB6KxzH/iSXuIdsjv4VDwc0wvcBoM=
 github.com/kthomas/go-self-signed-cert v0.0.0-20190324125449-a6356df979a5 h1:Sosu0789XxOLgLZlVRuFMF7k3LnoZ651Fc25N9bfMbc=
 github.com/kthomas/go-self-signed-cert v0.0.0-20190324125449-a6356df979a5/go.mod h1:KJCUwZyO/D5w+38wU0ENRVDh+aYTvAFeyR3Fma8ZJqs=
 github.com/kthomas/go.uuid v1.2.1-0.20190324131420-28d1fa77e9a4 h1:xWgita+beQTA+NaWz1dSFnWMZFLFPpRNZ0NdG1VOfOQ=

@@ -332,7 +332,7 @@ if [[ -z "${REDIS_HOSTS}" ]]; then
 fi
 
 if [[ -z "${REDIS_DB_INDEX}" ]]; then
-  REDIS_DB_INDEX=1
+  REDIS_DB_INDEX=0
 fi
 
 if [[ -z "${IDENTITYMIND_API_USER}" ]]; then

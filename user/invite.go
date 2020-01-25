@@ -114,6 +114,8 @@ func ParseInvite(signedToken string, strict bool) (*Invite, error) {
 }
 
 func (i *Invite) cache(key string) error {
+	common.Log.Debugf("attempting to cache invitation at key: %s", key)
+
 	rawinvites, err := redisutil.Get(key)
 	var invitations []*Invite
 
@@ -134,7 +136,9 @@ func (i *Invite) cache(key string) error {
 
 	rawinvitesJSON, err := json.Marshal(&invitations)
 	if err != nil {
-		return fmt.Errorf("failed to cach invitations at key: %s; %s", key, err.Error())
+		msg := fmt.Sprintf("failed to cache invitations at key: %s; %s", key, err.Error())
+		common.Log.Warning(msg)
+		return errors.New(msg)
 	}
 
 	var ttl *time.Duration
@@ -145,7 +149,7 @@ func (i *Invite) cache(key string) error {
 
 	err = redisutil.Set(key, string(rawinvitesJSON), ttl)
 	if err != nil {
-		common.Log.Warningf("failed to cach invitations at key: %s; %s", key, err.Error())
+		common.Log.Warningf("failed to cache invitations at key: %s; %s", key, err.Error())
 	}
 	return err
 }

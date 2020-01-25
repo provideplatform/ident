@@ -49,9 +49,9 @@ func init() {
 	auth0.RequireAuth0()
 	common.RequireJWT()
 	pgputil.RequirePGP()
+	redisutil.RequireRedis()
 	// common.RequireAPIAccounting()
 	consumer.RunAPIUsageDaemon()
-	redisutil.RequireRedis()
 }
 
 func main() {
