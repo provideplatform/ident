@@ -132,6 +132,10 @@ func (i *Invite) cache(key string) error {
 		Name:        i.Name,
 		Email:       i.Email,
 		Permissions: i.Permissions,
+		Token: &token.Token{
+			ExpiresAt: i.Token.ExpiresAt,
+			Hash:      i.Token.Hash,
+		},
 	})
 
 	rawinvitesJSON, err := json.Marshal(&invitations)
@@ -152,6 +156,74 @@ func (i *Invite) cache(key string) error {
 		common.Log.Warningf("failed to cache invitations at key: %s; %s", key, err.Error())
 	}
 	return err
+}
+
+func (i *Invite) invalidateCache(key string) error {
+	common.Log.Debugf("attempting to purge cached invitation at key: %s", key)
+
+	rawinvites, err := redisutil.Get(key)
+	var cachedInvitations []*Invite
+
+	if rawinvites != nil {
+		err = json.Unmarshal([]byte(*rawinvites), &cachedInvitations)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal cached invitations from key: %s; %s", key, err.Error())
+		}
+	} else {
+		common.Log.Debugf("cached invitations already purged from key: %s", key)
+		return nil
+	}
+
+	invitations := make([]*Invite, 0)
+	for _, cachedInvitation := range cachedInvitations {
+		if i.Token != nil && i.Token.Hash != nil && cachedInvitation.Token != nil && cachedInvitation.Token.Hash != nil && *cachedInvitation.Token.Hash != *i.Token.Hash {
+			invitations = append(invitations, cachedInvitation)
+		}
+	}
+
+	rawinvitesJSON, err := json.Marshal(&invitations)
+	if err != nil {
+		msg := fmt.Sprintf("failed to cache invitations at key: %s; %s", key, err.Error())
+		common.Log.Warning(msg)
+		return errors.New(msg)
+	}
+
+	var ttl *time.Duration
+	if i.Token != nil && i.Token.ExpiresAt != nil {
+		ttlval := time.Until(*i.Token.ExpiresAt)
+		ttl = &ttlval
+	}
+
+	err = redisutil.Set(key, string(rawinvitesJSON), ttl)
+	if err != nil {
+		common.Log.Warningf("failed to cache invitations at key: %s; %s", key, err.Error())
+	}
+	return err
+}
+
+// InvalidateCache invalidates cached pending tokens
+func (i *Invite) InvalidateCache() error {
+	var err error
+
+	if i.ApplicationID != nil {
+		key := fmt.Sprintf("application.%s.invitations", i.ApplicationID.String())
+		err = redisutil.WithRedlock(key, func() error { return i.invalidateCache(key) })
+		if err != nil {
+			common.Log.Warningf("failed to purge invitation from cache at key: %s; %s", key, err.Error())
+			return err
+		}
+	}
+
+	if i.OrganizationID != nil {
+		key := fmt.Sprintf("organization.%s.invitations", i.OrganizationID.String())
+		err = redisutil.WithRedlock(key, func() error { return i.invalidateCache(key) })
+		if err != nil {
+			common.Log.Warningf("failed to purge invitation from cache at key: %s; %s", key, err.Error())
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Create the invite

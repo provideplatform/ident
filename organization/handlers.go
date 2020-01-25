@@ -149,6 +149,9 @@ func createOrganizationHandler(c *gin.Context) {
 
 		if success {
 			success = invite.Token.IsRevoked() || invite.Token.Revoke(tx)
+			if success {
+				invite.InvalidateCache()
+			}
 		}
 	}
 
@@ -345,6 +348,9 @@ func createOrganizationUserHandler(c *gin.Context) {
 	success := org.addUser(tx, *usr, permissions)
 	if success && invite != nil {
 		success = invite.Token.IsRevoked() || invite.Token.Revoke(tx)
+		if success {
+			invite.InvalidateCache()
+		}
 	}
 
 	if success {
