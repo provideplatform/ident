@@ -115,10 +115,6 @@ func ParseInvite(signedToken string, strict bool) (*Invite, error) {
 
 func (i *Invite) cache(key string) error {
 	rawinvites, err := redisutil.Get(key)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve cached invitations from key: %s; %s", key, err.Error())
-	}
-
 	var invitations []*Invite
 
 	if rawinvites != nil {
