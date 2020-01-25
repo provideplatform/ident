@@ -174,10 +174,20 @@ func (i *Invite) invalidateCache(key string) error {
 		return nil
 	}
 
+	var expiresAt *time.Time
+
 	invitations := make([]*Invite, 0)
 	for _, cachedInvitation := range cachedInvitations {
 		if i.Token != nil && i.Token.Hash != nil && cachedInvitation.Token != nil && cachedInvitation.Token.Hash != nil && *cachedInvitation.Token.Hash != *i.Token.Hash {
 			invitations = append(invitations, cachedInvitation)
+		}
+
+		if cachedInvitation.Token != nil && cachedInvitation.Token.ExpiresAt != nil {
+			if expiresAt == nil {
+				expiresAt = cachedInvitation.Token.ExpiresAt
+			} else if expiresAt.Before(*cachedInvitation.Token.ExpiresAt) {
+				expiresAt = cachedInvitation.Token.ExpiresAt
+			}
 		}
 	}
 
@@ -189,8 +199,8 @@ func (i *Invite) invalidateCache(key string) error {
 	}
 
 	var ttl *time.Duration
-	if i.Token != nil && i.Token.ExpiresAt != nil {
-		ttlval := time.Until(*i.Token.ExpiresAt)
+	if expiresAt != nil {
+		ttlval := time.Until(*expiresAt)
 		ttl = &ttlval
 	}
 
