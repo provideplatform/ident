@@ -39,6 +39,8 @@ func InstallApplicationUsersAPI(r *gin.Engine) {
 	r.POST("/api/v1/applications/:id/users", createApplicationUserHandler)
 	r.PUT("/api/v1/applications/:id/users/:userId", updateApplicationUserHandler)
 	r.DELETE("/api/v1/applications/:id/users/:userId", deleteApplicationUserHandler)
+
+	r.GET("/api/v1/applications/:id/invitations", applicationInvitationsListHandler)
 }
 
 func resolveAppUser(db *gorm.DB, app *Application, userID *uuid.UUID) *user.User {
