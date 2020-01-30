@@ -182,16 +182,18 @@ func (o *Organization) Create(tx *gorm.DB) bool {
 }
 
 // pendingInvitations returns the pending invitations for the organization; these are ephemeral, in-memory only
-func (o *Organization) pendingInvitations() ([]*user.Invite, error) {
+func (o *Organization) pendingInvitations() []*user.Invite {
+	var invitations []*user.Invite
+
 	key := fmt.Sprintf("organization.%s.invitations", o.ID.String())
 	rawinvites, err := redisutil.Get(key)
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve cached organization invitations from key: %s; %s", key, err.Error())
+		common.Log.Debugf("failed to retrieve cached organization invitations from key: %s; %s", key, err.Error())
+		return invitations
 	}
 
-	var invitations []*user.Invite
 	json.Unmarshal([]byte(*rawinvites), &invitations)
-	return invitations, nil
+	return invitations
 }
 
 // Update an existing user

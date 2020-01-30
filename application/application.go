@@ -149,16 +149,18 @@ func (app *Application) sanitizeConfig() {
 }
 
 // pendingInvitations returns the pending invitations for the application; these are ephemeral, in-memory only
-func (app *Application) pendingInvitations() ([]*user.Invite, error) {
+func (app *Application) pendingInvitations() []*user.Invite {
+	var invitations []*user.Invite
+
 	key := fmt.Sprintf("application.%s.invitations", app.ID.String())
 	rawinvites, err := redisutil.Get(key)
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve cached application invitations from key: %s; %s", key, err.Error())
+		common.Log.Debugf("failed to retrieve cached application invitations from key: %s; %s", key, err.Error())
+		return invitations
 	}
 
-	var invitations []*user.Invite
 	json.Unmarshal([]byte(*rawinvites), &invitations)
-	return invitations, nil
+	return invitations
 }
 
 func (app *Application) addOrganization(tx *gorm.DB, org organization.Organization, permissions common.Permission) bool {
