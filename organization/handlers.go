@@ -199,12 +199,7 @@ func organizationInvitationsListHandler(c *gin.Context) {
 		return
 	}
 
-	invitations, err := org.pendingInvitations() // FIXME-- paginate the in-memory invitations list within redis
-	if err != nil {
-		provide.RenderError(err.Error(), 500, c)
-		return
-	}
-
+	invitations := org.pendingInvitations() // FIXME-- paginate the in-memory invitations list within redis
 	invitedUsers := make([]*user.User, 0)
 	for _, invite := range invitations {
 		usr := &user.User{
