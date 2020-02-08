@@ -56,6 +56,7 @@ func createNatsSubmitKYCApplicationSubscriptions(wg *sync.WaitGroup) {
 			consumeSubmitKYCApplicationMsg,
 			submitKYCApplicationAckWait,
 			natsSubmitKYCApplicationMaxInFlight,
+			nil,
 		)
 	}
 }
@@ -69,6 +70,7 @@ func createNatsCheckKYCApplicationStatusSubscriptions(wg *sync.WaitGroup) {
 			consumeCheckKYCApplicationStatusMsg,
 			checkKYCApplicationStatusAckWait,
 			natsCheckKYCApplicationStatusMaxInFlight,
+			nil,
 		)
 	}
 }
@@ -82,6 +84,7 @@ func createNatsDispatchKYCApplicationWebhookSubscriptions(wg *sync.WaitGroup) {
 			consumeDispatchKYCApplicationWebhookMsg,
 			dispatchKYCApplicationWebhookAckWait,
 			natsDispatchKYCApplicationWebhookMaxInFlight,
+			nil,
 		)
 	}
 }

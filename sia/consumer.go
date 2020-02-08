@@ -113,6 +113,7 @@ func createNatsSiaUserNotificationSubscriptions(wg *sync.WaitGroup) {
 			consumeSiaUserNotificationMsg,
 			siaUserNotificationAckWait,
 			natsSiaUserNotificationMaxInFlight,
+			nil,
 		)
 	}
 }
@@ -126,6 +127,7 @@ func createNatsSiaApplicationNotificationSubscriptions(wg *sync.WaitGroup) {
 			consumeSiaApplicationNotificationMsg,
 			siaApplicationNotificationAckWait,
 			natsSiaApplicationNotificationMaxInFlight,
+			nil,
 		)
 	}
 }
@@ -139,6 +141,7 @@ func createNatsSiaAPIUsageEventsSubscriptions(wg *sync.WaitGroup) {
 			consumeSiaAPIUsageEventsMsg,
 			siaAPIUsageEventAckWait,
 			natsSiaAPIUsageEventMaxInFlight,
+			nil,
 		)
 	}
 }

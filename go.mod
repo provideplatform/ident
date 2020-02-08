@@ -18,7 +18,7 @@ require (
 	github.com/kthomas/go-auth0 v0.0.0-20191125044405-5e59b0d714de
 	github.com/kthomas/go-db-config v0.0.0-20190930131840-6f8768ecee4c
 	github.com/kthomas/go-logger v0.0.0-20190616094252-01c360658513
-	github.com/kthomas/go-natsutil v0.0.0-20191005052905-c26ab647994e
+	github.com/kthomas/go-natsutil v0.0.0-20200208211216-a7982c77265e
 	github.com/kthomas/go-pgputil v0.0.0-20191124055155-a2d45567ec49
 	github.com/kthomas/go-redisutil v0.0.0-20200125200743-c81c9abcf1c5
 	github.com/kthomas/go-self-signed-cert v0.0.0-20190324125449-a6356df979a5
@@ -27,8 +27,6 @@ require (
 	github.com/kthomas/trumail v0.0.0-20190925185815-ab3de2e834a3
 	github.com/kthomas/vouched-golang v0.0.0-20191106012429-c12f34e0e3da
 	github.com/lib/pq v1.2.1-0.20190919160911-931b5ae4c24e // indirect
-	github.com/nats-io/nats-server/v2 v2.1.2 // indirect
-	github.com/nats-io/nats-streaming-server v0.16.2 // indirect
 	github.com/nats-io/nuid v1.0.2-0.20191008151827-57049d7fef86 // indirect
 	github.com/nats-io/stan.go v0.5.1-0.20191007145005-74ff03f767e3
 	github.com/onsi/ginkgo v1.10.3

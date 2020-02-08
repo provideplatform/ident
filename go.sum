@@ -107,6 +107,7 @@ github.com/go-stack/stack v1.8.0/go.mod h1:v0f6uXyyMGvRgIKkXu+yp6POWl0qKG85gN/me
 github.com/gogo/protobuf v1.1.1/go.mod h1:r8qH/GZQm5c6nD/R0oafs1akxWv10x8SbQlK7atdtwQ=
 github.com/gogo/protobuf v1.2.0/go.mod h1:r8qH/GZQm5c6nD/R0oafs1akxWv10x8SbQlK7atdtwQ=
 github.com/gogo/protobuf v1.2.1/go.mod h1:hp+jE20tsWTFYpLwKvXlhS1hjn+gTNwPg2I6zVXpSg4=
+github.com/gogo/protobuf v1.2.2-0.20190730201129-28a6bbf47e48/go.mod h1:SlYgWuQ5SjCEi6WLHjHCa1yvBfUnHcTbrrZtXPKa29o=
 github.com/gogo/protobuf v1.3.0/go.mod h1:SlYgWuQ5SjCEi6WLHjHCa1yvBfUnHcTbrrZtXPKa29o=
 github.com/gogo/protobuf v1.3.1-0.20191006172112-69adf3ecd52d h1:cssqLuL8Q3gGEoXVSzpOzv/TCbs93mkoWwXzcb6U3os=
 github.com/gogo/protobuf v1.3.1-0.20191006172112-69adf3ecd52d/go.mod h1:SlYgWuQ5SjCEi6WLHjHCa1yvBfUnHcTbrrZtXPKa29o=
@@ -217,8 +218,8 @@ github.com/kthomas/go-db-config v0.0.0-20190930131840-6f8768ecee4c h1:KIw63xEiZR
 github.com/kthomas/go-db-config v0.0.0-20190930131840-6f8768ecee4c/go.mod h1:oApzEAKQeLYMWVUCv09olaXsxUac+bSJCOLTOgw3Ekc=
 github.com/kthomas/go-logger v0.0.0-20190616094252-01c360658513 h1:lcgOk2ZGtDy87lMLWiZCXzNGe5vLprb8bPN84BsGqUY=
 github.com/kthomas/go-logger v0.0.0-20190616094252-01c360658513/go.mod h1:OljTeAhOdDB7r14ZEnn3v0H5WBbAfhnAXq2s4GH8/p4=
-github.com/kthomas/go-natsutil v0.0.0-20191005052905-c26ab647994e h1:THsrpPIJIICi0OU0nD747D4NZ3eIXYuRyZW0JEFRUtk=
-github.com/kthomas/go-natsutil v0.0.0-20191005052905-c26ab647994e/go.mod h1:kDZfrDzKqbWkMkKAjJLa2dXMlBsJTCHB9jNusrkm0zY=
+github.com/kthomas/go-natsutil v0.0.0-20200208211216-a7982c77265e h1:4Xq0UAIrIxdhla8XckWFOZTHsquJLhri3ateeSf15O4=
+github.com/kthomas/go-natsutil v0.0.0-20200208211216-a7982c77265e/go.mod h1:jPaZVBEiWH0lYCR3klxCfFbItG7PiGtayxRZFO5kncI=
 github.com/kthomas/go-pgputil v0.0.0-20191124055155-a2d45567ec49 h1:Jwb7Dt3D7kmGQdA4Ijb5K1+T1uwyh/i5egtfBZbZ3jg=
 github.com/kthomas/go-pgputil v0.0.0-20191124055155-a2d45567ec49/go.mod h1:39B58+gxki8YxfLtqa4MVW0EGmrl2BJqHJQ/6UvTMws=
 github.com/kthomas/go-redisutil v0.0.0-20200125200743-c81c9abcf1c5 h1:BKJu4ZH0LNIe5jskH2tOVXoCQECDZSYdKTkS225J0kU=
@@ -528,6 +529,8 @@ gopkg.in/alecthomas/kingpin.v2 v2.2.6/go.mod h1:FMv+mEhP44yOT+4EoQTLFTRgOQ1FBLks
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 h1:qIbj1fsPNlZgppZ+VLlY7N33q108Sa+fhmuc+sWQYwY=
 gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 h1:YR8cESwS4TdDjEe65xsg0ogRM/Nc3DYOhEAlW+xobZo=
+gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/fsnotify.v1 v1.4.7 h1:xOHLXZwVvI9hhs+cLKq5+I5onOuwQLhQwiu63xxlHs4=
 gopkg.in/fsnotify.v1 v1.4.7/go.mod h1:Tz8NjZHkW78fSQdbUxIjBTcgA1z1m8ZHf0WmKUhAMys=
 gopkg.in/go-playground/assert.v1 v1.2.1 h1:xoYuJVE7KT85PYWrN730RguIQO0ePzVRfFMXadIrXTM=
