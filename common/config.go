@@ -28,6 +28,7 @@ const defaultEmailVerificationAttempts = int(4)
 const defaultEmailVerificationTimeout = time.Millisecond * time.Duration(2500)
 
 const defaultJWTApplicationClaimsKey = "prvd"
+const defaultJWTNatsClaimsKey = "nats"
 
 type jwtKeypair struct {
 	fingerprint string
@@ -93,6 +94,9 @@ var (
 	// JWTAuthorizationTTL is the ttl in milliseconds for new token authorizations, calculated from the issued at timestamp ("iat" claim)
 	JWTAuthorizationTTL time.Duration
 
+	// JWTNatsClaimsKey is the key within the JWT claims payload where NATS-specific claims are encoded
+	JWTNatsClaimsKey string
+
 	// JWTKeypairs is a map of JWTKeypair instances which contains the configured RSA public/private keypairs for JWT signing and/or verification, keyed by fingerprint
 	jwtKeypairs map[string]*jwtKeypair
 
@@ -147,6 +151,12 @@ func RequireJWT() {
 		JWTApplicationClaimsKey = os.Getenv("JWT_APPLICATION_CLAIMS_KEY")
 	} else {
 		JWTApplicationClaimsKey = defaultJWTApplicationClaimsKey
+	}
+
+	if os.Getenv("JWT_NATS_CLAIMS_KEY") != "" {
+		JWTNatsClaimsKey = os.Getenv("JWT_NATS_CLAIMS_KEY")
+	} else {
+		JWTNatsClaimsKey = defaultJWTNatsClaimsKey
 	}
 
 	JWTAuthorizationAudience = os.Getenv("JWT_AUTHORIZATION_AUDIENCE")

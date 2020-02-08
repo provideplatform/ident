@@ -746,6 +746,11 @@ func (t *Token) encodeJWT() error {
 	}
 	claims[appClaimsKey] = t.encodeJWTAppClaims()
 
+	natsClaims := t.encodeJWTNatsClaims()
+	if natsClaims != nil {
+		claims[common.JWTNatsClaimsKey] = natsClaims
+	}
+
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims(claims))
 	jwtToken.Header["kid"] = t.Kid
 
@@ -791,4 +796,71 @@ func (t *Token) encodeJWTAppClaims() map[string]interface{} {
 	}
 
 	return appClaims
+}
+
+func (t *Token) encodeJWTNatsClaims() map[string]interface{} {
+	publishAllow := make([]string, 0)
+	publishDeny := make([]string, 0)
+
+	subscribeAllow := make([]string, 0)
+	subscribeDeny := make([]string, 0)
+
+	var responsesMax *int
+	var responsesTTL *time.Duration
+
+	var publishPermissions map[string]interface{}
+	if len(publishAllow) > 0 || len(publishDeny) > 0 {
+		publishPermissions = map[string]interface{}{}
+		if len(publishAllow) > 0 {
+			publishPermissions["allow"] = publishAllow
+		}
+		if len(publishDeny) > 0 {
+			publishPermissions["deny"] = publishDeny
+		}
+	}
+
+	var subscribePermissions map[string]interface{}
+	if len(subscribeAllow) > 0 || len(subscribeDeny) > 0 {
+		subscribePermissions = map[string]interface{}{}
+		if len(subscribeAllow) > 0 {
+			subscribePermissions["allow"] = subscribeAllow
+		}
+		if len(subscribeDeny) > 0 {
+			subscribePermissions["deny"] = subscribeDeny
+		}
+	}
+
+	var responsesPermissions map[string]interface{}
+	if responsesMax != nil || responsesTTL != nil {
+		responsesPermissions = map[string]interface{}{}
+		if responsesMax != nil {
+			responsesPermissions["max"] = responsesMax
+		}
+		if responsesTTL != nil {
+			responsesPermissions["ttl"] = responsesTTL
+		}
+	}
+
+	var permissions map[string]interface{}
+	if publishPermissions != nil || subscribePermissions != nil || responsesPermissions != nil {
+		permissions = map[string]interface{}{}
+		if publishPermissions != nil {
+			permissions["publish"] = publishPermissions
+		}
+		if subscribePermissions != nil {
+			permissions["subscribe"] = subscribePermissions
+		}
+		if responsesPermissions != nil {
+			permissions["responses"] = responsesPermissions
+		}
+	}
+
+	var natsClaims map[string]interface{}
+	if permissions != nil {
+		natsClaims = map[string]interface{}{
+			"permissions": permissions,
+		}
+	}
+
+	return natsClaims
 }
