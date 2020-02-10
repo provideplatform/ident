@@ -73,6 +73,8 @@ type Token struct {
 	ExtendedPermissions  *json.RawMessage  `sql:"-" json:"-"`
 	TTL                  *int              `sql:"-" json:"-"` // number of seconds this token will be valid; used internally
 	Data                 *json.RawMessage  `sql:"-" json:"data,omitempty"`
+
+	NatsClaims map[string]interface{} `sql:"-" json:"-"` // NATS claims
 }
 
 // Response represents the token portion of the response to a successful authentication request
@@ -807,6 +809,18 @@ func (t *Token) encodeJWTNatsClaims() map[string]interface{} {
 
 	var responsesMax *int
 	var responsesTTL *time.Duration
+
+	if t.ApplicationID != nil {
+		subscribeAllow = append(subscribeAllow, fmt.Sprintf("application.%s", t.ApplicationID.String()))
+	}
+
+	if t.UserID != nil {
+		subscribeAllow = append(subscribeAllow, fmt.Sprintf("user.%s", t.UserID.String()))
+	}
+
+	if t.OrganizationID != nil {
+		subscribeAllow = append(subscribeAllow, fmt.Sprintf("organization.%s", t.OrganizationID.String()))
+	}
 
 	var publishPermissions map[string]interface{}
 	if len(publishAllow) > 0 || len(publishDeny) > 0 {
