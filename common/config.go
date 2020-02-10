@@ -336,7 +336,7 @@ func requireTLSConfiguration() {
 		PrivateKeyPath = privateKeyPath
 		ServeTLS = true
 	} else if os.Getenv("REQUIRE_TLS") == "true" {
-		privKeyPath, certPath, err := selfsignedcert.GenerateToDisk()
+		privKeyPath, certPath, err := selfsignedcert.GenerateToDisk([]string{})
 		if err != nil {
 			Log.Panicf("failed to generate self-signed certificate; %s", err.Error())
 		}
