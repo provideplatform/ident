@@ -23,6 +23,7 @@ const defaultAuthorizationAudience = "https://provide.services"
 const defaultAuthorizationIssuer = "https://ident.provide.services"
 const defaultAuthorizationTTL = time.Hour * 24
 const defaultBannedErrorMessage = "Your IP address has been banned from making API calls"
+const defaultNatsAuthorizationAudience = "https://websocket.provide.services"
 
 const defaultEmailVerificationAttempts = int(4)
 const defaultEmailVerificationTimeout = time.Millisecond * time.Duration(2500)
@@ -97,6 +98,9 @@ var (
 	// JWTNatsClaimsKey is the key within the JWT claims payload where NATS-specific claims are encoded
 	JWTNatsClaimsKey string
 
+	// JWTNatsAuthorizationAudience is the audience who will consume the NATS bearer authorization JWT; this will be set as the JWT "aud" claim
+	JWTNatsAuthorizationAudience string
+
 	// JWTKeypairs is a map of JWTKeypair instances which contains the configured RSA public/private keypairs for JWT signing and/or verification, keyed by fingerprint
 	jwtKeypairs map[string]*jwtKeypair
 
@@ -157,6 +161,11 @@ func RequireJWT() {
 		JWTNatsClaimsKey = os.Getenv("JWT_NATS_CLAIMS_KEY")
 	} else {
 		JWTNatsClaimsKey = defaultJWTNatsClaimsKey
+	}
+
+	JWTNatsAuthorizationAudience = os.Getenv("JWT_NATS_AUTHORIZATION_AUDIENCE")
+	if JWTNatsAuthorizationAudience == "" {
+		JWTNatsAuthorizationAudience = defaultNatsAuthorizationAudience
 	}
 
 	JWTAuthorizationAudience = os.Getenv("JWT_AUTHORIZATION_AUDIENCE")
