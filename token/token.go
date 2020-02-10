@@ -823,7 +823,7 @@ func (t *Token) encodeJWTNatsClaims() map[string]interface{} {
 	}
 
 	// FIXME-- put these in configuration and read them from there...
-	subscribeAllow = append(subscribeAllow, "network.*")
+	subscribeAllow = append(subscribeAllow, "network.*.status")
 	subscribeAllow = append(subscribeAllow, "platform.*")
 
 	var publishPermissions map[string]interface{}
