@@ -9,7 +9,7 @@ import (
 // VendNatsBearerAuthorization vends a signed NATS authorization on behalf of the caller
 func VendNatsBearerAuthorization(subject string, publishAllow, publishDeny, subscribeAllow, subscribeDeny []string, responsesMax, responsesTTL *int) (*Token, error) {
 	token := &Token{
-		Audience: &JWTNatsAuthorizationAudience,
+		Audience: &common.JWTNatsAuthorizationAudience,
 		Subject:  &subject,
 		NatsClaims: map[string]interface{}{
 			"permissions": map[string]interface{}{
