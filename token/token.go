@@ -822,6 +822,10 @@ func (t *Token) encodeJWTNatsClaims() map[string]interface{} {
 		subscribeAllow = append(subscribeAllow, fmt.Sprintf("organization.%s", t.OrganizationID.String()))
 	}
 
+	// FIXME-- put these in configuration and read them from there...
+	subscribeAllow = append(subscribeAllow, "network.*")
+	subscribeAllow = append(subscribeAllow, "platform.*")
+
 	var publishPermissions map[string]interface{}
 	if len(publishAllow) > 0 || len(publishDeny) > 0 {
 		publishPermissions = map[string]interface{}{}
