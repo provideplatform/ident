@@ -748,7 +748,11 @@ func (t *Token) encodeJWT() error {
 	}
 	claims[appClaimsKey] = t.encodeJWTAppClaims()
 
-	natsClaims := t.encodeJWTNatsClaims()
+	natsClaims, err := t.encodeJWTNatsClaims()
+	if err != nil {
+		common.Log.Warningf("failed to encode NATS claims in JWT; %s", err.Error())
+		return nil
+	}
 	if natsClaims != nil {
 		claims[common.JWTNatsClaimsKey] = natsClaims
 	}
@@ -800,7 +804,7 @@ func (t *Token) encodeJWTAppClaims() map[string]interface{} {
 	return appClaims
 }
 
-func (t *Token) encodeJWTNatsClaims() map[string]interface{} {
+func (t *Token) encodeJWTNatsClaims() (map[string]interface{}, error) {
 	publishAllow := make([]string, 0)
 	publishDeny := make([]string, 0)
 
@@ -822,9 +826,53 @@ func (t *Token) encodeJWTNatsClaims() map[string]interface{} {
 		subscribeAllow = append(subscribeAllow, fmt.Sprintf("organization.%s", t.OrganizationID.String()))
 	}
 
-	// FIXME-- put these in configuration and read them from there...
-	subscribeAllow = append(subscribeAllow, "network.*.status")
-	subscribeAllow = append(subscribeAllow, "platform.*")
+	if t.NatsClaims != nil && len(t.NatsClaims) > 0 {
+		if permissions, permissionsOk := t.NatsClaims["permissions"].(map[string]interface{}); permissionsOk {
+			if pub, pubOk := permissions["publish"].(map[string]interface{}); pubOk {
+				if allow, allowOk := pub["allow"].([]interface{}); allowOk {
+					for _, subject := range allow {
+						publishAllow = append(publishAllow, subject.(string))
+					}
+				}
+
+				if deny, denyOk := pub["deny"].([]interface{}); denyOk {
+					for _, subject := range deny {
+						publishDeny = append(publishDeny, subject.(string))
+					}
+				}
+			}
+
+			if sub, subOk := permissions["subscribe"].(map[string]interface{}); subOk {
+				if allow, allowOk := sub["allow"].([]interface{}); allowOk {
+					for _, subject := range allow {
+						subscribeDeny = append(subscribeDeny, subject.(string))
+					}
+				}
+
+				if deny, denyOk := sub["deny"].([]interface{}); denyOk {
+					for _, subject := range deny {
+						publishDeny = append(publishDeny, subject.(string))
+					}
+				}
+			}
+
+			if resp, respOk := permissions["responses"].(map[string]interface{}); respOk {
+				if max, maxOk := resp["max"].(float64); maxOk {
+					respMax := int(max)
+					responsesMax = &respMax
+				}
+
+				if ttl, ttlOk := resp["ttl"].(float64); ttlOk {
+					respTTL := time.Duration(ttl)
+					responsesTTL = &respTTL
+				}
+			}
+		}
+	} else {
+		// FIXME-- put these defaults in configuration and read them from there...
+		subscribeAllow = append(subscribeAllow, "network.*.status")
+		subscribeAllow = append(subscribeAllow, "platform.*")
+	}
 
 	var publishPermissions map[string]interface{}
 	if len(publishAllow) > 0 || len(publishDeny) > 0 {
@@ -880,5 +928,5 @@ func (t *Token) encodeJWTNatsClaims() map[string]interface{} {
 		}
 	}
 
-	return natsClaims
+	return natsClaims, nil
 }
