@@ -829,29 +829,29 @@ func (t *Token) encodeJWTNatsClaims() (map[string]interface{}, error) {
 	if t.NatsClaims != nil && len(t.NatsClaims) > 0 {
 		if permissions, permissionsOk := t.NatsClaims["permissions"].(map[string]interface{}); permissionsOk {
 			if pub, pubOk := permissions["publish"].(map[string]interface{}); pubOk {
-				if allow, allowOk := pub["allow"].([]interface{}); allowOk {
+				if allow, allowOk := pub["allow"].([]string); allowOk {
 					for _, subject := range allow {
-						publishAllow = append(publishAllow, subject.(string))
+						publishAllow = append(publishAllow, subject)
 					}
 				}
 
-				if deny, denyOk := pub["deny"].([]interface{}); denyOk {
+				if deny, denyOk := pub["deny"].([]string); denyOk {
 					for _, subject := range deny {
-						publishDeny = append(publishDeny, subject.(string))
+						publishDeny = append(publishDeny, subject)
 					}
 				}
 			}
 
 			if sub, subOk := permissions["subscribe"].(map[string]interface{}); subOk {
-				if allow, allowOk := sub["allow"].([]interface{}); allowOk {
+				if allow, allowOk := sub["allow"].([]string); allowOk {
 					for _, subject := range allow {
-						subscribeAllow = append(subscribeAllow, subject.(string))
+						subscribeAllow = append(subscribeAllow, subject)
 					}
 				}
 
-				if deny, denyOk := sub["deny"].([]interface{}); denyOk {
+				if deny, denyOk := sub["deny"].([]string); denyOk {
 					for _, subject := range deny {
-						publishDeny = append(subscribeDeny, subject.(string))
+						subscribeDeny = append(subscribeDeny, subject)
 					}
 				}
 			}
