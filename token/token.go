@@ -845,13 +845,13 @@ func (t *Token) encodeJWTNatsClaims() (map[string]interface{}, error) {
 			if sub, subOk := permissions["subscribe"].(map[string]interface{}); subOk {
 				if allow, allowOk := sub["allow"].([]interface{}); allowOk {
 					for _, subject := range allow {
-						subscribeDeny = append(subscribeDeny, subject.(string))
+						subscribeAllow = append(subscribeAllow, subject.(string))
 					}
 				}
 
 				if deny, denyOk := sub["deny"].([]interface{}); denyOk {
 					for _, subject := range deny {
-						publishDeny = append(publishDeny, subject.(string))
+						publishDeny = append(subscribeDeny, subject.(string))
 					}
 				}
 			}
