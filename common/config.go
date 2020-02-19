@@ -268,7 +268,9 @@ func ResolveJWTKeypair(fingerprint *string) (*rsa.PublicKey, *rsa.PrivateKey, *s
 	if fingerprint == nil {
 		keypair = jwtKeypairs[resolveJWTFingerprints()[0]]
 	} else {
-		keypair = jwtKeypairs[*fingerprint]
+		if jwtKeypair, jwtKeypairOk := jwtKeypairs[*fingerprint]; jwtKeypairOk {
+			keypair = jwtKeypair
+		}
 	}
 
 	return &keypair.publicKey, keypair.privateKey, &keypair.fingerprint
