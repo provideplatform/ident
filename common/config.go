@@ -273,6 +273,10 @@ func ResolveJWTKeypair(fingerprint *string) (*rsa.PublicKey, *rsa.PrivateKey, *s
 		}
 	}
 
+	if keypair == nil {
+		return nil, nil, nil
+	}
+
 	return &keypair.publicKey, keypair.privateKey, &keypair.fingerprint
 }
 
