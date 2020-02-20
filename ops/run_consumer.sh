@@ -285,7 +285,7 @@ if [[ -z "${NATS_TOKEN}" ]]; then
 fi
 
 if [[ -z "${NATS_URL}" ]]; then
-  NATS_URL=nats://localhost:4221
+  NATS_URL=nats://localhost:4222
 fi
 
 if [[ -z "${NATS_STREAMING_URL}" ]]; then
