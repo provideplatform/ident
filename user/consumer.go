@@ -22,6 +22,8 @@ func init() {
 		return
 	}
 
+	natsutil.EstablishSharedNatsStreamingConnection(nil)
+
 	var waitGroup sync.WaitGroup
 
 	createNatsDispatchInvitationSubscriptions(&waitGroup)

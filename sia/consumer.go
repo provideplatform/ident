@@ -97,6 +97,8 @@ func init() {
 		return
 	}
 
+	natsutil.EstablishSharedNatsStreamingConnection(nil)
+
 	var waitGroup sync.WaitGroup
 
 	createNatsSiaUserNotificationSubscriptions(&waitGroup)

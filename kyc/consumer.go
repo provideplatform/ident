@@ -40,6 +40,8 @@ func init() {
 		return
 	}
 
+	natsutil.EstablishSharedNatsStreamingConnection(nil)
+
 	var waitGroup sync.WaitGroup
 
 	createNatsCheckKYCApplicationStatusSubscriptions(&waitGroup)
