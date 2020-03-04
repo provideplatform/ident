@@ -33,7 +33,7 @@ func InstallOrganizationUsersAPI(r *gin.Engine) {
 }
 
 func resolveOrganization(db *gorm.DB, orgID, appID, userID *uuid.UUID) *gorm.DB {
-	query := db.Joins("JOIN applications_organizations as ao ON ao.organization_id = organizations.id")
+	query := db.Joins("LEFT OUTER JOIN applications_organizations as ao ON ao.organization_id = organizations.id")
 	if appID != nil {
 		query = query.Where("ao.application_id = ?", appID)
 	}
