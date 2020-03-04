@@ -525,6 +525,7 @@ func (u *User) AsResponse() *Response {
 	return &Response{
 		ID:                     u.ID,
 		CreatedAt:              u.CreatedAt,
+		Name:                   u.FullName(),
 		FirstName:              *u.FirstName,
 		LastName:               *u.LastName,
 		Email:                  *u.Email,
