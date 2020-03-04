@@ -28,7 +28,9 @@ const natsSiaUserNotificationSubject = "sia.user.notification"
 type User struct {
 	provide.Model
 	ApplicationID          *uuid.UUID             `sql:"type:uuid" json:"application_id,omitempty"`
-	Name                   *string                `sql:"not null" json:"name"`
+	Name                   *string                `sql:"-" json:"name"`
+	FirstName              *string                `sql:"not null" json:"first_name"`
+	LastName               *string                `sql:"not null" json:"last_name"`
 	Email                  *string                `sql:"not null" json:"email,omitempty"`
 	Permissions            common.Permission      `sql:"not null" json:"permissions,omitempty"`
 	EphemeralMetadata      *EphemeralUserMetadata `sql:"-" json:"metadata,omitempty"`
@@ -49,6 +51,8 @@ type Response struct {
 	ID                     uuid.UUID              `json:"id"`
 	CreatedAt              time.Time              `json:"created_at"`
 	Name                   string                 `json:"name"`
+	FirstName              string                 `json:"first_name"`
+	LastName               string                 `json:"last_name"`
 	Email                  string                 `json:"email"`
 	Permissions            common.Permission      `json:"permissions,omitempty"`
 	PrivacyPolicyAgreedAt  *time.Time             `json:"privacy_policy_agreed_at"`
@@ -413,9 +417,22 @@ func (u *User) verifyEmailAddress() bool {
 	return validEmailAddress
 }
 
+func (u *User) FullName() *string {
+	name := ""
+	if u.FirstName != nil {
+		name = *u.FirstName
+	}
+	if u.LastName != nil {
+		name = fmt.Sprintf("%s %s", name, *u.LastName)
+	}
+	return common.StringOrNil(name)
+}
+
 // enrich attempts to enrich the user; currently this only supports any user/app metadata on the
 // user's associated auth0 record, enriching `u.EphemeralMetadata`; no-op if auth0 is not configured
 func (u *User) enrich() error {
+	u.Name = u.FullName()
+
 	if !common.Auth0IntegrationEnabled {
 		return nil
 	}
@@ -508,7 +525,8 @@ func (u *User) AsResponse() *Response {
 	return &Response{
 		ID:                     u.ID,
 		CreatedAt:              u.CreatedAt,
-		Name:                   *u.Name,
+		FirstName:              *u.FirstName,
+		LastName:               *u.LastName,
 		Email:                  *u.Email,
 		Metadata:               u.EphemeralMetadata,
 		Permissions:            u.Permissions,
@@ -531,7 +549,9 @@ func (u *User) CreateResetPasswordToken(db *gorm.DB) bool {
 		"iat": issuedAt.Unix(),
 		"sub": fmt.Sprintf("user:%s", u.ID.String()),
 		"data": map[string]interface{}{
-			"name": u.Name,
+			"name":       u.FullName(),
+			"first_name": u.FirstName,
+			"last_name":  u.LastName,
 		},
 	}
 

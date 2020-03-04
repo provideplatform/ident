@@ -203,8 +203,9 @@ func organizationInvitationsListHandler(c *gin.Context) {
 	invitedUsers := make([]*user.User, 0)
 	for _, invite := range invitations {
 		usr := &user.User{
-			Name:  invite.Name,
-			Email: invite.Email,
+			FirstName: invite.FirstName,
+			LastName:  invite.LastName,
+			Email:     invite.Email,
 		}
 		if invite.Permissions != nil {
 			usr.Permissions = *invite.Permissions

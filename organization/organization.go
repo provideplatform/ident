@@ -155,12 +155,12 @@ func (o *Organization) Create(tx *gorm.DB) bool {
 					db.Where("id = ?", o.UserID).Find(&usr)
 					if usr != nil && usr.ID != uuid.Nil {
 						if o.addUser(db, *usr, common.DefaultApplicationResourcePermission) {
-							common.Log.Debugf("associated user %s with organization: %s", *usr.Name, *o.Name)
+							common.Log.Debugf("associated user %s with organization: %s", *usr.FullName(), *o.Name)
 							if tx == nil {
 								db.Commit()
 							}
 						} else {
-							common.Log.Warningf("failed to associate user %s with organization: %s", *usr.Name, *o.Name)
+							common.Log.Warningf("failed to associate user %s with organization: %s", *usr.FullName(), *o.Name)
 							return false
 						}
 					} else if tx == nil {

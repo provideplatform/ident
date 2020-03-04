@@ -21,7 +21,8 @@ type Invite struct {
 	// provide.Model
 	ApplicationID    *uuid.UUID         `sql:"-" json:"application_id,omitempty"`
 	UserID           *uuid.UUID         `sql:"-" json:"user_id,omitempty"`
-	Name             *string            `sql:"-" json:"name,omitempty"`
+	FirstName        *string            `sql:"-" json:"first_name,omitempty"`
+	LastName         *string            `sql:"-" json:"last_name,omitempty"`
 	Email            *string            `sql:"-" json:"email,omitempty"`
 	InvitorID        *uuid.UUID         `sql:"-" json:"invitor_id,omitempty"`
 	InvitorName      *string            `sql:"-" json:"invitor_name,omitempty"`
@@ -53,7 +54,8 @@ func ParseInvite(signedToken string, strict bool) (*Invite, error) {
 	data := token.ParseData()
 	common.Log.Debugf("parsed valid invitation token; subject: %s", *token.Subject)
 
-	name, _ := data["name"].(string)
+	firstName, _ := data["first_name"].(string)
+	lastName, _ := data["last_name"].(string)
 	email, _ := data["email"].(string)
 	var permissions *common.Permission
 	if claimedPermissions, claimedPermissionsOk := data["permissions"].(float64); claimedPermissionsOk {
@@ -102,7 +104,8 @@ func ParseInvite(signedToken string, strict bool) (*Invite, error) {
 	return &Invite{
 		ApplicationID:    applicationUUID,
 		UserID:           token.UserID,
-		Name:             common.StringOrNil(name),
+		FirstName:        common.StringOrNil(firstName),
+		LastName:         common.StringOrNil(lastName),
 		Email:            common.StringOrNil(email),
 		InvitorID:        invitorUUID,
 		InvitorName:      common.StringOrNil(invitorName),
@@ -129,7 +132,8 @@ func (i *Invite) cache(key string) error {
 	}
 
 	invitations = append(invitations, &Invite{
-		Name:        i.Name,
+		FirstName:   i.FirstName,
+		LastName:    i.LastName,
 		Email:       i.Email,
 		Permissions: i.Permissions,
 		Token: &token.Token{
@@ -278,7 +282,8 @@ func (i *Invite) vendToken() (*token.Token, error) {
 	dataJSON, _ := json.Marshal(map[string]interface{}{
 		"application_id":    i.ApplicationID,
 		"user_id":           i.UserID,
-		"name":              i.Name,
+		"first_name":        i.FirstName,
+		"last_name":         i.LastName,
 		"email":             i.Email,
 		"invitor_id":        i.InvitorID,
 		"invitor_name":      i.InvitorName,

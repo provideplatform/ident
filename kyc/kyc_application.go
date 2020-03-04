@@ -211,7 +211,7 @@ func (k *KYCApplication) Create(db *gorm.DB) bool {
 		} else {
 			user := k.User(db)
 			if user != nil && user.ID != uuid.Nil {
-				k.Name = user.Name
+				k.Name = user.FullName()
 			}
 		}
 	}
@@ -597,11 +597,13 @@ func (k *KYCApplication) enrichSimilar(db *gorm.DB) error {
 			if similarUser != nil {
 				userIDStr := similarUser.ID.String()
 				_, userOk := similarUserIDs[userIDStr]
-				if !userOk && similarUser.Name != nil && similarUser.Email != nil {
+				if !userOk && similarUser.FirstName != nil && similarUser.LastName != nil && similarUser.Email != nil {
 					similarUsers = append(similarUsers, &user.Response{
 						ID:        similarUser.ID,
 						CreatedAt: similarUser.CreatedAt,
-						Name:      *similarUser.Name,
+						Name:      *similarUser.FullName(),
+						FirstName: *similarUser.FirstName,
+						LastName:  *similarUser.LastName,
 						Email:     *similarUser.Email,
 					})
 					similarUserIDs[userIDStr] = struct{}{}

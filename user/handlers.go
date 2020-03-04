@@ -213,8 +213,12 @@ func createUserHandler(c *gin.Context) {
 			user.Email = invite.Email
 		}
 
-		if user.Name == nil {
-			user.Name = invite.Name
+		if user.FirstName == nil {
+			user.FirstName = invite.FirstName
+		}
+
+		if user.LastName == nil {
+			user.LastName = invite.LastName
 		}
 	}
 
@@ -575,7 +579,7 @@ func vendInvitationTokenHandler(c *gin.Context) {
 	invitor := Find(userID)
 
 	invite.InvitorID = userID
-	invite.InvitorName = invitor.Name
+	invite.InvitorName = invitor.FullName()
 	// TODO: load invitor permissions in the appropriate context; i.e., in the ApplicationID context if it is set
 
 	_, permissionsOk := params["permissions"]
