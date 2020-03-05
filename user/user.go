@@ -180,7 +180,7 @@ func AuthenticateApplicationUser(email string, applicationID uuid.UUID, scope *s
 	} else {
 		return nil, errors.New("application user authentication failed with given credentials")
 	}
-	if user.ExpiresAt != nil && time.Now().After(user.ExpiresAt) {
+	if user.ExpiresAt != nil && time.Now().After(*user.ExpiresAt) {
 		return nil, errors.New("user authentication failed; user account has expired")
 	}
 
