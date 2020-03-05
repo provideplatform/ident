@@ -32,6 +32,7 @@ type User struct {
 	FirstName              *string                `sql:"not null" json:"first_name"`
 	LastName               *string                `sql:"not null" json:"last_name"`
 	Email                  *string                `sql:"not null" json:"email,omitempty"`
+	ExpiresAt              *time.Time             `json:"-"`
 	Permissions            common.Permission      `sql:"not null" json:"permissions,omitempty"`
 	EphemeralMetadata      *EphemeralUserMetadata `sql:"-" json:"metadata,omitempty"`
 	Password               *string                `json:"-"`
@@ -179,6 +180,10 @@ func AuthenticateApplicationUser(email string, applicationID uuid.UUID, scope *s
 	} else {
 		return nil, errors.New("application user authentication failed with given credentials")
 	}
+	if user.ExpiresAt != nil && time.Now().After(user.ExpiresAt) {
+		return nil, errors.New("user authentication failed; user account has expired")
+	}
+
 	token := &token.Token{
 		UserID:      &user.ID,
 		Scope:       scope,
