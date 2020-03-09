@@ -176,6 +176,7 @@ func (app *Application) addOrganization(tx *gorm.DB, org organization.Organizati
 	success := result.RowsAffected == 1
 	if success {
 		common.Log.Debugf("added organization %s to application: %s", org.ID, app.ID)
+		db.Exec("DELETE FROM applications_users WHERE applications_users.application_id=? AND applications_users.user_id IN (SELECT user_id FROM organizations_users WHERE organizations_users.organization_id=?)", app.ID, org.ID)
 	} else {
 		common.Log.Warningf("failed to add organization %s to application: %s", org.ID, app.ID)
 	}
