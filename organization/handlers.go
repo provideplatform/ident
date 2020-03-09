@@ -244,6 +244,9 @@ func organizationUsersListHandler(c *gin.Context) {
 
 	var users []*user.User
 	provide.Paginate(c, usersQuery, &user.User{}).Find(&users)
+	for _, usr := range users {
+		usr.Enrich()
+	}
 	provide.Render(users, 200, c)
 }
 

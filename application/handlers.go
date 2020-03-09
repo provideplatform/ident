@@ -549,6 +549,9 @@ func applicationUsersListHandler(c *gin.Context) {
 
 	var users []*user.User
 	provide.Paginate(c, app.UsersListQuery(db), &user.User{}).Find(&users)
+	for _, usr := range users {
+		usr.Enrich()
+	}
 	provide.Render(users, 200, c)
 }
 

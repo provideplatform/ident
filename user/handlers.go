@@ -136,7 +136,7 @@ func usersListHandler(c *gin.Context) {
 
 	if c.Query("enrich") == "true" {
 		for _, usr := range users {
-			usr.enrich()
+			usr.Enrich()
 		}
 	}
 
@@ -161,7 +161,7 @@ func userDetailsHandler(c *gin.Context) {
 		provide.RenderError("user not found", 404, c)
 		return
 	}
-	user.enrich()
+	user.Enrich()
 
 	provide.Render(user.AsResponse(), 200, c)
 }

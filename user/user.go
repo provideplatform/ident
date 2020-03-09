@@ -435,7 +435,7 @@ func (u *User) FullName() *string {
 
 // enrich attempts to enrich the user; currently this only supports any user/app metadata on the
 // user's associated auth0 record, enriching `u.EphemeralMetadata`; no-op if auth0 is not configured
-func (u *User) enrich() error {
+func (u *User) Enrich() error {
 	u.Name = u.FullName()
 
 	if !common.Auth0IntegrationEnabled {

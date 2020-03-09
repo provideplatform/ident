@@ -183,7 +183,7 @@ func (u *User) updateAuth0User() error {
 	json.Unmarshal(rawparams, &auth0Params)
 
 	// enrich the user to make sure the proper auth0 id is used
-	err := u.enrich()
+	err := u.Enrich()
 	if err != nil {
 		err := fmt.Errorf("failed to update auth0 user: %s; %s", *u.Email, err.Error())
 		common.Log.Warning(err.Error())
