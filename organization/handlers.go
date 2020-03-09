@@ -33,7 +33,7 @@ func InstallOrganizationUsersAPI(r *gin.Engine) {
 }
 
 func resolveOrganization(db *gorm.DB, orgID, appID, userID *uuid.UUID) *gorm.DB {
-	query := db.Joins("LEFT OUTER JOIN applications_organizations as ao ON ao.organization_id = organizations.id")
+	query := db.Joins("JOIN applications_organizations as ao ON ao.organization_id = organizations.id")
 	if appID != nil {
 		query = query.Where("ao.application_id = ?", appID)
 	}
@@ -47,7 +47,7 @@ func resolveOrganization(db *gorm.DB, orgID, appID, userID *uuid.UUID) *gorm.DB 
 }
 
 func resolveOrganizationUsers(db *gorm.DB, orgID uuid.UUID, appID *uuid.UUID) *gorm.DB {
-	query := db.Select("users.id, users.created_at, users.name, ou.permissions as permissions")
+	query := db.Select("users.id, users.created_at, users.first_name, users.last_name, ou.permissions as permissions")
 	query = query.Joins("JOIN organizations_users as ou ON ou.user_id = users.id").Where("ou.organization_id = ?", orgID)
 	if appID != nil {
 		query = query.Joins("JOIN applications_organizations as ao ON ao.organization_id = ou.organization_id").Where("ao.application_id = ?", appID)

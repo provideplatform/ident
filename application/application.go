@@ -63,7 +63,7 @@ func (app *Application) OrganizationsListQuery(db *gorm.DB) *gorm.DB {
 
 // UsersListQuery returns a db query which joins the application users and returns the query for pagination
 func (app *Application) UsersListQuery(db *gorm.DB) *gorm.DB {
-	query := db.Select("users.id, users.created_at, users.name, au.permissions as permissions")
+	query := db.Select("users.id, users.created_at, users.first_name, users.last_name, au.permissions as permissions")
 	query = query.Joins("JOIN applications_users as au ON au.user_id = users.id").Where("au.application_id = ?", app.ID)
 	return query
 }
