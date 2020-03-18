@@ -549,16 +549,20 @@ func (u *User) CreateResetPasswordToken(db *gorm.DB) bool {
 		common.Log.Warningf("failed to generate reset password JWT token; %s", err.Error())
 		return false
 	}
+	appClaims := map[string]interface{}{
+		"name":       u.FullName(),
+		"first_name": u.FirstName,
+		"last_name":  u.LastName,
+	}
+	if u.ApplicationID != nil {
+		appClaims["application_id"] = u.ApplicationID
+	}
 	claims := map[string]interface{}{
-		"jti": tokenID,
-		"exp": issuedAt.Add(defaultResetPasswordTokenTimeout).Unix(),
-		"iat": issuedAt.Unix(),
-		"sub": fmt.Sprintf("user:%s", u.ID.String()),
-		"data": map[string]interface{}{
-			"name":       u.FullName(),
-			"first_name": u.FirstName,
-			"last_name":  u.LastName,
-		},
+		"jti":                          tokenID,
+		"exp":                          issuedAt.Add(defaultResetPasswordTokenTimeout).Unix(),
+		"iat":                          issuedAt.Unix(),
+		"sub":                          fmt.Sprintf("user:%s", u.ID.String()),
+		common.JWTApplicationClaimsKey: appClaims,
 	}
 
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims(claims))
