@@ -427,13 +427,26 @@ func userResetPasswordRequestHandler(c *gin.Context) {
 		return
 	}
 
-	db := dbconf.DatabaseConnection()
-	user := &User{}
-	query := db.Where("email = ?", email)
+	var appID *uuid.UUID
+	appIDStr, appIDStrOk := params["application_id"].(string)
+
 	if bearer != nil && bearer.ApplicationID != nil {
-		query = query.Where("application_id = ?", bearer.ApplicationID.String())
+		appID = bearer.ApplicationID
+		if appIDStrOk && appIDStr != appID.String() {
+			provide.RenderError(fmt.Sprintf("mismatched/ambiguous application_id; (%s provided in bearer token; %s as application_id param)", appID.String(), appIDStr), 400, c)
+			return
+		}
+	} else if appIDStrOk {
+		appUUID, err := uuid.FromString(appIDStr)
+		if err != nil {
+			provide.RenderError(fmt.Sprintf("invalid application_id; %s", err.Error()), 422, c)
+			return
+		}
+		appID = &appUUID
 	}
-	query.Find(&user)
+
+	db := dbconf.DatabaseConnection()
+	user := FindByEmail(email, appID, nil)
 
 	if user == nil || user.ID == uuid.Nil {
 		provide.RenderError("user not found", 404, c)
