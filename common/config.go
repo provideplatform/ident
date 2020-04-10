@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/kthomas/go-pgputil"
 	"golang.org/x/crypto/ssh"
 
 	logger "github.com/kthomas/go-logger"
@@ -199,7 +199,7 @@ func RequireJWTVerifiers() {
 	Log.Debug("attempting to read required public key from environment for verifying signed JWT")
 
 	jwtPublicKeyPEM := strings.Replace(os.Getenv("JWT_SIGNER_PUBLIC_KEY"), `\n`, "\n", -1)
-	publicKey, err := jwt.ParseRSAPublicKeyFromPEM([]byte(jwtPublicKeyPEM))
+	publicKey, err := pgputil.DecodeRSAPublicKeyFromPEM([]byte(jwtPublicKeyPEM))
 	if err != nil {
 		Log.Panicf("failed to parse JWT public key; %s", err.Error())
 	}
@@ -223,13 +223,13 @@ func requireJWTKeypairs() {
 	jwtKeypairs = map[string]*jwtKeypair{}
 
 	jwtPrivateKeyPEM := strings.Replace(os.Getenv("JWT_SIGNER_PRIVATE_KEY"), `\n`, "\n", -1)
-	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(jwtPrivateKeyPEM))
+	privateKey, err := pgputil.DecodeRSAPrivateKeyFromPEM([]byte(jwtPrivateKeyPEM))
 	if err != nil {
 		Log.Panicf("failed to parse JWT private key; %s", err.Error())
 	}
 
 	jwtPublicKeyPEM := strings.Replace(os.Getenv("JWT_SIGNER_PUBLIC_KEY"), `\n`, "\n", -1)
-	publicKey, err := jwt.ParseRSAPublicKeyFromPEM([]byte(jwtPublicKeyPEM))
+	publicKey, err := pgputil.DecodeRSAPublicKeyFromPEM([]byte(jwtPublicKeyPEM))
 	if err != nil {
 		Log.Panicf("failed to parse JWT public key; %s", err.Error())
 	}
