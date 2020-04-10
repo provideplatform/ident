@@ -7,7 +7,15 @@ import (
 )
 
 // VendNatsBearerAuthorization vends a signed NATS authorization on behalf of the caller
-func VendNatsBearerAuthorization(subject string, publishAllow, publishDeny, subscribeAllow, subscribeDeny []string, responsesMax, responsesTTL *int) (*Token, error) {
+func VendNatsBearerAuthorization(
+	subject string,
+	publishAllow,
+	publishDeny,
+	subscribeAllow,
+	subscribeDeny []string,
+	responsesMax,
+	responsesTTL *int,
+) (*Token, error) {
 	token := &Token{
 		Audience: &common.JWTNatsAuthorizationAudience,
 		Subject:  &subject,

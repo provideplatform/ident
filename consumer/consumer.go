@@ -19,7 +19,7 @@ type apiUsageDelegate struct{}
 // Track receives an API call from the API daemon's underlying buffered channel for local processing
 func (d *apiUsageDelegate) Track(apiCall *provide.APICall) {
 	payload, _ := json.Marshal(apiCall)
-	natsutil.NatsPublishAsync(natsAPIUsageEventNotificationSubject, payload)
+	natsutil.NatsStreamingPublishAsync(natsAPIUsageEventNotificationSubject, payload)
 }
 
 // RunAPIUsageDaemon runs the usage daemon
