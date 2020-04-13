@@ -14,7 +14,7 @@ import (
 	provide "github.com/provideservices/provide-go"
 )
 
-const natsSiaOrganizationNotificationSubject = "sia.user.notification"
+const natsSiaOrganizationNotificationSubject = "sia.organization.notification"
 const organizationResourceKey = "organization"
 
 // Organization model
