@@ -35,12 +35,19 @@ func (v *Vault) listSecretsQuery(db *gorm.DB) *gorm.DB {
 }
 
 func (v *Vault) resolveMasterKey(db *gorm.DB) (*Key, error) {
+	if v.MasterKeyID == nil {
+		return nil, fmt.Errorf("unable to resolve master key for vault: %s; nil master key id", v.ID)
+	}
+
 	masterKey := &Key{}
 	db.Where("id = ?", v.MasterKeyID).Find(&masterKey)
 	if masterKey == nil || masterKey.ID == uuid.Nil {
 		return nil, fmt.Errorf("failed to resolve master key for vault: %s", v.ID)
 	}
+	masterKey.encrypted = true
+
 	v.MasterKey = masterKey
+	v.MasterKeyID = &masterKey.ID
 	return v.MasterKey, nil
 }
 
@@ -53,13 +60,50 @@ func (v *Vault) validate() bool {
 		})
 	}
 
-	if v.MasterKey == nil {
+	if v.ID != uuid.Nil && v.MasterKeyID == nil {
 		v.Errors = append(v.Errors, &provide.Error{
 			Message: common.StringOrNil("master key required"),
 		})
 	}
 
 	return len(v.Errors) == 0
+}
+
+func (v *Vault) createMasterKey(tx *gorm.DB) error {
+	keypair, err := CreatePair(PrefixByteSeed)
+	if err != nil {
+		common.Log.Warningf("failed to create Ed25519 keypair; %s", err.Error())
+		return err
+	}
+
+	seed, err := keypair.Seed()
+	if err != nil {
+		common.Log.Warningf("failed to read encoded Ed25519 seed; %s", err.Error())
+		return err
+	}
+
+	masterKey := &Key{
+		VaultID:     &v.ID,
+		Type:        common.StringOrNil(keyTypeSymmetric),
+		Usage:       common.StringOrNil(keyUsageEncryptDecrypt),
+		Spec:        common.StringOrNil(keySpecAES256GCM),
+		Name:        common.StringOrNil(fmt.Sprintf("master0")),
+		Description: common.StringOrNil(fmt.Sprintf("AES-256 GCM master key for vault %s", v.ID)),
+		PrivateKey:  common.StringOrNil(string(seed[0:32])),
+	}
+
+	if !masterKey.Create(tx) {
+		err := fmt.Errorf("failed to create master key for vault: %s; %s", v.ID, *masterKey.Errors[0].Message)
+		common.Log.Warning(err.Error())
+		return err
+	}
+
+	v.MasterKey = masterKey
+	v.MasterKeyID = &masterKey.ID
+	tx.Save(&v)
+
+	common.Log.Debugf("created master key %s with %d-byte seed for vault: %s", masterKey.ID, len(seed), v.ID)
+	return nil
 }
 
 // Create and persist a vault
@@ -69,8 +113,6 @@ func (v *Vault) Create(tx *gorm.DB) bool {
 		db = tx
 	} else {
 		db = dbconf.DatabaseConnection()
-		db = db.Begin()
-		defer db.RollbackUnlessCommitted()
 	}
 
 	if !v.validate() {
@@ -92,8 +134,14 @@ func (v *Vault) Create(tx *gorm.DB) bool {
 			success := rowsAffected > 0
 			if success {
 				common.Log.Debugf("created vault %s", v.ID.String())
-				if tx == nil {
-					db.Commit()
+				err := v.createMasterKey(db)
+				if err != nil {
+					common.Log.Warningf("failed to create master key for vault: %s; %s", v.ID.String(), err.Error())
+				} else {
+					_, err := v.MasterKey.createEd25519Keypair("ekho - signing", fmt.Sprintf("Ed25519 keypair for vault %s", v.ID))
+					if err != nil {
+						common.Log.Warningf("failed to create Ed22519 keypair; %s", err.Error())
+					}
 				}
 
 				return success

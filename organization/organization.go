@@ -14,7 +14,6 @@ import (
 	provide "github.com/provideservices/provide-go"
 )
 
-const natsSiaOrganizationNotificationSubject = "sia.organization.notification"
 const organizationResourceKey = "organization"
 
 // Organization model
@@ -169,8 +168,10 @@ func (o *Organization) Create(tx *gorm.DB) bool {
 				}
 
 				if success {
-					payload, _ := json.Marshal(o)
-					natsutil.NatsPublish(natsSiaOrganizationNotificationSubject, payload)
+					payload, _ := json.Marshal(map[string]interface{}{
+						"organization_id": o.ID.String(),
+					})
+					natsutil.NatsStreamingPublish(natsCreatedOrganizationCreatedSubject, payload)
 				}
 
 				return success

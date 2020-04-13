@@ -1,0 +1,1 @@
+ALTER TABLE ONLY keys DROP COLUMN spec;

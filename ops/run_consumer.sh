@@ -241,7 +241,7 @@ if [[ -z "${PGP_PASSPHRASE}" ]]; then
 fi
 
 if [[ -z "${LOG_LEVEL}" ]]; then
-  LOG_LEVEL=info
+  LOG_LEVEL=debug
 fi
 
 if [[ -z "${DATABASE_HOST}" ]]; then
