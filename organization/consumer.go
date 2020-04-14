@@ -49,11 +49,11 @@ func createNatsOrganizationCreatedSubscriptions(wg *sync.WaitGroup) {
 }
 
 func consumeCreatedOrganizationMsg(msg *stan.Msg) {
-	// defer func() {
-	// 	if r := recover(); r != nil {
-	// 		natsutil.AttemptNack(msg, createOrganizationTimeout)
-	// 	}
-	// }()
+	defer func() {
+		if r := recover(); r != nil {
+			natsutil.AttemptNack(msg, createOrganizationTimeout)
+		}
+	}()
 
 	common.Log.Debugf("consuming %d-byte NATS created organization message on subject: %s", msg.Size(), msg.Subject)
 
