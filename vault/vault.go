@@ -7,6 +7,7 @@ import (
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/ident/common"
+	identcrypto "github.com/provideapp/ident/vault/crypto"
 	provide "github.com/provideservices/provide-go"
 )
 
@@ -26,11 +27,13 @@ type Vault struct {
 	MasterKeyID *uuid.UUID `sql:"type:uuid" json:"master_key_id"`
 }
 
-func (v *Vault) listKeysQuery(db *gorm.DB) *gorm.DB {
-	return db.Select("keys.id, keys.created_at, keys.name, keys.description, keys.type, keys.usage, keys.vault_id").Where("keys.vault_id = ?", v.ID)
+// ListKeysQuery returns the fields to SELECT from vault keys table
+func (v *Vault) ListKeysQuery(db *gorm.DB) *gorm.DB {
+	return db.Select("keys.id, keys.created_at, keys.name, keys.description, keys.type, keys.usage, keys.spec, keys.public_key, keys.vault_id").Where("keys.vault_id = ?", v.ID)
 }
 
-func (v *Vault) listSecretsQuery(db *gorm.DB) *gorm.DB {
+// ListSecretsQuery returns the fields to SELECT from vault secrets table
+func (v *Vault) ListSecretsQuery(db *gorm.DB) *gorm.DB {
 	return db.Select("secrets.id, secrets.created_at, secrets.name, secrets.description, secrets.type").Where("secrets.vault_id = ?", v.ID)
 }
 
@@ -70,7 +73,7 @@ func (v *Vault) validate() bool {
 }
 
 func (v *Vault) createMasterKey(tx *gorm.DB) error {
-	keypair, err := CreatePair(PrefixByteSeed)
+	keypair, err := identcrypto.CreatePair(identcrypto.PrefixByteSeed)
 	if err != nil {
 		common.Log.Warningf("failed to create Ed25519 keypair; %s", err.Error())
 		return err
@@ -141,6 +144,11 @@ func (v *Vault) Create(tx *gorm.DB) bool {
 					_, err := v.MasterKey.createEd25519Keypair("ekho - signing", fmt.Sprintf("Ed25519 keypair for vault %s", v.ID))
 					if err != nil {
 						common.Log.Warningf("failed to create Ed22519 keypair; %s", err.Error())
+					}
+
+					_, err = v.MasterKey.createBabyJubJubKeypair("zksnarks", fmt.Sprintf("zksnark twisted edwards curve keypair for vault %s", v.ID))
+					if err != nil {
+						common.Log.Warningf("failed to create babyJubJub keypair; %s", err.Error())
 					}
 				}
 

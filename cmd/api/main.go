@@ -115,6 +115,7 @@ func runAPI() {
 	application.InstallApplicationUsersAPI(r)
 	organization.InstallOrganizationAPI(r)
 	organization.InstallOrganizationUsersAPI(r)
+	organization.InstallOrganizationVaultsAPI(r)
 	token.InstallTokenAPI(r)
 	user.InstallUserAPI(r)
 	kyc.InstallKYCAPI(r)

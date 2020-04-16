@@ -168,7 +168,7 @@ func vaultKeysListHandler(c *gin.Context) {
 	}
 
 	var keys []*Key
-	provide.Paginate(c, vault.listKeysQuery(db), &Key{}).Find(&keys)
+	provide.Paginate(c, vault.ListKeysQuery(db), &Key{}).Find(&keys)
 	provide.Render(keys, 200, c)
 }
 
@@ -196,7 +196,7 @@ func vaultSecretsListHandler(c *gin.Context) {
 	}
 
 	var secrets []*Secret
-	provide.Paginate(c, vault.listSecretsQuery(db), &Secret{}).Find(&secrets)
+	provide.Paginate(c, vault.ListSecretsQuery(db), &Secret{}).Find(&secrets)
 	provide.Render(secrets, 200, c)
 }
 

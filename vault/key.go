@@ -13,6 +13,7 @@ import (
 	"github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/ident/common"
+	identcrypto "github.com/provideapp/ident/vault/crypto"
 	provide "github.com/provideservices/provide-go"
 )
 
@@ -23,6 +24,7 @@ const keyUsageEncryptDecrypt = "encrypt/decrypt"
 const keyUsageSignVerify = "sign/verify"
 
 const keySpecAES256GCM = "AES-256-GCM"
+const keySpecECCBabyJubJub = "babyJubJub"
 const keySpecECCEd25519 = "Ed25519"
 const keySpecECCSecp256r1 = "ECC-NIST-P256"
 const keySpecECCSecp2048 = "ECC-NIST-P384"
@@ -49,8 +51,34 @@ type Key struct {
 	mutex     sync.Mutex `sql:"-"`
 }
 
+func (k *Key) createBabyJubJubKeypair(name, description string) (*Key, error) {
+	publicKey, privateKey, err := provide.TECGenerateKeyPair()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create babyJubJub keypair; %s", err.Error())
+	}
+
+	babyJubJubKey := &Key{
+		VaultID:     k.VaultID,
+		Type:        common.StringOrNil(keyTypeAsymmetric),
+		Usage:       common.StringOrNil(keyUsageSignVerify),
+		Spec:        common.StringOrNil(keySpecECCBabyJubJub),
+		Name:        common.StringOrNil(name),
+		Description: common.StringOrNil(description),
+		PublicKey:   common.StringOrNil(string(publicKey)),
+		PrivateKey:  common.StringOrNil(string(privateKey)),
+	}
+
+	db := dbconf.DatabaseConnection()
+	if !babyJubJubKey.Create(db) {
+		return nil, fmt.Errorf("failed to create babyJubJub key in vault: %s; %s", k.VaultID, *babyJubJubKey.Errors[0].Message)
+	}
+
+	common.Log.Debugf("created babyJubJub key %s in vault: %s; public key: %s", babyJubJubKey.ID, k.VaultID, *babyJubJubKey.PublicKey)
+	return babyJubJubKey, nil
+}
+
 func (k *Key) createEd25519Keypair(name, description string) (*Key, error) {
-	keypair, err := CreatePair(PrefixByteSeed)
+	keypair, err := identcrypto.CreatePair(identcrypto.PrefixByteSeed)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Ed25519 keypair; %s", err.Error())
 	}
@@ -400,7 +428,7 @@ func (k *Key) Sign(payload []byte) ([]byte, error) {
 		if k.Seed == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil Ed25519 seed", len(payload), k.ID)
 		}
-		ec25519Key, err := FromSeed([]byte(*k.Seed))
+		ec25519Key, err := identcrypto.FromSeed([]byte(*k.Seed))
 		if err != nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; %s", len(payload), k.ID, err.Error())
 		}
@@ -433,7 +461,7 @@ func (k *Key) Verify(payload, sig []byte) error {
 
 	switch *k.Spec {
 	case keySpecECCEd25519:
-		ec25519Key, err := FromPublicKey(*k.PublicKey)
+		ec25519Key, err := identcrypto.FromPublicKey(*k.PublicKey)
 		if err != nil {
 			return fmt.Errorf("failed to verify %d-byte payload using key: %s; %s", len(payload), k.ID, err.Error())
 		}
@@ -474,9 +502,9 @@ func (k *Key) validate() bool {
 		k.Errors = append(k.Errors, &provide.Error{
 			Message: common.StringOrNil(fmt.Sprintf("symmetric key in %s usage mode must be %s", keyUsageEncryptDecrypt, keySpecAES256GCM)), // TODO: support keySpecRSA2048, keySpecRSA3072, keySpecRSA4096
 		})
-	} else if *k.Type == keyTypeAsymmetric && *k.Usage == keyUsageSignVerify && (k.Spec == nil || *k.Spec != keySpecECCEd25519) {
+	} else if *k.Type == keyTypeAsymmetric && *k.Usage == keyUsageSignVerify && (k.Spec == nil || (*k.Spec != keySpecECCBabyJubJub && *k.Spec != keySpecECCEd25519)) {
 		k.Errors = append(k.Errors, &provide.Error{
-			Message: common.StringOrNil(fmt.Sprintf("assymmetric key in %s usage mode must be %s", keyUsageSignVerify, keySpecECCEd25519)), // TODO: support keySpecRSA2048, keySpecRSA3072, keySpecRSA4096
+			Message: common.StringOrNil(fmt.Sprintf("asymmetric key in %s usage mode must be %s or %s", keyUsageSignVerify, keySpecECCBabyJubJub, keySpecECCEd25519)), // TODO: support keySpecRSA2048, keySpecRSA3072, keySpecRSA4096
 		})
 	}
 
