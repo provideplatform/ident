@@ -23,6 +23,7 @@ import (
 const defaultResetPasswordTokenTimeout = time.Hour * 1
 const identUserIDKey = "ident_user_id"
 const natsSiaUserNotificationSubject = "sia.user.notification"
+const natsSiaUserDeleteNotificationSubject = "sia.user.deleted"
 
 // User model
 type User struct {
@@ -528,6 +529,11 @@ func (u *User) Delete() bool {
 				return false
 			}
 		}
+
+		payload, _ := json.Marshal(map[string]interface{}{
+			"user_id": u.ID.String(),
+		})
+		natsutil.NatsStreamingPublish(natsSiaUserDeleteNotificationSubject, payload)
 	}
 	tx.Commit()
 	return success
