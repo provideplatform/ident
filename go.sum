@@ -386,8 +386,6 @@ github.com/prometheus/procfs v0.0.3 h1:CTwfnzjQ+8dS6MhHHu4YswVAD99sL2wjPqP+VkURm
 github.com/prometheus/procfs v0.0.3/go.mod h1:4A/X28fw3Fc593LaREMrKMqOKvUAntwMDaekg4FpcdQ=
 github.com/prometheus/tsdb v0.10.0 h1:If5rVCMTp6W2SiRAQFlbpJNgVlgMEd+U2GZckwK38ic=
 github.com/prometheus/tsdb v0.10.0/go.mod h1:oi49uRhEe9dPUTlS3JRZOwJuVi6tmh10QSgwXEyGCt4=
-github.com/provideservices/provide-go v0.0.0-20200418043115-d440e5a896f5 h1:tMuhCtzS20cvp52lWFARApgb7v1TbRSziZ+/xOym8SA=
-github.com/provideservices/provide-go v0.0.0-20200418043115-d440e5a896f5/go.mod h1:GRdkwEXlwp+unjdvD2InHM8oqyb+ag0J0eVLDoAqFmw=
 github.com/provideservices/provide-go v0.0.0-20200418080558-dcc56d4784ca h1:oGaZGbw1sF/XfZbY3gHJAP/hclQD2msq6Y3aAnW4TKU=
 github.com/provideservices/provide-go v0.0.0-20200418080558-dcc56d4784ca/go.mod h1:MzCtrgWHO5pkKjuR0abZlK9ciGMQJhqmOKwzbUBL1Yg=
 github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=

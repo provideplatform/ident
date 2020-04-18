@@ -47,7 +47,7 @@ func (v *Vault) resolveMasterKey(db *gorm.DB) (*Key, error) {
 	if masterKey == nil || masterKey.ID == uuid.Nil {
 		return nil, fmt.Errorf("failed to resolve master key for vault: %s", v.ID)
 	}
-	masterKey.encrypted = true
+	masterKey.setEncrypted(true)
 
 	v.MasterKey = masterKey
 	v.MasterKeyID = &masterKey.ID

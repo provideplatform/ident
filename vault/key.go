@@ -47,12 +47,13 @@ type Key struct {
 	PublicKey   *string    `sql:"type:bytea" json:"public_key,omitempty"`
 	PrivateKey  *string    `sql:"type:bytea" json:"-"`
 
-	encrypted bool       `sql:"-"`
+	encrypted *bool      `sql:"-"`
 	mutex     sync.Mutex `sql:"-"`
 }
 
-// KeySignVerifyRequest represents an API request to sign or verify an arbitrary message
-type KeySignVerifyRequest struct {
+// KeySignVerifyRequestResponse represents the API request/response parameters
+// needed to sign or verify an arbitrary message
+type KeySignVerifyRequestResponse struct {
 	Message   *string `json:"message,omitempty"`
 	Signature *string `json:"signature,omitempty"`
 	Verified  *bool   `json:"verified,omitempty"`
@@ -170,11 +171,19 @@ func (k *Key) resolveMasterKey() (*Key, error) {
 	return masterKey, err
 }
 
+func (k *Key) setEncrypted(encrypted bool) {
+	k.encrypted = &encrypted
+}
+
 func (k *Key) decryptFields() error {
 	k.mutex.Lock()
 	defer k.mutex.Unlock()
 
-	if !k.encrypted {
+	if k.encrypted == nil {
+		k.setEncrypted(true)
+	}
+
+	if !*k.encrypted {
 		return fmt.Errorf("fields already decrypted for key: %s", k.ID)
 	}
 
@@ -220,7 +229,7 @@ func (k *Key) decryptFields() error {
 		}
 	}
 
-	k.encrypted = false
+	k.setEncrypted(false)
 	return nil
 }
 
@@ -228,7 +237,11 @@ func (k *Key) encryptFields() error {
 	k.mutex.Lock()
 	defer k.mutex.Unlock()
 
-	if k.encrypted {
+	if k.encrypted == nil {
+		k.setEncrypted(true)
+	}
+
+	if *k.encrypted {
 		return fmt.Errorf("fields already encrypted for key: %s", k.ID)
 	}
 
@@ -274,7 +287,7 @@ func (k *Key) encryptFields() error {
 		}
 	}
 
-	k.encrypted = true
+	k.setEncrypted(true)
 	return nil
 }
 
@@ -314,7 +327,7 @@ func (k *Key) Decrypt(ciphertext []byte) ([]byte, error) {
 	}
 
 	if k.Type != nil && *k.Type == keyTypeSymmetric {
-		return k.decryptSymmetric(ciphertext[12:], ciphertext[0:11])
+		return k.decryptSymmetric(ciphertext[12:], ciphertext[0:12])
 	}
 
 	if k.Type != nil && *k.Type == keyTypeAsymmetric {
@@ -453,25 +466,33 @@ func (k *Key) Sign(payload []byte) ([]byte, error) {
 	k.decryptFields()
 	defer k.encryptFields()
 
+	var sig []byte
+	var sigerr error
+
 	switch *k.Spec {
 	case keySpecECCBabyJubJub:
 		if k.PrivateKey == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil private key", len(payload), k.ID)
 		}
-		return provide.TECSign([]byte(*k.PrivateKey), payload)
+		sig, sigerr = provide.TECSign([]byte(*k.PrivateKey), payload)
 	case keySpecECCEd25519:
 		if k.Seed == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil Ed25519 seed", len(payload), k.ID)
 		}
-		common.Log.Debugf("seed: %s", *k.Seed)
 		ec25519Key, err := identcrypto.FromSeed([]byte(*k.Seed))
 		if err != nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; %s", len(payload), k.ID, err.Error())
 		}
-		return ec25519Key.Sign(payload)
+		sig, sigerr = ec25519Key.Sign(payload)
+	default:
+		sigerr = fmt.Errorf("failed to sign %d-byte payload using key: %s; %s key spec not yet implemented", len(payload), k.ID, *k.Spec)
 	}
 
-	return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; sign() not yet implemented", len(payload), k.ID)
+	if sigerr != nil {
+		return nil, sigerr
+	}
+
+	return sig, nil
 }
 
 // Verify the given payload against a signature using the public key
@@ -509,7 +530,7 @@ func (k *Key) Verify(payload, sig []byte) error {
 		return ec25519Key.Verify(payload, sig)
 	}
 
-	return fmt.Errorf("failed to verify %d-byte payload using key: %s; sign() not yet implemented", len(payload), k.ID)
+	return fmt.Errorf("failed to verify %d-byte payload using key: %s; %s key spec not yet implemented", len(payload), k.ID, *k.Spec)
 }
 
 func (k *Key) validate() bool {
@@ -549,7 +570,7 @@ func (k *Key) validate() bool {
 		})
 	}
 
-	if !k.encrypted {
+	if k.encrypted == nil || !*k.encrypted {
 		err := k.encryptFields()
 		if err != nil {
 			k.Errors = append(k.Errors, &provide.Error{

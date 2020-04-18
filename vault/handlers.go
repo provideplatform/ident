@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -221,8 +222,13 @@ func vaultKeySignHandler(c *gin.Context) {
 		provide.RenderError(err.Error(), 500, c)
 		return
 	}
-	params.Signature = common.StringOrNil(string(signature))
-	provide.Render(params, 200, c)
+
+	sighex := make([]byte, hex.EncodedLen(len(signature)))
+	hex.Encode(sighex, sig)
+
+	provide.Render(&KeySignVerifyRequestResponse{
+		Signature: common.StringOrNil(string(sighex)),
+	}, 200, c)
 }
 
 func vaultKeyVerifyHandler(c *gin.Context) {
@@ -266,11 +272,19 @@ func vaultKeyVerifyHandler(c *gin.Context) {
 		return
 	}
 
-	err = key.Verify([]byte(*params.Message), []byte(*params.Signature))
+	sig, err := hex.DecodeString([]byte(*params.Signature))
+	if err != nil {
+		msg := fmt.Sprintf("failed to decode signature from hex; %s", err.Error())
+		provide.RenderError(msg, 422, c)
+		return
+	}
+
+	err = key.Verify([]byte(*params.Message), sig)
 	verified := err == nil
 
-	params.Verified = &verified
-	provide.Render(params, 200, c)
+	provide.Render(&KeySignVerifyRequestResponse{
+		Verified: &verified,
+	}, 200, c)
 }
 
 func vaultSecretsListHandler(c *gin.Context) {

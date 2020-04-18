@@ -1,6 +1,7 @@
 package organization
 
 import (
+	"encoding/hex"
 	"encoding/json"
 
 	"github.com/gin-gonic/gin"
@@ -580,8 +581,13 @@ func organizationVaultKeySignHandler(c *gin.Context) {
 		provide.RenderError(err.Error(), 500, c)
 		return
 	}
-	params.Signature = common.StringOrNil(string(signature))
-	provide.Render(params, 200, c)
+
+	sighex := make([]byte, hex.EncodedLen(len(signature)))
+	hex.Encode(sighex, sig)
+
+	provide.Render(&vault.KeySignVerifyRequestResponse{
+		Signature: common.StringOrNil(string(sighex)),
+	}, 200, c)
 }
 
 func organizationVaultKeyVerifyHandler(c *gin.Context) {
@@ -630,7 +636,7 @@ func organizationVaultKeyVerifyHandler(c *gin.Context) {
 		return
 	}
 
-	params := &vault.KeySignVerifyRequest{}
+	params := &vault.KeySignVerifyRequestResponse{}
 	err = json.Unmarshal(buf, &params)
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -645,8 +651,9 @@ func organizationVaultKeyVerifyHandler(c *gin.Context) {
 	err = key.Verify([]byte(*params.Message), []byte(*params.Signature))
 	verified := err == nil
 
-	params.Verified = &verified
-	provide.Render(params, 200, c)
+	provide.Render(&vault.KeySignVerifyRequest{
+		Verified: &verified,
+	}, 200, c)
 }
 
 func organizationVaultSecretsListHandler(c *gin.Context) {
