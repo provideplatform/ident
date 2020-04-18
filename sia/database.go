@@ -112,18 +112,19 @@ func dispatchSiaNotifications() {
 }
 
 func dispatchUserNotifications(db *gorm.DB) {
-	var users []user.User
+	var users []*user.User
 	db.Where("application_id IS NULL").Find(&users)
 
 	common.Log.Debugf("Dispatching %d sia user notifications...", len(users))
 	for _, usr := range users {
+		usr.Enrich()
 		payload, _ := json.Marshal(usr)
 		natsutil.NatsStreamingPublish(natsSiaUserNotificationSubject, payload)
 	}
 }
 
 func dispatchApplicationNotifications(db *gorm.DB) {
-	var apps []application.Application
+	var apps []*application.Application
 	db.Find(&apps)
 
 	common.Log.Debugf("Dispatching %d sia application notifications...", len(apps))
