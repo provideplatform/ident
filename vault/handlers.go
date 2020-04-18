@@ -193,7 +193,7 @@ func vaultKeySignHandler(c *gin.Context) {
 	}
 
 	if params.Message == nil || params.Signature != nil || params.Verified != nil {
-		provide.RenderError("message is required", 422, c)
+		provide.RenderError("only the message to be signed should be provided", 422, c)
 		return
 	}
 
@@ -248,7 +248,7 @@ func vaultKeyVerifyHandler(c *gin.Context) {
 	}
 
 	if params.Signature == nil || params.Message == nil || params.Verified != nil {
-		provide.RenderError("message and signature are required", 422, c)
+		provide.RenderError("only the message and signature to be verified should be provided", 422, c)
 		return
 	}
 
