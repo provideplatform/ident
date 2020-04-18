@@ -51,6 +51,12 @@ type Key struct {
 	mutex     sync.Mutex `sql:"-"`
 }
 
+type keySignVerifyRequest struct {
+	Message   *string `json:"message,omitempty"`
+	Signature *string `json:"signature,omitempty"`
+	Verified  *bool   `json:"verified,omitempty"`
+}
+
 func (k *Key) createBabyJubJubKeypair(name, description string) (*Key, error) {
 	publicKey, privateKey, err := provide.TECGenerateKeyPair()
 	if err != nil {
@@ -112,6 +118,29 @@ func (k *Key) createEd25519Keypair(name, description string) (*Key, error) {
 	common.Log.Debugf("created Ed25519 key %s with %d-byte seed in vault: %s; public key: %s", ed25519Key.ID, len(seed), k.VaultID, *ed25519Key.PublicKey)
 	return ed25519Key, nil
 }
+
+// func (k *Key) dhKeyExchange() {
+// 		// Alice's public/private keypair
+// 		a := suite.Scalar().Pick(random.Stream) // Alice's private key
+// 		A := suite.Point().Mul(nil, a)          // Alice's public key
+
+// 		// Bob's public/private keypair
+// 		b := suite.Scalar().Pick(random.Stream) // Alice's private key
+// 		B := suite.Point().Mul(nil, b)          // Alice's public key
+
+// 		// Assume Alice and Bob have securely obtained each other's public keys.
+
+// 		// Alice computes their shared secret using Bob's public key.
+// 		SA := suite.Point().Mul(B, a)
+
+// 		// Bob computes their shared secret using Alice's public key.
+// 		SB := suite.Point().Mul(A, b)
+
+// 		// They had better be the same!
+// 		if !SA.Equal(SB) {
+// 			panic("Diffie-Hellman key exchange didn't work")
+// 		}
+// }
 
 func (k *Key) resolveMasterKey() (*Key, error) {
 	var masterKey *Key
@@ -424,6 +453,11 @@ func (k *Key) Sign(payload []byte) ([]byte, error) {
 	defer k.encryptFields()
 
 	switch *k.Spec {
+	case keySpecECCBabyJubJub:
+		if k.PrivateKey == nil {
+			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil private key", len(payload), k.ID)
+		}
+		return provide.TECSign([]byte(*k.PrivateKey), payload)
 	case keySpecECCEd25519:
 		if k.Seed == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil Ed25519 seed", len(payload), k.ID)
@@ -460,6 +494,11 @@ func (k *Key) Verify(payload, sig []byte) error {
 	defer k.encryptFields()
 
 	switch *k.Spec {
+	case keySpecECCBabyJubJub:
+		if k.PrivateKey == nil {
+			return fmt.Errorf("failed to verify %d-byte payload using key: %s; nil private key", len(payload), k.ID)
+		}
+		return provide.TECVerify([]byte(*k.PublicKey), payload, sig)
 	case keySpecECCEd25519:
 		ec25519Key, err := identcrypto.FromPublicKey(*k.PublicKey)
 		if err != nil {

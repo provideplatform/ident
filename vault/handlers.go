@@ -23,6 +23,9 @@ func InstallVaultAPI(r *gin.Engine) {
 	r.DELETE("/api/v1/vaults/:id", deleteVaultHandler)
 
 	r.GET("/api/v1/vaults/:id/keys", vaultKeysListHandler)
+	r.POST("/api/v1/vaults/:vaultId/keys/:id/sign", vaultKeySignHandler)
+	r.POST("/api/v1/vaults/:vaultId/keys/:id/verify", vaultKeyVerifyHandler)
+
 	r.GET("/api/v1/vaults/:id/secrets", vaultSecretsListHandler)
 }
 
@@ -172,6 +175,104 @@ func vaultKeysListHandler(c *gin.Context) {
 	provide.Render(keys, 200, c)
 }
 
+func vaultKeySignHandler(c *gin.Context) {
+	bearer := token.InContext(c)
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	params := &keySignVerifyRequest{}
+	err = json.Unmarshal(buf, &params)
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	if params.Message == nil {
+		provide.RenderError(err.Error(), 422, c)
+		return
+	}
+
+	var key = &Key{}
+
+	db := dbconf.DatabaseConnection()
+	var query *gorm.DB
+
+	query = db.Where("id = ? AND vault_id = ?", c.Param("id"), c.Param("vaultId"))
+	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
+		query = query.Where("application_id = ?", bearer.ApplicationID)
+	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
+		query = query.Where("organization_id = ?", bearer.OrganizationID)
+	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
+		query = query.Where("user_id = ?", bearer.UserID)
+	}
+	query.Find(&key)
+
+	if key.ID == uuid.Nil {
+		provide.RenderError("key not found", 404, c)
+		return
+	}
+
+	signature, err := key.Sign([]byte(*params.Message))
+	if err != nil {
+		provide.RenderError(err.Error(), 500, c)
+		return
+	}
+	params.Signature = common.StringOrNil(string(signature))
+	provide.Render(params, 200, c)
+}
+
+func vaultKeyVerifyHandler(c *gin.Context) {
+	bearer := token.InContext(c)
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	params := &keySignVerifyRequest{}
+	err = json.Unmarshal(buf, &params)
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	if params.Message == nil || params.Signature == nil || params.Verified != nil {
+		provide.RenderError(err.Error(), 422, c)
+		return
+	}
+
+	var key = &Key{}
+
+	db := dbconf.DatabaseConnection()
+	var query *gorm.DB
+
+	query = db.Where("id = ? AND vault_id = ?", c.Param("id"), c.Param("vaultId"))
+	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
+		query = query.Where("application_id = ?", bearer.ApplicationID)
+	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
+		query = query.Where("organization_id = ?", bearer.OrganizationID)
+	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
+		query = query.Where("user_id = ?", bearer.UserID)
+	}
+	query.Find(&key)
+
+	if key.ID == uuid.Nil {
+		provide.RenderError("key not found", 404, c)
+		return
+	}
+
+	err = key.Verify([]byte(*params.Message), []byte(*params.Signature))
+	verified := err == nil
+
+	params.Verified = &verified
+	provide.Render(params, 200, c)
+}
+
 func vaultSecretsListHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
@@ -199,36 +300,3 @@ func vaultSecretsListHandler(c *gin.Context) {
 	provide.Paginate(c, vault.ListSecretsQuery(db), &Secret{}).Find(&secrets)
 	provide.Render(secrets, 200, c)
 }
-
-// func applicationVaultsListHandler(c *gin.Context) {
-// 	bearer := InContext(c)
-// 	userID := bearer.UserID
-// 	appID := bearer.ApplicationID
-// 	if (userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) {
-// 		provide.RenderError("unauthorized", 401, c)
-// 		return
-// 	}
-
-// 	if appID != nil && (*appID).String() != c.Param("id") {
-// 		provide.RenderError("forbidden", 403, c)
-// 		return
-// 	}
-
-// 	var app = &application.Application{}
-// 	dbconf.DatabaseConnection().Where("id = ?", c.Param("id")).Find(&app)
-// 	if app == nil || app.ID == uuid.Nil {
-// 		provide.RenderError("application not found", 404, c)
-// 		return
-// 	}
-// 	if userID != nil && *userID != app.UserID {
-// 		provide.RenderError("forbidden", 403, c)
-// 		return
-// 	}
-
-// 	query := dbconf.DatabaseConnection()
-
-// 	var vaults []*Vault
-// 	query = query.Where("application_id = ?", app.ID)
-// 	provide.Paginate(c, query, &Vault{}).Find(&vaults)
-// 	provide.Render(vaults, 200, c)
-// }
