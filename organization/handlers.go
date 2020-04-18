@@ -3,6 +3,7 @@ package organization
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
@@ -583,7 +584,7 @@ func organizationVaultKeySignHandler(c *gin.Context) {
 	}
 
 	sighex := make([]byte, hex.EncodedLen(len(signature)))
-	hex.Encode(sighex, sig)
+	hex.Encode(sighex, signature)
 
 	provide.Render(&vault.KeySignVerifyRequestResponse{
 		Signature: common.StringOrNil(string(sighex)),
@@ -648,7 +649,14 @@ func organizationVaultKeyVerifyHandler(c *gin.Context) {
 		return
 	}
 
-	err = key.Verify([]byte(*params.Message), []byte(*params.Signature))
+	sig, err := hex.DecodeString(*params.Signature)
+	if err != nil {
+		msg := fmt.Sprintf("failed to decode signature from hex; %s", err.Error())
+		provide.RenderError(msg, 422, c)
+		return
+	}
+
+	err = key.Verify([]byte(*params.Message), sig)
 	verified := err == nil
 
 	provide.Render(&vault.KeySignVerifyRequestResponse{

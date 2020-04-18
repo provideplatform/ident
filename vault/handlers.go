@@ -224,7 +224,7 @@ func vaultKeySignHandler(c *gin.Context) {
 	}
 
 	sighex := make([]byte, hex.EncodedLen(len(signature)))
-	hex.Encode(sighex, sig)
+	hex.Encode(sighex, signature)
 
 	provide.Render(&KeySignVerifyRequestResponse{
 		Signature: common.StringOrNil(string(sighex)),
@@ -272,7 +272,7 @@ func vaultKeyVerifyHandler(c *gin.Context) {
 		return
 	}
 
-	sig, err := hex.DecodeString([]byte(*params.Signature))
+	sig, err := hex.DecodeString(*params.Signature)
 	if err != nil {
 		msg := fmt.Sprintf("failed to decode signature from hex; %s", err.Error())
 		provide.RenderError(msg, 422, c)
