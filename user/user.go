@@ -276,7 +276,7 @@ func (u *User) Create(tx *gorm.DB, createAuth0User bool) bool {
 
 				if success && (u.ApplicationID == nil || *u.ApplicationID == uuid.Nil) {
 					payload, _ := json.Marshal(u.AsResponse())
-					natsutil.NatsPublish(natsSiaUserNotificationSubject, payload)
+					natsutil.NatsStreamingPublish(natsSiaUserNotificationSubject, payload)
 				}
 
 				return success

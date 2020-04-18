@@ -310,7 +310,7 @@ func (i *Invite) vendToken() (*token.Token, error) {
 	}
 
 	payload, _ := json.Marshal(token)
-	natsutil.NatsPublish(natsDispatchInvitationSubject, payload)
+	natsutil.NatsStreamingPublish(natsDispatchInvitationSubject, payload)
 
 	return token, nil
 }

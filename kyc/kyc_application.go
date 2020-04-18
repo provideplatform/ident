@@ -240,7 +240,7 @@ func (k *KYCApplication) Create(db *gorm.DB) bool {
 				payload, _ := json.Marshal(map[string]interface{}{
 					"kyc_application_id": k.ID.String(),
 				})
-				natsutil.NatsPublish(natsSubmitKYCApplicationSubject, payload)
+				natsutil.NatsStreamingPublish(natsSubmitKYCApplicationSubject, payload)
 			}
 			return success
 		}
@@ -283,7 +283,7 @@ func (k *KYCApplication) Update(status *string) bool {
 			"kyc_application_id": k.ID.String(),
 			"status":             status,
 		})
-		natsutil.NatsPublish(natsDispatchKYCApplicationWebhookSubject, payload)
+		natsutil.NatsStreamingPublish(natsDispatchKYCApplicationWebhookSubject, payload)
 	}
 
 	return len(k.Errors) == 0
@@ -427,7 +427,7 @@ func (k *KYCApplication) submit(db *gorm.DB) error {
 	payload, _ := json.Marshal(map[string]interface{}{
 		"kyc_application_id": k.ID.String(),
 	})
-	natsutil.NatsPublish(natsCheckKYCApplicationStatusSubject, payload)
+	natsutil.NatsStreamingPublish(natsCheckKYCApplicationStatusSubject, payload)
 	return nil
 }
 
@@ -805,7 +805,7 @@ func (k *KYCApplication) updateStatus(db *gorm.DB, status string, description *s
 		payload, _ := json.Marshal(map[string]interface{}{
 			"kyc_application_id": k.ID.String(),
 		})
-		natsutil.NatsPublish(natsDispatchKYCApplicationWebhookSubject, payload)
+		natsutil.NatsStreamingPublish(natsDispatchKYCApplicationWebhookSubject, payload)
 	}
 }
 

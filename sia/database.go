@@ -118,7 +118,7 @@ func dispatchUserNotifications(db *gorm.DB) {
 	common.Log.Debugf("Dispatching %d sia user notifications...", len(users))
 	for _, usr := range users {
 		payload, _ := json.Marshal(usr)
-		natsutil.NatsPublish(natsSiaUserNotificationSubject, payload)
+		natsutil.NatsStreamingPublish(natsSiaUserNotificationSubject, payload)
 	}
 }
 
@@ -129,6 +129,6 @@ func dispatchApplicationNotifications(db *gorm.DB) {
 	common.Log.Debugf("Dispatching %d sia application notifications...", len(apps))
 	for _, app := range apps {
 		payload, _ := json.Marshal(app)
-		natsutil.NatsPublish(natsSiaApplicationNotificationSubject, payload)
+		natsutil.NatsStreamingPublish(natsSiaApplicationNotificationSubject, payload)
 	}
 }

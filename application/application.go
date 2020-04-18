@@ -321,7 +321,7 @@ func (app *Application) Create(tx *gorm.DB) (*CreateResponse, error) {
 				}
 
 				payload, _ := json.Marshal(app)
-				natsutil.NatsPublish(natsSiaApplicationNotificationSubject, payload)
+				natsutil.NatsStreamingPublish(natsSiaApplicationNotificationSubject, payload)
 
 				return &CreateResponse{
 					Application: app,
