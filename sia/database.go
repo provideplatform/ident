@@ -106,6 +106,10 @@ func dispatchSiaNotifications() {
 		dispatchUserNotifications(identDB)
 	}
 
+	if os.Getenv("SIA_DISPATCH_USER_EMAIL_UNDELIVERABLE_NOTIFICATIONS") == "true" {
+		dispatchUserEmailUndeliverableNotifications(identDB)
+	}
+
 	if os.Getenv("SIA_DISPATCH_APPLICATION_NOTIFICATIONS") == "true" {
 		dispatchApplicationNotifications(identDB)
 	}
@@ -120,6 +124,18 @@ func dispatchUserNotifications(db *gorm.DB) {
 		usr.Enrich()
 		payload, _ := json.Marshal(usr)
 		natsutil.NatsStreamingPublish(natsSiaUserNotificationSubject, payload)
+	}
+}
+
+func dispatchUserEmailUndeliverableNotifications(db *gorm.DB) {
+	var users []*user.User
+	db.Find(&users)
+
+	for _, usr := range users {
+		err := usr.VerifyEmailDeliverability()
+		if err != nil {
+			common.Log.Warningf("email address %s not deliverable for user id: %s", *usr.Email, usr.ID.String())
+		}
 	}
 }
 

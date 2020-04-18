@@ -391,27 +391,7 @@ func (u *User) verifyEmailAddress() bool {
 		}
 
 		if common.PerformEmailVerification {
-			common.Log.Debugf("attempting to verify deliverability for email address: %s", *u.Email)
-
-			var emailVerificationErr error
-			emailVerifier := trumail.NewVerifier(common.EmailVerificationFromDomain, common.EmailVerificationFromAddress, common.EmailVerificationTimeout, common.EmailVerificationAttempts)
-			lookup, err := emailVerifier.Verify(*u.Email)
-			if err != nil {
-				validEmailAddress = false
-				emailVerificationErr = fmt.Errorf("email address verification failed: %s; %s", *u.Email, err.Error())
-			} else if !lookup.Deliverable && !lookup.CatchAll {
-				validEmailAddress = false
-				emailVerificationErr = fmt.Errorf("email address verification failed: %s; undeliverable", *u.Email)
-			} else if lookup.CatchAll {
-				validEmailAddress = false
-				emailVerificationErr = fmt.Errorf("email address verification failed: %s; mail server exists but inbox is invalid", *u.Email)
-			} else {
-				validEmailAddress = lookup.Deliverable
-				if !validEmailAddress {
-					emailVerificationErr = fmt.Errorf("email address verification failed: %s; undeliverable", *u.Email)
-				}
-			}
-
+			emailVerificationErr := u.verifyEmailDeliverability()
 			if emailVerificationErr != nil {
 				u.Errors = append(u.Errors, &provide.Error{
 					Message: common.StringOrNil(emailVerificationErr.Error()),
@@ -422,6 +402,34 @@ func (u *User) verifyEmailAddress() bool {
 	return validEmailAddress
 }
 
+// VerifyEmailDeliverability attempts to verify the user's email address is still deliverable;
+// this must be called from a host that has not been blacklisted, or it could have unintended consequences...
+func (u *User) VerifyEmailDeliverability() error {
+	common.Log.Debugf("attempting to verify deliverability for email address: %s", *u.Email)
+
+	var err error
+	emailVerifier := trumail.NewVerifier(
+		common.EmailVerificationFromDomain,
+		common.EmailVerificationFromAddress,
+		common.EmailVerificationTimeout,
+		common.EmailVerificationAttempts,
+	)
+
+	lookup, err := emailVerifier.Verify(*u.Email)
+	if err != nil {
+		err = fmt.Errorf("email address verification failed: %s; %s", *u.Email, err.Error())
+	} else if !lookup.Deliverable && !lookup.CatchAll {
+		err = fmt.Errorf("email address verification failed: %s; undeliverable", *u.Email)
+	} else if lookup.CatchAll {
+		err = fmt.Errorf("email address verification failed: %s; mail server exists but inbox is invalid", *u.Email)
+	} else if !lookup.Deliverable {
+		err = fmt.Errorf("email address verification failed: %s; undeliverable", *u.Email)
+	}
+
+	return err
+}
+
+// FullName returns the user's full name
 func (u *User) FullName() *string {
 	name := ""
 	if u.FirstName != nil {
@@ -433,7 +441,7 @@ func (u *User) FullName() *string {
 	return common.StringOrNil(name)
 }
 
-// enrich attempts to enrich the user; currently this only supports any user/app metadata on the
+// Enrich attempts to enrich the user; currently this only supports any user/app metadata on the
 // user's associated auth0 record, enriching `u.EphemeralMetadata`; no-op if auth0 is not configured
 func (u *User) Enrich() error {
 	u.Name = u.FullName()
