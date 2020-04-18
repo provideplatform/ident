@@ -192,7 +192,7 @@ func vaultKeySignHandler(c *gin.Context) {
 		return
 	}
 
-	if params.Message == nil {
+	if params.Message == nil || params.Signature != nil || params.Verified != nil {
 		provide.RenderError(err.Error(), 422, c)
 		return
 	}
