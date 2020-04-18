@@ -23,6 +23,11 @@ const natsSiaUserNotificationMaxInFlight = 1024
 const siaUserNotificationAckWait = time.Second * 15
 const siaUserNotificationTimeout = int64(time.Minute * 5)
 
+const natsSiaUserDeletedNotificationSubject = "sia.user.deleted"
+const natsSiaUserDeletedNotificationMaxInFlight = 64
+const siaUserDeletedNotificationAckWait = time.Second * 15
+const siaUserDeletedNotificationTimeout = int64(time.Minute * 1)
+
 const natsSiaApplicationNotificationSubject = "sia.application.notification"
 const natsSiaApplicationNotificationMaxInFlight = 1024
 const siaApplicationNotificationAckWait = time.Second * 15
@@ -102,6 +107,7 @@ func init() {
 	var waitGroup sync.WaitGroup
 
 	createNatsSiaUserNotificationSubscriptions(&waitGroup)
+	createNatsSiaUserDeletedNotificationSubscriptions(&waitGroup)
 	createNatsSiaApplicationNotificationSubscriptions(&waitGroup)
 	createNatsSiaAPIUsageEventsSubscriptions(&waitGroup)
 }
@@ -115,6 +121,20 @@ func createNatsSiaUserNotificationSubscriptions(wg *sync.WaitGroup) {
 			consumeSiaUserNotificationMsg,
 			siaUserNotificationAckWait,
 			natsSiaUserNotificationMaxInFlight,
+			nil,
+		)
+	}
+}
+
+func createNatsSiaUserDeletedNotificationSubscriptions(wg *sync.WaitGroup) {
+	for i := uint64(0); i < natsutil.GetNatsConsumerConcurrency(); i++ {
+		natsutil.RequireNatsStreamingSubscription(wg,
+			siaUserDeletedNotificationAckWait,
+			natsSiaUserDeletedNotificationSubject,
+			natsSiaUserDeletedNotificationSubject,
+			consumeSiaUserDeletedNotificationMsg,
+			siaUserDeletedNotificationAckWait,
+			natsSiaUserDeletedNotificationMaxInFlight,
 			nil,
 		)
 	}
@@ -152,7 +172,7 @@ func consumeSiaUserNotificationMsg(msg *stan.Msg) {
 	defer func() {
 		if r := recover(); r != nil {
 			common.Log.Warningf("Recovered from failed %d-byte sia user notification message on subject: %s; payload: %s", msg.Size(), msg.Subject, string(msg.Data))
-			natsutil.AttemptNack(msg, siaApplicationNotificationTimeout)
+			natsutil.AttemptNack(msg, siaUserNotificationTimeout)
 		}
 	}()
 
@@ -196,7 +216,7 @@ func consumeSiaUserNotificationMsg(msg *stan.Msg) {
 	}
 	if rowsAffected == 0 {
 		common.Log.Warning("Failed to persist sia account")
-		natsutil.AttemptNack(msg, siaApplicationNotificationTimeout)
+		natsutil.AttemptNack(msg, siaUserNotificationTimeout)
 		return
 	}
 	// end save account
@@ -219,7 +239,7 @@ func consumeSiaUserNotificationMsg(msg *stan.Msg) {
 	}
 	if rowsAffected == 0 {
 		common.Log.Warning("Failed to persist sia account contact")
-		natsutil.AttemptNack(msg, siaApplicationNotificationTimeout)
+		natsutil.AttemptNack(msg, siaUserNotificationTimeout)
 		return
 	}
 	// end save contact
@@ -228,6 +248,37 @@ func consumeSiaUserNotificationMsg(msg *stan.Msg) {
 
 	common.Log.Debugf("Sia user notification message handled for user: %s", account.UserID)
 	msg.Ack()
+}
+
+func consumeSiaUserDeletedNotificationMsg(msg *stan.Msg) {
+	defer func() {
+		if r := recover(); r != nil {
+			common.Log.Warningf("Recovered from failed %d-byte sia user deleted notification message on subject: %s; payload: %s", msg.Size(), msg.Subject, string(msg.Data))
+			natsutil.AttemptNack(msg, siaUserDeletedNotificationTimeout)
+		}
+	}()
+
+	common.Log.Debugf("Consuming %d-byte NATS sia user deleted notification message on subject: %s", msg.Size(), msg.Subject)
+
+	var params map[string]interface{}
+
+	err := json.Unmarshal(msg.Data, &params)
+	if err != nil {
+		common.Log.Warningf("Failed to umarshal sia user deleted notification event message; %s", err.Error())
+		natsutil.Nack(msg)
+		return
+	}
+
+	// siaDB := siaDatabaseConnection()
+	// tx := siaDB.Begin()
+	// defer tx.RollbackUnlessCommitted()
+
+	userUUID, err := uuid.FromString(params["user_id"].(string))
+
+	common.Log.Debugf("sia account soft delete impl pending; received user deleted notification for user id: %s", userUUID.String())
+	// TODO: implement sia account soft delete...
+
+	natsutil.Nack(msg)
 }
 
 func consumeSiaApplicationNotificationMsg(msg *stan.Msg) {
