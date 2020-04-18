@@ -180,7 +180,7 @@ func (k *Key) decryptFields() error {
 	defer k.mutex.Unlock()
 
 	if k.encrypted == nil {
-		k.setEncrypted(true)
+		k.setEncrypted(k.ID != uuid.Nil)
 	}
 
 	if !*k.encrypted {
@@ -238,7 +238,7 @@ func (k *Key) encryptFields() error {
 	defer k.mutex.Unlock()
 
 	if k.encrypted == nil {
-		k.setEncrypted(true)
+		k.setEncrypted(k.ID != uuid.Nil)
 	}
 
 	if *k.encrypted {
