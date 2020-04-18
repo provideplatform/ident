@@ -573,7 +573,7 @@ func organizationVaultKeySignHandler(c *gin.Context) {
 	}
 
 	if params.Message == nil || params.Signature != nil || params.Verified != nil {
-		provide.RenderError(err.Error(), 422, c)
+		provide.RenderError("message is required", 422, c)
 		return
 	}
 
@@ -644,8 +644,8 @@ func organizationVaultKeyVerifyHandler(c *gin.Context) {
 		return
 	}
 
-	if params.Message == nil || params.Signature == nil || params.Verified != nil {
-		provide.RenderError(err.Error(), 422, c)
+	if params.Signature == nil || params.Message == nil || params.Verified != nil {
+		provide.RenderError("message and signature are required", 422, c)
 		return
 	}
 
