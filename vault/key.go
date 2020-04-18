@@ -51,7 +51,8 @@ type Key struct {
 	mutex     sync.Mutex `sql:"-"`
 }
 
-type keySignVerifyRequest struct {
+// KeySignVerifyRequest represents an API request to sign or verify an arbitrary message
+type KeySignVerifyRequest struct {
 	Message   *string `json:"message,omitempty"`
 	Signature *string `json:"signature,omitempty"`
 	Verified  *bool   `json:"verified,omitempty"`
@@ -445,7 +446,7 @@ func (k *Key) Sign(payload []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil or invalid key usage", len(payload), k.ID)
 	}
 
-	if k.Spec == nil || *k.Spec != keySpecECCEd25519 {
+	if k.Spec == nil || (*k.Spec != keySpecECCBabyJubJub && *k.Spec != keySpecECCEd25519) {
 		return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil or invalid key spec", len(payload), k.ID)
 	}
 
@@ -462,6 +463,7 @@ func (k *Key) Sign(payload []byte) ([]byte, error) {
 		if k.Seed == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil Ed25519 seed", len(payload), k.ID)
 		}
+		common.Log.Debugf("seed: %s", *k.Seed)
 		ec25519Key, err := identcrypto.FromSeed([]byte(*k.Seed))
 		if err != nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; %s", len(payload), k.ID, err.Error())
@@ -482,7 +484,7 @@ func (k *Key) Verify(payload, sig []byte) error {
 		return fmt.Errorf("failed to verify %d-byte payload using key: %s; nil or invalid key usage", len(payload), k.ID)
 	}
 
-	if k.Spec == nil || *k.Spec != keySpecECCEd25519 {
+	if k.Spec == nil || (*k.Spec != keySpecECCBabyJubJub && *k.Spec != keySpecECCEd25519) {
 		return fmt.Errorf("failed to verify %d-byte payload using key: %s; nil or invalid key spec", len(payload), k.ID)
 	}
 

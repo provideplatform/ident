@@ -40,6 +40,8 @@ func InstallOrganizationVaultsAPI(r *gin.Engine) {
 	r.GET("/api/v1/organizations/:id/vaults/:vaultId/keys", organizationVaultKeysListHandler)
 	// r.POST("/api/v1/organizations/:id/vaults/:vaultId/keys", createOrganizationVaultKeyHandler)
 	// r.DELETE("/api/v1/organizations/:id/vaults/:vaultId/keys/:keyId", deleteOrganizationVaultKeyHandler)
+	r.POST("/api/v1/organizations/:id/vaults/:vaultId/keys/:keyId/sign", organizationVaultKeySignHandler)
+	r.POST("/api/v1/organizations/:id/vaults/:vaultId/keys/:keyId/verify", organizationVaultKeyVerifyHandler)
 
 	r.GET("/api/v1/organizations/:id/vaults/:vaultId/secrets", organizationVaultSecretsListHandler)
 	// r.POST("/api/v1/organizations/:id/vaults/:vaultId/secrets", createOrganizationVaultSecretHandler)
@@ -513,6 +515,138 @@ func organizationVaultKeysListHandler(c *gin.Context) {
 	var keys []*vault.Key
 	provide.Paginate(c, vlt.ListKeysQuery(db), &vault.Key{}).Find(&keys)
 	provide.Render(keys, 200, c)
+}
+
+func organizationVaultKeySignHandler(c *gin.Context) {
+	bearer := token.InContext(c)
+	userID := bearer.UserID
+	applicationID := bearer.ApplicationID
+
+	if (userID == nil || *userID == uuid.Nil) && (applicationID == nil || *applicationID == uuid.Nil) {
+		provide.RenderError("unauthorized", 401, c)
+		return
+	}
+
+	organizationID, err := uuid.FromString(c.Param("id"))
+	if err != nil {
+		provide.RenderError(err.Error(), 422, c)
+		return
+	}
+
+	db := dbconf.DatabaseConnection()
+
+	org := &Organization{}
+	resolveOrganization(db, &organizationID, applicationID, userID).Find(&org)
+
+	if org == nil || org.ID == uuid.Nil {
+		provide.RenderError("unauthorized", 401, c)
+		return
+	}
+
+	vlt := &vault.Vault{}
+	db.Where("vaults.id = ? AND vaults.organization_id = ?", c.Param("vaultId"), org.ID).Find(&vlt)
+	if vlt == nil || vlt.ID == uuid.Nil {
+		provide.RenderError("vault not found", 404, c)
+		return
+	}
+
+	key := &vault.Key{}
+	db.Where("keys.vault_id = ? AND keys.id = ?", vlt.ID.String(), c.Param("keyId")).Find(&key)
+	if key == nil || key.ID == uuid.Nil {
+		provide.RenderError("key not found", 404, c)
+		return
+	}
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	params := &vault.KeySignVerifyRequest{}
+	err = json.Unmarshal(buf, &params)
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	if params.Message == nil {
+		provide.RenderError(err.Error(), 422, c)
+		return
+	}
+
+	signature, err := key.Sign([]byte(*params.Message))
+	if err != nil {
+		provide.RenderError(err.Error(), 500, c)
+		return
+	}
+	params.Signature = common.StringOrNil(string(signature))
+	provide.Render(params, 200, c)
+}
+
+func organizationVaultKeyVerifyHandler(c *gin.Context) {
+	bearer := token.InContext(c)
+	userID := bearer.UserID
+	applicationID := bearer.ApplicationID
+
+	if (userID == nil || *userID == uuid.Nil) && (applicationID == nil || *applicationID == uuid.Nil) {
+		provide.RenderError("unauthorized", 401, c)
+		return
+	}
+
+	organizationID, err := uuid.FromString(c.Param("id"))
+	if err != nil {
+		provide.RenderError(err.Error(), 422, c)
+		return
+	}
+
+	db := dbconf.DatabaseConnection()
+
+	org := &Organization{}
+	resolveOrganization(db, &organizationID, applicationID, userID).Find(&org)
+
+	if org == nil || org.ID == uuid.Nil {
+		provide.RenderError("unauthorized", 401, c)
+		return
+	}
+
+	vlt := &vault.Vault{}
+	db.Where("vaults.id = ? AND vaults.organization_id = ?", c.Param("vaultId"), org.ID).Find(&vlt)
+	if vlt == nil || vlt.ID == uuid.Nil {
+		provide.RenderError("vault not found", 404, c)
+		return
+	}
+
+	key := &vault.Key{}
+	db.Where("keys.vault_id = ? AND keys.id = ?", vlt.ID.String(), c.Param("keyId")).Find(&key)
+	if key == nil || key.ID == uuid.Nil {
+		provide.RenderError("key not found", 404, c)
+		return
+	}
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	params := &vault.KeySignVerifyRequest{}
+	err = json.Unmarshal(buf, &params)
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	if params.Message == nil {
+		provide.RenderError(err.Error(), 422, c)
+		return
+	}
+
+	err = key.Verify([]byte(*params.Message), []byte(*params.Signature))
+	verified := err == nil
+
+	params.Verified = &verified
+	provide.Render(params, 200, c)
 }
 
 func organizationVaultSecretsListHandler(c *gin.Context) {
