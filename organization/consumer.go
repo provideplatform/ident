@@ -79,7 +79,7 @@ func consumeCreatedOrganizationMsg(msg *stan.Msg) {
 
 	if organization == nil || organization.ID == uuid.Nil {
 		common.Log.Warningf("failed to resolve organization during created message handler; organization id: %s", organizationID)
-		natsutil.Nack(msg)
+		natsutil.AttemptNack(msg, createOrganizationTimeout)
 		return
 	}
 
