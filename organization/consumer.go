@@ -2,7 +2,6 @@ package organization
 
 import (
 	"encoding/json"
-	"fmt"
 	"sync"
 	"time"
 
@@ -11,7 +10,6 @@ import (
 	uuid "github.com/kthomas/go.uuid"
 	stan "github.com/nats-io/stan.go"
 	"github.com/provideapp/ident/common"
-	"github.com/provideapp/ident/vault"
 )
 
 const natsCreatedOrganizationCreatedSubject = "ident.organization.created"
@@ -79,20 +77,13 @@ func consumeCreatedOrganizationMsg(msg *stan.Msg) {
 
 	if organization == nil || organization.ID == uuid.Nil {
 		common.Log.Warningf("failed to resolve organization during created message handler; organization id: %s", organizationID)
-		natsutil.AttemptNack(msg, createOrganizationTimeout)
+		natsutil.Nack(msg)
 		return
 	}
 
-	vault := &vault.Vault{
-		OrganizationID: &organization.ID,
-		Name:           common.StringOrNil(fmt.Sprintf("Vault: %s", *organization.Name)),
-		Description:    common.StringOrNil("Default vault for the organization"),
-	}
-
-	if vault.Create(nil) {
+	vault, err := organization.createVault(db)
+	if err == nil {
 		common.Log.Debugf("Created default vault for organization: %s", *organization.Name)
-		payload, _ := json.Marshal(organization)
-		natsutil.NatsStreamingPublish(natsCreatedOrganizationCreatedSubject, payload)
 		msg.Ack()
 	} else {
 		common.Log.Warningf("Failed to create default vault for organization: %s; %s", *organization.Name, *vault.Errors[0].Message)

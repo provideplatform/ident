@@ -2,15 +2,17 @@ package organization
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
-	"github.com/kthomas/go-natsutil"
+	natsutil "github.com/kthomas/go-natsutil"
 	redisutil "github.com/kthomas/go-redisutil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/user"
+	"github.com/provideapp/ident/vault"
 	provide "github.com/provideservices/provide-go"
 )
 
@@ -180,6 +182,33 @@ func (o *Organization) Create(tx *gorm.DB) bool {
 	}
 
 	return false
+}
+
+// createVault creates a key management "vault" for the organization
+func (o *Organization) createVault(tx *gorm.DB) (*vault.Vault, error) {
+	var db *gorm.DB
+	if tx != nil {
+		db = tx
+	} else {
+		db = dbconf.DatabaseConnection()
+		db = db.Begin()
+		defer db.RollbackUnlessCommitted()
+	}
+
+	vlt := &vault.Vault{
+		OrganizationID: &o.ID,
+		Name:           o.Name,
+		Description:    common.StringOrNil("Organizational keystore"),
+	}
+
+	if !vlt.Create(db) {
+		errmsg := fmt.Sprintf("Failed to create vault for organization: %s; %s", *o.Name, *vlt.Errors[0].Message)
+		common.Log.Warning(errmsg)
+		return nil, errors.New(errmsg)
+	}
+
+	common.Log.Debugf("Created vault for organization: %s", *o.Name)
+	return vlt, nil
 }
 
 // pendingInvitations returns the pending invitations for the organization; these are ephemeral, in-memory only
