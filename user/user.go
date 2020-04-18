@@ -391,7 +391,7 @@ func (u *User) verifyEmailAddress() bool {
 		}
 
 		if common.PerformEmailVerification {
-			emailVerificationErr := u.verifyEmailDeliverability()
+			emailVerificationErr := u.VerifyEmailDeliverability()
 			if emailVerificationErr != nil {
 				u.Errors = append(u.Errors, &provide.Error{
 					Message: common.StringOrNil(emailVerificationErr.Error()),
