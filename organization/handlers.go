@@ -564,7 +564,7 @@ func organizationVaultKeySignHandler(c *gin.Context) {
 		return
 	}
 
-	params := &vault.KeySignVerifyRequest{}
+	params := &vault.KeySignVerifyRequestResponse{}
 	err = json.Unmarshal(buf, &params)
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -651,7 +651,7 @@ func organizationVaultKeyVerifyHandler(c *gin.Context) {
 	err = key.Verify([]byte(*params.Message), []byte(*params.Signature))
 	verified := err == nil
 
-	provide.Render(&vault.KeySignVerifyRequest{
+	provide.Render(&vault.KeySignVerifyRequestResponse{
 		Verified: &verified,
 	}, 200, c)
 }

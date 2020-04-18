@@ -185,7 +185,7 @@ func vaultKeySignHandler(c *gin.Context) {
 		return
 	}
 
-	params := &KeySignVerifyRequest{}
+	params := &KeySignVerifyRequestResponse{}
 	err = json.Unmarshal(buf, &params)
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -240,7 +240,7 @@ func vaultKeyVerifyHandler(c *gin.Context) {
 		return
 	}
 
-	params := &KeySignVerifyRequest{}
+	params := &KeySignVerifyRequestResponse{}
 	err = json.Unmarshal(buf, &params)
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
