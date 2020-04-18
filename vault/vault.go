@@ -141,12 +141,12 @@ func (v *Vault) Create(tx *gorm.DB) bool {
 				if err != nil {
 					common.Log.Warningf("failed to create master key for vault: %s; %s", v.ID.String(), err.Error())
 				} else {
-					_, err := v.MasterKey.createEd25519Keypair("ekho - signing", fmt.Sprintf("Ed25519 keypair for vault %s", v.ID))
+					_, err := v.MasterKey.CreateEd25519Keypair("ekho - signing", fmt.Sprintf("Ed25519 keypair for vault %s", v.ID))
 					if err != nil {
 						common.Log.Warningf("failed to create Ed22519 keypair; %s", err.Error())
 					}
 
-					_, err = v.MasterKey.createBabyJubJubKeypair("zksnarks", fmt.Sprintf("zksnark twisted edwards curve keypair for vault %s", v.ID))
+					_, err = v.MasterKey.CreateBabyJubJubKeypair("zksnarks", fmt.Sprintf("zksnark twisted edwards curve keypair for vault %s", v.ID))
 					if err != nil {
 						common.Log.Warningf("failed to create babyJubJub keypair; %s", err.Error())
 					}
@@ -158,6 +158,33 @@ func (v *Vault) Create(tx *gorm.DB) bool {
 	}
 
 	return false
+}
+
+// CreateC25519Keypair creates an c25519 keypair suitable for Diffie-Hellman key exchange
+func (v *Vault) CreateC25519Keypair(name, description string) (*Key, error) {
+	publicKey, privateKey, err := provide.C25519GenerateKeyPair()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create C25519 keypair; %s", err.Error())
+	}
+
+	c25519Key := &Key{
+		VaultID:     &v.ID,
+		Type:        common.StringOrNil(keyTypeAsymmetric),
+		Usage:       common.StringOrNil(keyUsageSignVerify),
+		Spec:        common.StringOrNil(keySpecECCC25519),
+		Name:        common.StringOrNil(name),
+		Description: common.StringOrNil(description),
+		PublicKey:   common.StringOrNil(string(publicKey)),
+		PrivateKey:  common.StringOrNil(string(privateKey)),
+	}
+
+	db := dbconf.DatabaseConnection()
+	if !c25519Key.Create(db) {
+		return nil, fmt.Errorf("failed to create C25519 key in vault: %s; %s", v.ID, *c25519Key.Errors[0].Message)
+	}
+
+	common.Log.Debugf("created C25519 key %s in vault: %s; public key: %s", c25519Key.ID, v.ID, *c25519Key.PublicKey)
+	return c25519Key, nil
 }
 
 // Delete a vault

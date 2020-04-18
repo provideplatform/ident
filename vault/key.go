@@ -4,6 +4,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -25,6 +26,7 @@ const keyUsageSignVerify = "sign/verify"
 
 const keySpecAES256GCM = "AES-256-GCM"
 const keySpecECCBabyJubJub = "babyJubJub"
+const keySpecECCC25519 = "C25519"
 const keySpecECCEd25519 = "Ed25519"
 const keySpecECCSecp256r1 = "ECC-NIST-P256"
 const keySpecECCSecp2048 = "ECC-NIST-P384"
@@ -51,6 +53,14 @@ type Key struct {
 	mutex     sync.Mutex `sql:"-"`
 }
 
+// KeyExchangeRequestResponse represents the API request/response parameters
+// // needed to initiate or reciprocate a Diffie-Hellman key exchange
+// type KeyExchangeRequestResponse struct {
+// 	PublicKey  *string `json:"public_key,omitempty"`
+// 	SigningKey *string `json:"signing_key,omitempty"`
+// 	Signature  *string `json:"signature,omitempty"`
+// }
+
 // KeySignVerifyRequestResponse represents the API request/response parameters
 // needed to sign or verify an arbitrary message
 type KeySignVerifyRequestResponse struct {
@@ -59,7 +69,8 @@ type KeySignVerifyRequestResponse struct {
 	Verified  *bool   `json:"verified,omitempty"`
 }
 
-func (k *Key) createBabyJubJubKeypair(name, description string) (*Key, error) {
+// CreateBabyJubJubKeypair creates a keypair on the twisted edwards babyJubJub curve
+func (k *Key) CreateBabyJubJubKeypair(name, description string) (*Key, error) {
 	publicKey, privateKey, err := provide.TECGenerateKeyPair()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create babyJubJub keypair; %s", err.Error())
@@ -85,7 +96,49 @@ func (k *Key) createBabyJubJubKeypair(name, description string) (*Key, error) {
 	return babyJubJubKey, nil
 }
 
-func (k *Key) createEd25519Keypair(name, description string) (*Key, error) {
+// CreateDiffieHellmanSharedSecret creates a shared secret given a peer public key and signature
+func (k *Key) CreateDiffieHellmanSharedSecret(peerPublicKey, peerSigningKey, peerSignature []byte, name, description string) (*Key, error) {
+	k.decryptFields()
+	defer k.encryptFields()
+
+	if k.PrivateKey == nil {
+		err := errors.New("failed to calculate Diffie-Hellman shared secret; nil private key")
+		common.Log.Warning(err.Error())
+		return nil, err
+	}
+
+	ec25519Key, err := identcrypto.FromPublicKey(string(peerSigningKey))
+	if err != nil {
+		return nil, fmt.Errorf("failed to compute shared secret; failed to unmarshal %d-byte Ed22519 public key: %s", len(peerPublicKey), string(peerPublicKey))
+	}
+	err = ec25519Key.Verify(peerPublicKey, peerSignature)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compute shared secret; failed to verify %d-byte Ed22519 signature using public key: %s; %s", len(peerSignature), string(peerPublicKey), err.Error())
+	}
+
+	sharedSecret := provide.C25519ComputeSecret([]byte(*k.PrivateKey), peerPublicKey)
+
+	dhSecret := &Key{
+		VaultID:     k.VaultID,
+		Type:        common.StringOrNil(keyTypeAsymmetric),
+		Usage:       common.StringOrNil(keyUsageSignVerify),
+		Spec:        common.StringOrNil(keySpecECCC25519),
+		Name:        common.StringOrNil(name),
+		Description: common.StringOrNil(description),
+		Seed:        common.StringOrNil(string(sharedSecret)),
+	}
+
+	db := dbconf.DatabaseConnection()
+	if !dhSecret.Create(db) {
+		return nil, fmt.Errorf("failed to create Diffie-Hellman shared secret in vault: %s; %s", k.VaultID, *dhSecret.Errors[0].Message)
+	}
+
+	common.Log.Debugf("created Diffie-Hellman shared secret %s in vault: %s; public key: %s", dhSecret.ID, k.VaultID, *dhSecret.PublicKey)
+	return dhSecret, nil
+}
+
+// CreateEd25519Keypair creates an Ed25519 keypair
+func (k *Key) CreateEd25519Keypair(name, description string) (*Key, error) {
 	keypair, err := identcrypto.CreatePair(identcrypto.PrefixByteSeed)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Ed25519 keypair; %s", err.Error())
@@ -120,29 +173,6 @@ func (k *Key) createEd25519Keypair(name, description string) (*Key, error) {
 	common.Log.Debugf("created Ed25519 key %s with %d-byte seed in vault: %s; public key: %s", ed25519Key.ID, len(seed), k.VaultID, *ed25519Key.PublicKey)
 	return ed25519Key, nil
 }
-
-// func (k *Key) dhKeyExchange() {
-// 		// Alice's public/private keypair
-// 		a := suite.Scalar().Pick(random.Stream) // Alice's private key
-// 		A := suite.Point().Mul(nil, a)          // Alice's public key
-
-// 		// Bob's public/private keypair
-// 		b := suite.Scalar().Pick(random.Stream) // Alice's private key
-// 		B := suite.Point().Mul(nil, b)          // Alice's public key
-
-// 		// Assume Alice and Bob have securely obtained each other's public keys.
-
-// 		// Alice computes their shared secret using Bob's public key.
-// 		SA := suite.Point().Mul(B, a)
-
-// 		// Bob computes their shared secret using Alice's public key.
-// 		SB := suite.Point().Mul(A, b)
-
-// 		// They had better be the same!
-// 		if !SA.Equal(SB) {
-// 			panic("Diffie-Hellman key exchange didn't work")
-// 		}
-// }
 
 func (k *Key) resolveMasterKey() (*Key, error) {
 	var masterKey *Key
@@ -564,9 +594,9 @@ func (k *Key) validate() bool {
 		k.Errors = append(k.Errors, &provide.Error{
 			Message: common.StringOrNil(fmt.Sprintf("symmetric key in %s usage mode must be %s", keyUsageEncryptDecrypt, keySpecAES256GCM)), // TODO: support keySpecRSA2048, keySpecRSA3072, keySpecRSA4096
 		})
-	} else if *k.Type == keyTypeAsymmetric && *k.Usage == keyUsageSignVerify && (k.Spec == nil || (*k.Spec != keySpecECCBabyJubJub && *k.Spec != keySpecECCEd25519)) {
+	} else if *k.Type == keyTypeAsymmetric && *k.Usage == keyUsageSignVerify && (k.Spec == nil || (*k.Spec != keySpecECCBabyJubJub && *k.Spec != keySpecECCC25519 && *k.Spec != keySpecECCEd25519)) {
 		k.Errors = append(k.Errors, &provide.Error{
-			Message: common.StringOrNil(fmt.Sprintf("asymmetric key in %s usage mode must be %s or %s", keyUsageSignVerify, keySpecECCBabyJubJub, keySpecECCEd25519)), // TODO: support keySpecRSA2048, keySpecRSA3072, keySpecRSA4096
+			Message: common.StringOrNil(fmt.Sprintf("asymmetric key in %s usage mode must be %s, %s or %s", keyUsageSignVerify, keySpecECCBabyJubJub, keySpecECCC25519, keySpecECCEd25519)), // TODO: support keySpecRSA2048, keySpecRSA3072, keySpecRSA4096
 		})
 	}
 
