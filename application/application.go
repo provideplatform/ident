@@ -20,6 +20,7 @@ import (
 )
 
 const applicationResourceKey = "application"
+const natsOrganizationImplicitKeyExchangeInitSubject = "ident.organization.keys.exchange.init"
 const natsSiaApplicationNotificationSubject = "sia.application.notification"
 
 // Application model which is initially owned by the user who created it
@@ -163,6 +164,29 @@ func (app *Application) pendingInvitations() []*user.Invite {
 	return invitations
 }
 
+func (app *Application) initImplicitDiffieHellmanKeyExchange(db *gorm.DB, org *organization.Organization) error {
+	common.Log.Debugf("initializing implicit Diffie-Hellman key exchange for application: %s; new organization: %s", app.ID, org.ID)
+
+	var orgs []*organization.Organization
+	app.OrganizationsListQuery(db).Where("id != ?", org.ID).Find(&orgs)
+
+	for _, peerOrg := range orgs {
+		payload, _ := json.Marshal(map[string]interface{}{
+			"organization_id":      org.ID.String(),
+			"peer_organization_id": peerOrg.ID.String(),
+		})
+		natsutil.NatsStreamingPublish(natsOrganizationImplicitKeyExchangeInitSubject, payload)
+
+		payload, _ = json.Marshal(map[string]interface{}{
+			"organization_id":      peerOrg.ID.String(),
+			"peer_organization_id": org.ID.String(),
+		})
+		natsutil.NatsStreamingPublish(natsOrganizationImplicitKeyExchangeInitSubject, payload)
+	}
+
+	return nil
+}
+
 func (app *Application) addOrganization(tx *gorm.DB, org organization.Organization, permissions common.Permission) bool {
 	var db *gorm.DB
 	if tx != nil {
@@ -177,6 +201,7 @@ func (app *Application) addOrganization(tx *gorm.DB, org organization.Organizati
 	if success {
 		common.Log.Debugf("added organization %s to application: %s", org.ID, app.ID)
 		db.Exec("DELETE FROM applications_users WHERE applications_users.application_id=? AND applications_users.user_id IN (SELECT user_id FROM organizations_users WHERE organizations_users.organization_id=?)", app.ID, org.ID)
+		go app.initImplicitDiffieHellmanKeyExchange(db, &org)
 	} else {
 		common.Log.Warningf("failed to add organization %s to application: %s", org.ID, app.ID)
 	}

@@ -127,13 +127,6 @@ func consumeCreatedOrganizationMsg(msg *stan.Msg) {
 	vault, err := organization.createVault(db)
 	if err == nil {
 		common.Log.Debugf("Created default vault for organization: %s", *organization.Name)
-
-		// TODO: dispatch to all app orgs
-		// payload, _ := json.Marshal(map[string]interface{}{
-		// 	"organization_id":
-		// })
-		// natsutil.NatsStreamingPublish(natsOrganizationImplicitKeyExchangeInitSubject, payload)
-
 		msg.Ack()
 	} else {
 		common.Log.Warningf("Failed to create default vault for organization: %s; %s", *organization.Name, *vault.Errors[0].Message)
