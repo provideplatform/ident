@@ -164,22 +164,24 @@ func (app *Application) pendingInvitations() []*user.Invite {
 	return invitations
 }
 
-func (app *Application) initImplicitDiffieHellmanKeyExchange(db *gorm.DB, org *organization.Organization) error {
-	common.Log.Debugf("initializing implicit Diffie-Hellman key exchange for application: %s; new organization: %s", app.ID, org.ID)
+// initImplicitDiffieHellmanKeyExchange initializes a Diffie-Hellman key exchange for all organizations
+// within the current application, completing the exchange for all possible peers of the given
+func (app *Application) initImplicitDiffieHellmanKeyExchange(db *gorm.DB, organizationID uuid.UUID) error {
+	common.Log.Debugf("initializing implicit Diffie-Hellman key exchange for application: %s; new organization: %s", app.ID, organizationID)
 
 	var orgs []*organization.Organization
-	app.OrganizationsListQuery(db).Where("id != ?", org.ID).Find(&orgs)
+	app.OrganizationsListQuery(db).Where("organizations.id != ?", organizationID).Find(&orgs)
 
 	for _, peerOrg := range orgs {
 		payload, _ := json.Marshal(map[string]interface{}{
-			"organization_id":      org.ID.String(),
+			"organization_id":      organizationID.String(),
 			"peer_organization_id": peerOrg.ID.String(),
 		})
 		natsutil.NatsStreamingPublish(natsOrganizationImplicitKeyExchangeInitSubject, payload)
 
 		payload, _ = json.Marshal(map[string]interface{}{
 			"organization_id":      peerOrg.ID.String(),
-			"peer_organization_id": org.ID.String(),
+			"peer_organization_id": organizationID.String(),
 		})
 		natsutil.NatsStreamingPublish(natsOrganizationImplicitKeyExchangeInitSubject, payload)
 	}
@@ -201,7 +203,7 @@ func (app *Application) addOrganization(tx *gorm.DB, org organization.Organizati
 	if success {
 		common.Log.Debugf("added organization %s to application: %s", org.ID, app.ID)
 		db.Exec("DELETE FROM applications_users WHERE applications_users.application_id=? AND applications_users.user_id IN (SELECT user_id FROM organizations_users WHERE organizations_users.organization_id=?)", app.ID, org.ID)
-		go app.initImplicitDiffieHellmanKeyExchange(db, &org)
+		go app.initImplicitDiffieHellmanKeyExchange(db, org.ID)
 	} else {
 		common.Log.Warningf("failed to add organization %s to application: %s", org.ID, app.ID)
 	}
