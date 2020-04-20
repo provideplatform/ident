@@ -10,6 +10,7 @@ require (
 	github.com/docker/docker v1.13.1 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
+	github.com/ethereum/go-ethereum v1.9.7-0.20191017083913-a28093ced4e8
 	github.com/gin-gonic/gin v1.6.2
 	github.com/golang-migrate/migrate v3.5.4+incompatible
 	github.com/jinzhu/gorm v1.9.12

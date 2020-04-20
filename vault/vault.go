@@ -150,6 +150,11 @@ func (v *Vault) Create(tx *gorm.DB) bool {
 					if err != nil {
 						common.Log.Warningf("failed to create babyJubJub keypair; %s", err.Error())
 					}
+
+					_, err = v.MasterKey.CreateSecp256k1Keypair("secp256k1", fmt.Sprintf("ethereum-compatible secp256k1 curve keypair for vault %s", v.ID))
+					if err != nil {
+						common.Log.Warningf("failed to create secp256k1 keypair; %s", err.Error())
+					}
 				}
 
 				return success

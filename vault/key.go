@@ -3,12 +3,18 @@ package vault
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"sync"
 
+	"github.com/ethereum/go-ethereum/common/math"
+	ethcrypto "github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
 	"github.com/kthomas/go-pgputil"
@@ -28,13 +34,15 @@ const keySpecAES256GCM = "AES-256-GCM"
 const keySpecECCBabyJubJub = "babyJubJub"
 const keySpecECCC25519 = "C25519"
 const keySpecECCEd25519 = "Ed25519"
-const keySpecECCSecp256r1 = "ECC-NIST-P256"
-const keySpecECCSecp2048 = "ECC-NIST-P384"
-const keySpecECCSecp521r1 = "ECC-NIST-P521"
-const keySpecECCSecpP256k1 = "ECC-SECG-P256K1"
-const keySpecRSA2048 = "RSA-2048"
-const keySpecRSA3072 = "RSA-3072"
-const keySpecRSA4096 = "RSA-4096"
+const keySpecECCSecp256k1 = "secp256k1"
+
+// const keySpecECCSecp256r1 = "ECC-NIST-P256"
+// const keySpecECCSecp2048 = "ECC-NIST-P384"
+// const keySpecECCSecp521r1 = "ECC-NIST-P521"
+// const keySpecECCSecpP256k1 = "ECC-SECG-P256K1"
+// const keySpecRSA2048 = "RSA-2048"
+// const keySpecRSA3072 = "RSA-3072"
+// const keySpecRSA4096 = "RSA-4096"
 
 // Key represents a symmetric or asymmetric signing key
 type Key struct {
@@ -172,6 +180,37 @@ func (k *Key) CreateEd25519Keypair(name, description string) (*Key, error) {
 
 	common.Log.Debugf("created Ed25519 key %s with %d-byte seed in vault: %s; public key: %s", ed25519Key.ID, len(seed), k.VaultID, *ed25519Key.PublicKey)
 	return ed25519Key, nil
+}
+
+// CreateSecp256k1Keypair creates a keypair on the secp256k1 curve
+func (k *Key) CreateSecp256k1Keypair(name, description string) (*Key, error) {
+	address, privkey, err := provide.EVMGenerateKeyPair()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create babyJubJub keypair; %s", err.Error())
+	}
+
+	publicKey := elliptic.Marshal(secp256k1.S256(), privkey.PublicKey.X, privkey.PublicKey.Y)
+	privateKey := math.PaddedBigBytes(privkey.D, privkey.Params().BitSize/8)
+	desc := fmt.Sprintf("%s; address: %s", description, *address)
+
+	secp256k1Key := &Key{
+		VaultID:     k.VaultID,
+		Type:        common.StringOrNil(keyTypeAsymmetric),
+		Usage:       common.StringOrNil(keyUsageSignVerify),
+		Spec:        common.StringOrNil(keySpecECCSecp256k1),
+		Name:        common.StringOrNil(name),
+		Description: common.StringOrNil(desc),
+		PublicKey:   common.StringOrNil(string(publicKey)),
+		PrivateKey:  common.StringOrNil(string(privateKey)),
+	}
+
+	db := dbconf.DatabaseConnection()
+	if !secp256k1Key.Create(db) {
+		return nil, fmt.Errorf("failed to create secp256k1 key in vault: %s; %s", k.VaultID, *secp256k1Key.Errors[0].Message)
+	}
+
+	common.Log.Debugf("created secp256k1 key %s in vault: %s; public key: %s", secp256k1Key.ID, k.VaultID, *secp256k1Key.PublicKey)
+	return secp256k1Key, nil
 }
 
 func (k *Key) resolveMasterKey() (*Key, error) {
@@ -489,7 +528,7 @@ func (k *Key) Sign(payload []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil or invalid key usage", len(payload), k.ID)
 	}
 
-	if k.Spec == nil || (*k.Spec != keySpecECCBabyJubJub && *k.Spec != keySpecECCEd25519) {
+	if k.Spec == nil || (*k.Spec != keySpecECCBabyJubJub && *k.Spec != keySpecECCEd25519 && *k.Spec != keySpecECCSecp256k1) {
 		return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil or invalid key spec", len(payload), k.ID)
 	}
 
@@ -514,6 +553,15 @@ func (k *Key) Sign(payload []byte) ([]byte, error) {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; %s", len(payload), k.ID, err.Error())
 		}
 		sig, sigerr = ec25519Key.Sign(payload)
+	case keySpecECCSecp256k1:
+		if k.PrivateKey == nil {
+			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil secp256k1 private key", len(payload), k.ID)
+		}
+		secp256k1Key, err := ethcrypto.ToECDSA([]byte(*k.PrivateKey))
+		if err != nil {
+			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; %s", len(payload), k.ID, err.Error())
+		}
+		return secp256k1Key.Sign(rand.Reader, payload, nil)
 	default:
 		sigerr = fmt.Errorf("failed to sign %d-byte payload using key: %s; %s key spec not yet implemented", len(payload), k.ID, *k.Spec)
 	}
@@ -528,19 +576,19 @@ func (k *Key) Sign(payload []byte) ([]byte, error) {
 // Verify the given payload against a signature using the public key
 func (k *Key) Verify(payload, sig []byte) error {
 	if k.Type == nil && *k.Type != keyTypeAsymmetric {
-		return fmt.Errorf("failed to verify %d-byte payload using key: %s; nil or invalid key type", len(payload), k.ID)
+		return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil or invalid key type", len(payload), k.ID)
 	}
 
 	if k.Usage == nil || *k.Usage != keyUsageSignVerify {
-		return fmt.Errorf("failed to verify %d-byte payload using key: %s; nil or invalid key usage", len(payload), k.ID)
+		return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil or invalid key usage", len(payload), k.ID)
 	}
 
-	if k.Spec == nil || (*k.Spec != keySpecECCBabyJubJub && *k.Spec != keySpecECCEd25519) {
-		return fmt.Errorf("failed to verify %d-byte payload using key: %s; nil or invalid key spec", len(payload), k.ID)
+	if k.Spec == nil || (*k.Spec != keySpecECCBabyJubJub && *k.Spec != keySpecECCEd25519 && *k.Spec != keySpecECCSecp256k1) {
+		return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil or invalid key spec", len(payload), k.ID)
 	}
 
 	if k.PublicKey == nil {
-		return fmt.Errorf("failed to verify %d-byte payload using key: %s; nil public key", len(payload), k.ID)
+		return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil public key", len(payload), k.ID)
 	}
 
 	k.decryptFields()
@@ -548,19 +596,38 @@ func (k *Key) Verify(payload, sig []byte) error {
 
 	switch *k.Spec {
 	case keySpecECCBabyJubJub:
-		if k.PrivateKey == nil {
-			return fmt.Errorf("failed to verify %d-byte payload using key: %s; nil private key", len(payload), k.ID)
+		if k.PublicKey == nil {
+			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil public key", len(payload), k.ID)
 		}
 		return provide.TECVerify([]byte(*k.PublicKey), payload, sig)
 	case keySpecECCEd25519:
+		if k.PublicKey == nil {
+			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil public key", len(payload), k.ID)
+		}
 		ec25519Key, err := identcrypto.FromPublicKey(*k.PublicKey)
 		if err != nil {
-			return fmt.Errorf("failed to verify %d-byte payload using key: %s; %s", len(payload), k.ID, err.Error())
+			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; %s", len(payload), k.ID, err.Error())
 		}
 		return ec25519Key.Verify(payload, sig)
+	case keySpecECCSecp256k1:
+		if k.PublicKey == nil {
+			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil public key", len(payload), k.ID)
+		}
+		x, y := elliptic.Unmarshal(secp256k1.S256(), []byte(*k.PublicKey))
+		if x == nil {
+			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; failed to unmarshal public key", len(payload), k.ID)
+		}
+		secp256k1Key := &ecdsa.PublicKey{Curve: secp256k1.S256(), X: x, Y: y}
+		// TODO: unmarshal sig into r and s vals
+		var r *big.Int
+		var s *big.Int
+		if !ecdsa.Verify(secp256k1Key, payload, r, s) {
+			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s", len(payload), k.ID)
+		}
+		return nil
 	}
 
-	return fmt.Errorf("failed to verify %d-byte payload using key: %s; %s key spec not yet implemented", len(payload), k.ID, *k.Spec)
+	return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; %s key spec not yet implemented", len(payload), k.ID, *k.Spec)
 }
 
 func (k *Key) validate() bool {
@@ -596,7 +663,7 @@ func (k *Key) validate() bool {
 		})
 	} else if *k.Type == keyTypeAsymmetric && *k.Usage == keyUsageSignVerify && (k.Spec == nil || (*k.Spec != keySpecECCBabyJubJub && *k.Spec != keySpecECCC25519 && *k.Spec != keySpecECCEd25519)) {
 		k.Errors = append(k.Errors, &provide.Error{
-			Message: common.StringOrNil(fmt.Sprintf("asymmetric key in %s usage mode must be %s, %s or %s", keyUsageSignVerify, keySpecECCBabyJubJub, keySpecECCC25519, keySpecECCEd25519)), // TODO: support keySpecRSA2048, keySpecRSA3072, keySpecRSA4096
+			Message: common.StringOrNil(fmt.Sprintf("asymmetric key in %s usage mode must be %s, %s or %s", keyUsageSignVerify, keySpecECCBabyJubJub, keySpecECCC25519, keySpecECCEd25519, keySpecECCSecp256k1)), // TODO: support keySpecRSA2048, keySpecRSA3072, keySpecRSA4096
 		})
 	}
 
