@@ -516,6 +516,9 @@ func organizationVaultKeysListHandler(c *gin.Context) {
 
 	var keys []*vault.Key
 	provide.Paginate(c, vlt.ListKeysQuery(db), &vault.Key{}).Find(&keys)
+	for _, key := range keys {
+		key.Enrich()
+	}
 	provide.Render(keys, 200, c)
 }
 

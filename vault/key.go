@@ -57,6 +57,7 @@ type Key struct {
 	PublicKey   *string    `sql:"type:bytea" json:"public_key,omitempty"`
 	PrivateKey  *string    `sql:"type:bytea" json:"-"`
 
+	Address   *string    `sql:"-" json:"address,omitempty"`
 	encrypted *bool      `sql:"-"`
 	mutex     sync.Mutex `sql:"-"`
 }
@@ -358,6 +359,21 @@ func (k *Key) encryptFields() error {
 
 	k.setEncrypted(true)
 	return nil
+}
+
+// Enrich the key; typically a no-op; useful for public keys which
+// have a compressed representation (i.e., crypto address)
+func (k *Key) Enrich() {
+	if k.Spec != nil && *k.Spec == keySpecECCSecp256k1 {
+		if k.PublicKey != nil {
+			x, y := elliptic.Unmarshal(secp256k1.S256(), []byte(*k.PublicKey))
+			if x != nil {
+				publicKey := &ecdsa.PublicKey{Curve: secp256k1.S256(), X: x, Y: y}
+				addr := ethcrypto.PubkeyToAddress(*publicKey)
+				k.Address = common.StringOrNil(addr.Hex())
+			}
+		}
+	}
 }
 
 // Create and persist a key
