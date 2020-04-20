@@ -85,9 +85,12 @@ func organizationsListHandler(c *gin.Context) {
 
 	var orgs []*Organization
 
-	query := dbconf.DatabaseConnection()
-	query = resolveOrganization(query, nil, applicationID, userID)
+	db := dbconf.DatabaseConnection()
+	query := resolveOrganization(db, nil, applicationID, userID)
 	provide.Paginate(c, query, &Organization{}).Find(&orgs)
+	for _, org := range orgs {
+		org.Enrich(db, nil)
+	}
 	provide.Render(orgs, 200, c)
 }
 

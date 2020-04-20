@@ -27,6 +27,7 @@ type Organization struct {
 	Description *string           `json:"description"`
 	Permissions common.Permission `sql:"not null" json:"permissions,omitempty"`
 
+	Keys  []*vault.Key `sql:"-" json:"keys,omitempty"`
 	Users []*user.User `gorm:"many2many:organizations_users" json:"-"`
 }
 
@@ -259,6 +260,23 @@ func (o *Organization) Update() bool {
 
 	tx.Commit()
 	return success
+}
+
+// Enrich an organization
+func (o *Organization) Enrich(db *gorm.DB, keyType *string) {
+	organizationKeysQuery(db, o.ID, keyType).Find(&o.Keys)
+	for _, key := range o.Keys {
+		key.Enrich()
+	}
+}
+
+func organizationKeysQuery(db *gorm.DB, orgID uuid.UUID, keyType *string) *gorm.DB {
+	query := db.Select("keys.id, keys.created_at, keys.name, keys.description, keys.type, keys.usage, keys.spec, keys.public_key, keys.vault_id")
+	query = query.Joins("JOIN vaults as v ON keys.vault_id = v.id").Where("v.organization_id = ?", orgID)
+	if keyType != nil {
+		query = query.Where("keys.type = ?", *keyType)
+	}
+	return query
 }
 
 // validate an organization for persistence

@@ -324,6 +324,9 @@ func applicationOrganizationsListHandler(c *gin.Context) {
 
 	var orgs []*organization.Organization
 	provide.Paginate(c, app.OrganizationsListQuery(db), &organization.Organization{}).Find(&orgs)
+	for _, org := range orgs {
+		org.Enrich(db, common.StringOrNil("asymmetric"))
+	}
 	provide.Render(orgs, 200, c)
 }
 
