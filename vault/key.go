@@ -6,6 +6,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -190,8 +191,8 @@ func (k *Key) CreateSecp256k1Keypair(name, description string) (*Key, error) {
 		return nil, fmt.Errorf("failed to create babyJubJub keypair; %s", err.Error())
 	}
 
-	publicKey := elliptic.Marshal(secp256k1.S256(), privkey.PublicKey.X, privkey.PublicKey.Y)
-	privateKey := math.PaddedBigBytes(privkey.D, privkey.Params().BitSize/8)
+	publicKey := hex.EncodeToString(elliptic.Marshal(secp256k1.S256(), privkey.PublicKey.X, privkey.PublicKey.Y))
+	privateKey := hex.EncodeToString(math.PaddedBigBytes(privkey.D, privkey.Params().BitSize/8))
 	desc := fmt.Sprintf("%s; address: %s", description, *address)
 
 	secp256k1Key := &Key{
@@ -366,11 +367,14 @@ func (k *Key) encryptFields() error {
 func (k *Key) Enrich() {
 	if k.Spec != nil && *k.Spec == keySpecECCSecp256k1 {
 		if k.PublicKey != nil {
-			x, y := elliptic.Unmarshal(secp256k1.S256(), []byte(*k.PublicKey))
-			if x != nil {
-				publicKey := &ecdsa.PublicKey{Curve: secp256k1.S256(), X: x, Y: y}
-				addr := ethcrypto.PubkeyToAddress(*publicKey)
-				k.Address = common.StringOrNil(addr.Hex())
+			pubkey, err := hex.DecodeString(*k.PublicKey)
+			if err == nil {
+				x, y := elliptic.Unmarshal(secp256k1.S256(), pubkey)
+				if x != nil {
+					publicKey := &ecdsa.PublicKey{Curve: secp256k1.S256(), X: x, Y: y}
+					addr := ethcrypto.PubkeyToAddress(*publicKey)
+					k.Address = common.StringOrNil(addr.Hex())
+				}
 			}
 		}
 	}
@@ -573,7 +577,11 @@ func (k *Key) Sign(payload []byte) ([]byte, error) {
 		if k.PrivateKey == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil secp256k1 private key", len(payload), k.ID)
 		}
-		secp256k1Key, err := ethcrypto.ToECDSA([]byte(*k.PrivateKey))
+		privkey, err := hex.DecodeString(*k.PrivateKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; %s", len(payload), k.ID, err.Error())
+		}
+		secp256k1Key, err := ethcrypto.ToECDSA([]byte(privkey))
 		if err != nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; %s", len(payload), k.ID, err.Error())
 		}
