@@ -661,9 +661,9 @@ func (k *Key) validate() bool {
 		k.Errors = append(k.Errors, &provide.Error{
 			Message: common.StringOrNil(fmt.Sprintf("symmetric key in %s usage mode must be %s", keyUsageEncryptDecrypt, keySpecAES256GCM)), // TODO: support keySpecRSA2048, keySpecRSA3072, keySpecRSA4096
 		})
-	} else if *k.Type == keyTypeAsymmetric && *k.Usage == keyUsageSignVerify && (k.Spec == nil || (*k.Spec != keySpecECCBabyJubJub && *k.Spec != keySpecECCC25519 && *k.Spec != keySpecECCEd25519)) {
+	} else if *k.Type == keyTypeAsymmetric && *k.Usage == keyUsageSignVerify && (k.Spec == nil || (*k.Spec != keySpecECCBabyJubJub && *k.Spec != keySpecECCC25519 && *k.Spec != keySpecECCEd25519 && *k.Spec != keySpecECCSecp256k1)) {
 		k.Errors = append(k.Errors, &provide.Error{
-			Message: common.StringOrNil(fmt.Sprintf("asymmetric key in %s usage mode must be %s, %s or %s", keyUsageSignVerify, keySpecECCBabyJubJub, keySpecECCC25519, keySpecECCEd25519, keySpecECCSecp256k1)), // TODO: support keySpecRSA2048, keySpecRSA3072, keySpecRSA4096
+			Message: common.StringOrNil(fmt.Sprintf("asymmetric key in %s usage mode must be %s, %s, %s or %s", keyUsageSignVerify, keySpecECCBabyJubJub, keySpecECCC25519, keySpecECCEd25519, keySpecECCSecp256k1)), // TODO: support keySpecRSA2048, keySpecRSA3072, keySpecRSA4096
 		})
 	}
 
