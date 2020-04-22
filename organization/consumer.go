@@ -332,7 +332,7 @@ func consumeOrganizationImplicitKeyExchangeCompleteMsg(msg *stan.Msg) {
 		}
 
 		if signingKey != nil {
-			dhSecret, err := signingKey.CreateDiffieHellmanSharedSecret(
+			ecdhSecret, err := signingKey.CreateDiffieHellmanSharedSecret(
 				[]byte(peerPubKey),
 				[]byte(peerSigningKey),
 				[]byte(sig),
@@ -341,7 +341,7 @@ func consumeOrganizationImplicitKeyExchangeCompleteMsg(msg *stan.Msg) {
 			)
 
 			if err == nil {
-				common.Log.Debugf("calculated %d-byte shared secret during implicit key exchange message handler; organization id: %s", len(*dhSecret.PrivateKey), organizationID)
+				common.Log.Debugf("calculated %d-byte shared secret during implicit key exchange message handler; organization id: %s", len(*ecdhSecret.PrivateKey), organizationID)
 				// TODO: publish (or POST) to Ekho API (address books sync'd) -- store channel id and use in subsequent message POST
 				// POST /users
 				msg.Ack()
