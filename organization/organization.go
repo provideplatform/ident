@@ -16,7 +16,7 @@ import (
 	provide "github.com/provideservices/provide-go"
 )
 
-const natsAppliationImplicitKeyExchangeInitSubject = "ident.application.keys.exchange.init"
+const natsApplicationImplicitKeyExchangeInitSubject = "ident.application.keys.exchange.init"
 const organizationResourceKey = "organization"
 
 // Organization model
@@ -64,7 +64,7 @@ func (o *Organization) addApplicationAssociation(tx *gorm.DB, appID uuid.UUID, p
 			"application_id":  appID.String(),
 			"organization_id": o.ID.String(),
 		})
-		natsutil.NatsStreamingPublish(natsAppliationImplicitKeyExchangeInitSubject, payload)
+		natsutil.NatsStreamingPublish(natsApplicationImplicitKeyExchangeInitSubject, payload)
 	} else {
 		common.Log.Warningf("failed to add organization %s to application: %s", o.ID, appID)
 	}

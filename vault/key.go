@@ -111,8 +111,13 @@ func (k *Key) CreateDiffieHellmanSharedSecret(peerPublicKey, peerSigningKey, pee
 	k.decryptFields()
 	defer k.encryptFields()
 
-	if k.PrivateKey == nil {
-		err := errors.New("failed to calculate Diffie-Hellman shared secret; nil private key")
+	privkey := k.Seed
+	if privkey == nil {
+		privkey = k.PrivateKey
+	}
+
+	if privkey == nil {
+		err := errors.New("failed to calculate Diffie-Hellman shared secret; nil seed/private key")
 		common.Log.Warning(err.Error())
 		return nil, err
 	}
@@ -126,7 +131,7 @@ func (k *Key) CreateDiffieHellmanSharedSecret(peerPublicKey, peerSigningKey, pee
 		return nil, fmt.Errorf("failed to compute shared secret; failed to verify %d-byte Ed22519 signature using public key: %s; %s", len(peerSignature), string(peerPublicKey), err.Error())
 	}
 
-	sharedSecret := provide.C25519ComputeSecret([]byte(*k.PrivateKey), peerPublicKey)
+	sharedSecret := provide.C25519ComputeSecret([]byte(*privkey), peerPublicKey)
 
 	dhSecret := &Key{
 		VaultID:     k.VaultID,
