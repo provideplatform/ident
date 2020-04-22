@@ -187,7 +187,7 @@ func consumeOrganizationImplicitKeyExchangeInitMsg(msg *stan.Msg) {
 
 		orgVault.ListKeysQuery(db).Find(&signingKeys)
 		for _, key := range signingKeys {
-			if key.Name != nil && strings.ToLower(*key.Name) == "ekho - signing" { // FIXME
+			if key.Name != nil && strings.ToLower(*key.Name) == "ekho signing" { // FIXME
 				signingKey = key
 				break
 			}
