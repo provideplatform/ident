@@ -210,11 +210,12 @@ func consumeOrganizationImplicitKeyExchangeInitMsg(msg *stan.Msg) {
 			common.Log.Debugf("generated %d-byte signature using Ed25519 signing key", len(c25519PublicKeySigned))
 
 			payload, _ := json.Marshal(map[string]interface{}{
-				"organization_id": peerOrganizationID,
-				"public_key":      *c25519Key.PublicKey,
-				"signature":       string(c25519PublicKeySigned),
-				"signing_key":     *signingKey.PublicKey,
-				"signing_spec":    *signingKey.Spec,
+				"organization_id":      organizationID,
+				"peer_organization_id": peerOrganizationID,
+				"public_key":           *c25519Key.PublicKey,
+				"signature":            string(c25519PublicKeySigned),
+				"signing_key":          *signingKey.PublicKey,
+				"signing_spec":         *signingKey.Spec,
 			})
 			natsutil.NatsStreamingPublish(natsOrganizationImplicitKeyExchangeCompleteSubject, payload)
 

@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	"github.com/jinzhu/gorm"
@@ -29,7 +30,7 @@ type Vault struct {
 
 // ListKeysQuery returns the fields to SELECT from vault keys table
 func (v *Vault) ListKeysQuery(db *gorm.DB) *gorm.DB {
-	return db.Select("keys.id, keys.created_at, keys.name, keys.description, keys.type, keys.usage, keys.spec, keys.public_key, keys.vault_id").Where("keys.vault_id = ?", v.ID)
+	return db.Select("keys.id, keys.created_at, keys.name, keys.description, keys.type, keys.usage, keys.spec, keys.seed, keys.private_key, keys.public_key, keys.vault_id").Where("keys.vault_id = ?", v.ID)
 }
 
 // ListSecretsQuery returns the fields to SELECT from vault secrets table
@@ -141,9 +142,9 @@ func (v *Vault) Create(tx *gorm.DB) bool {
 				if err != nil {
 					common.Log.Warningf("failed to create master key for vault: %s; %s", v.ID.String(), err.Error())
 				} else {
-					_, err := v.MasterKey.CreateEd25519Keypair("ekho - signing", fmt.Sprintf("Ed25519 keypair for vault %s", v.ID))
+					_, err = v.MasterKey.CreateSecp256k1Keypair("secp256k1", fmt.Sprintf("ethereum-compatible secp256k1 curve keypair for vault %s", v.ID))
 					if err != nil {
-						common.Log.Warningf("failed to create Ed22519 keypair; %s", err.Error())
+						common.Log.Warningf("failed to create secp256k1 keypair; %s", err.Error())
 					}
 
 					_, err = v.MasterKey.CreateBabyJubJubKeypair("zksnarks", fmt.Sprintf("zksnark twisted edwards curve keypair for vault %s", v.ID))
@@ -151,9 +152,9 @@ func (v *Vault) Create(tx *gorm.DB) bool {
 						common.Log.Warningf("failed to create babyJubJub keypair; %s", err.Error())
 					}
 
-					_, err = v.MasterKey.CreateSecp256k1Keypair("secp256k1", fmt.Sprintf("ethereum-compatible secp256k1 curve keypair for vault %s", v.ID))
+					_, err := v.MasterKey.CreateEd25519Keypair("ekho - signing", fmt.Sprintf("Ed25519 keypair for vault %s", v.ID))
 					if err != nil {
-						common.Log.Warningf("failed to create secp256k1 keypair; %s", err.Error())
+						common.Log.Warningf("failed to create Ed22519 keypair; %s", err.Error())
 					}
 				}
 
@@ -172,6 +173,8 @@ func (v *Vault) CreateC25519Keypair(name, description string) (*Key, error) {
 		return nil, fmt.Errorf("failed to create C25519 keypair; %s", err.Error())
 	}
 
+	publicKeyHex := hex.EncodeToString(publicKey)
+
 	c25519Key := &Key{
 		VaultID:     &v.ID,
 		Type:        common.StringOrNil(keyTypeAsymmetric),
@@ -179,8 +182,8 @@ func (v *Vault) CreateC25519Keypair(name, description string) (*Key, error) {
 		Spec:        common.StringOrNil(keySpecECCC25519),
 		Name:        common.StringOrNil(name),
 		Description: common.StringOrNil(description),
-		PublicKey:   common.StringOrNil(string(publicKey)),
-		PrivateKey:  common.StringOrNil(string(privateKey)),
+		PublicKey:   common.StringOrNil(publicKeyHex),
+		PrivateKey:  common.StringOrNil(hex.EncodeToString(privateKey)),
 	}
 
 	db := dbconf.DatabaseConnection()
@@ -188,7 +191,7 @@ func (v *Vault) CreateC25519Keypair(name, description string) (*Key, error) {
 		return nil, fmt.Errorf("failed to create C25519 key in vault: %s; %s", v.ID, *c25519Key.Errors[0].Message)
 	}
 
-	common.Log.Debugf("created C25519 key %s in vault: %s; public key: %s", c25519Key.ID, v.ID, *c25519Key.PublicKey)
+	common.Log.Debugf("created C25519 key %s in vault: %s; public key: %s", c25519Key.ID, v.ID, publicKeyHex)
 	return c25519Key, nil
 }
 
