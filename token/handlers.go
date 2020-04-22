@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
+
 	// "github.com/provideapp/ident/application"
 	"github.com/provideapp/ident/common"
 	provide "github.com/provideservices/provide-go"
@@ -73,17 +74,17 @@ func createTokenHandler(c *gin.Context) {
 		appID = bearer.ApplicationID
 	}
 
-	if appID != nil {
-		var orgID *uuid.UUID
-		if organizationID, ok := params["organization_id"].(string); ok {
-			orgUUID, err := uuid.FromString(organizationID)
-			if err == nil {
-				orgID = &orgUUID
-			}
-		} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
-			orgID = bearer.OrganizationID
+	var orgID *uuid.UUID
+	if organizationID, ok := params["organization_id"].(string); ok {
+		orgUUID, err := uuid.FromString(organizationID)
+		if err == nil {
+			orgID = &orgUUID
 		}
+	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
+		orgID = bearer.OrganizationID
+	}
 
+	if appID != nil {
 		db := dbconf.DatabaseConnection()
 		resp, err := VendApplicationToken(db, appID, orgID, nil, nil) // FIXME-- support users and extended permissions
 		if err != nil {
@@ -148,36 +149,3 @@ func deleteTokenHandler(c *gin.Context) {
 	tx.Commit()
 	provide.Render(nil, 204, c)
 }
-
-// func applicationTokensListHandler(c *gin.Context) {
-// 	bearer := InContext(c)
-// 	userID := bearer.UserID
-// 	appID := bearer.ApplicationID
-// 	if (userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) {
-// 		provide.RenderError("unauthorized", 401, c)
-// 		return
-// 	}
-
-// 	if appID != nil && (*appID).String() != c.Param("id") {
-// 		provide.RenderError("forbidden", 403, c)
-// 		return
-// 	}
-
-// 	var app = &application.Application{}
-// 	dbconf.DatabaseConnection().Where("id = ?", c.Param("id")).Find(&app)
-// 	if app == nil || app.ID == uuid.Nil {
-// 		provide.RenderError("application not found", 404, c)
-// 		return
-// 	}
-// 	if userID != nil && *userID != app.UserID {
-// 		provide.RenderError("forbidden", 403, c)
-// 		return
-// 	}
-
-// 	query := dbconf.DatabaseConnection()
-
-// 	var tokens []*Token
-// 	query = query.Where("application_id = ?", app.ID)
-// 	provide.Paginate(c, query, &Token{}).Find(&tokens)
-// 	provide.Render(tokens, 200, c)
-// }
