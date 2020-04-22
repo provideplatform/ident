@@ -29,7 +29,7 @@ require (
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.9.0
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
-	github.com/provideservices/provide-go v0.0.0-20200422031521-7b5d7387c79a
+	github.com/provideservices/provide-go v0.0.0-20200422071740-6824570ab984
 	github.com/t-tiger/gorm-bulk-insert v1.3.0
 	golang.org/x/crypto v0.0.0-20200406173513-056763e48d71
 )

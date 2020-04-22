@@ -1,6 +1,7 @@
 package organization
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -202,7 +203,8 @@ func consumeOrganizationImplicitKeyExchangeInitMsg(msg *stan.Msg) {
 				natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
 			}
 
-			c25519PublicKeySigned, err := signingKey.Sign([]byte(*c25519Key.PublicKey))
+			c25519PublicKeyRaw, err := hex.DecodeString(*c25519Key.PublicKey)
+			c25519PublicKeySigned, err := signingKey.Sign(c25519PublicKeyRaw)
 			if err != nil {
 				common.Log.Warningf("failed to sign single-use c25519 public key for implicit key exchange; organization id: %s; %s", organizationID, err.Error())
 				natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
@@ -213,7 +215,7 @@ func consumeOrganizationImplicitKeyExchangeInitMsg(msg *stan.Msg) {
 				"organization_id":      organizationID,
 				"peer_organization_id": peerOrganizationID,
 				"public_key":           *c25519Key.PublicKey,
-				"signature":            string(c25519PublicKeySigned),
+				"signature":            hex.EncodeToString(c25519PublicKeySigned),
 				"signing_key":          *signingKey.PublicKey,
 				"signing_spec":         *signingKey.Spec,
 			})
@@ -317,11 +319,23 @@ func consumeOrganizationImplicitKeyExchangeCompleteMsg(msg *stan.Msg) {
 			}
 		}
 
+		peerPubKey, err := hex.DecodeString(peerPublicKey)
+		if err != nil {
+			common.Log.Warningf("failed to decode peer public key as hex during implicit key exchange message handler; organization id: %s; %s", organizationID, err.Error())
+			natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
+		}
+
+		sig, err := hex.DecodeString(signature)
+		if err != nil {
+			common.Log.Warningf("failed to decode signature as hex during implicit key exchange message handler; organization id: %s; %s", organizationID, err.Error())
+			natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
+		}
+
 		if signingKey != nil {
 			dhSecret, err := signingKey.CreateDiffieHellmanSharedSecret(
-				[]byte(peerPublicKey),
+				[]byte(peerPubKey),
 				[]byte(peerSigningKey),
-				[]byte(signature),
+				[]byte(sig),
 				"ekho - shared secret",
 				fmt.Sprintf("ekho - shared secret with organization: %s", peerOrganizationID),
 			)

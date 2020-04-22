@@ -86,6 +86,8 @@ func (k *Key) CreateBabyJubJubKeypair(name, description string) (*Key, error) {
 		return nil, fmt.Errorf("failed to create babyJubJub keypair; %s", err.Error())
 	}
 
+	publicKeyHex := hex.EncodeToString(publicKey)
+
 	babyJubJubKey := &Key{
 		VaultID:     k.VaultID,
 		Type:        common.StringOrNil(keyTypeAsymmetric),
@@ -93,7 +95,7 @@ func (k *Key) CreateBabyJubJubKeypair(name, description string) (*Key, error) {
 		Spec:        common.StringOrNil(keySpecECCBabyJubJub),
 		Name:        common.StringOrNil(name),
 		Description: common.StringOrNil(description),
-		PublicKey:   common.StringOrNil(string(publicKey)),
+		PublicKey:   common.StringOrNil(publicKeyHex),
 		PrivateKey:  common.StringOrNil(string(privateKey)),
 	}
 
@@ -102,7 +104,7 @@ func (k *Key) CreateBabyJubJubKeypair(name, description string) (*Key, error) {
 		return nil, fmt.Errorf("failed to create babyJubJub key in vault: %s; %s", k.VaultID, *babyJubJubKey.Errors[0].Message)
 	}
 
-	common.Log.Debugf("created babyJubJub key %s in vault: %s; public key: %s", babyJubJubKey.ID, k.VaultID, *babyJubJubKey.PublicKey)
+	common.Log.Debugf("created babyJubJub key %s in vault: %s; public key: %s", babyJubJubKey.ID, k.VaultID, publicKeyHex)
 	return babyJubJubKey, nil
 }
 
@@ -197,7 +199,7 @@ func (k *Key) CreateSecp256k1Keypair(name, description string) (*Key, error) {
 	}
 
 	publicKey := hex.EncodeToString(elliptic.Marshal(secp256k1.S256(), privkey.PublicKey.X, privkey.PublicKey.Y))
-	privateKey := hex.EncodeToString(math.PaddedBigBytes(privkey.D, privkey.Params().BitSize/8))
+	privateKey := math.PaddedBigBytes(privkey.D, privkey.Params().BitSize/8)
 	desc := fmt.Sprintf("%s; address: %s", description, *address)
 
 	secp256k1Key := &Key{
@@ -207,7 +209,7 @@ func (k *Key) CreateSecp256k1Keypair(name, description string) (*Key, error) {
 		Spec:        common.StringOrNil(keySpecECCSecp256k1),
 		Name:        common.StringOrNil(name),
 		Description: common.StringOrNil(desc),
-		PublicKey:   common.StringOrNil(string(publicKey)),
+		PublicKey:   common.StringOrNil(publicKey),
 		PrivateKey:  common.StringOrNil(string(privateKey)),
 	}
 
@@ -216,7 +218,7 @@ func (k *Key) CreateSecp256k1Keypair(name, description string) (*Key, error) {
 		return nil, fmt.Errorf("failed to create secp256k1 key in vault: %s; %s", k.VaultID, *secp256k1Key.Errors[0].Message)
 	}
 
-	common.Log.Debugf("created secp256k1 key %s in vault: %s; public key: %s", secp256k1Key.ID, k.VaultID, *secp256k1Key.PublicKey)
+	common.Log.Debugf("created secp256k1 key %s in vault: %s; public key: %s", secp256k1Key.ID, k.VaultID, publicKey)
 	return secp256k1Key, nil
 }
 
@@ -582,11 +584,7 @@ func (k *Key) Sign(payload []byte) ([]byte, error) {
 		if k.PrivateKey == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil secp256k1 private key", len(payload), k.ID)
 		}
-		privkey, err := hex.DecodeString(*k.PrivateKey)
-		if err != nil {
-			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; %s", len(payload), k.ID, err.Error())
-		}
-		secp256k1Key, err := ethcrypto.ToECDSA([]byte(privkey))
+		secp256k1Key, err := ethcrypto.ToECDSA([]byte(*k.PrivateKey))
 		if err != nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; %s", len(payload), k.ID, err.Error())
 		}

@@ -183,7 +183,7 @@ func (v *Vault) CreateC25519Keypair(name, description string) (*Key, error) {
 		Name:        common.StringOrNil(name),
 		Description: common.StringOrNil(description),
 		PublicKey:   common.StringOrNil(publicKeyHex),
-		PrivateKey:  common.StringOrNil(hex.EncodeToString(privateKey)),
+		PrivateKey:  common.StringOrNil(string(privateKey)),
 	}
 
 	db := dbconf.DatabaseConnection()
