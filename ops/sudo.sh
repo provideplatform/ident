@@ -98,6 +98,26 @@ if [[ -z "${LOG_LEVEL}" ]]; then
   LOG_LEVEL=info
 fi
 
+if [[ -z "${NATS_CLUSTER_ID}" ]]; then
+  NATS_CLUSTER_ID=provide
+fi
+
+if [[ -z "${NATS_TOKEN}" ]]; then
+  NATS_TOKEN=testtoken
+fi
+
+if [[ -z "${NATS_URL}" ]]; then
+  NATS_URL=nats://localhost:4222
+fi
+
+if [[ -z "${NATS_STREAMING_URL}" ]]; then
+  NATS_STREAMING_URL=nats://localhost:4222
+fi
+
+if [[ -z "${NATS_FORCE_TLS}" ]]; then
+  NATS_FORCE_TLS=false
+fi
+
 if [[ -z "${DATABASE_HOST}" ]]; then
   DATABASE_HOST=localhost
 fi
@@ -131,4 +151,10 @@ DATABASE_LOGGING=$DATABASE_LOGGING \
 JWT_SIGNER_PUBLIC_KEY=$JWT_SIGNER_PUBLIC_KEY \
 JWT_SIGNER_PRIVATE_KEY=$JWT_SIGNER_PRIVATE_KEY \
 LOG_LEVEL=$LOG_LEVEL \
+NATS_CLUSTER_ID=$NATS_CLUSTER_ID \
+NATS_TOKEN=$NATS_TOKEN \
+NATS_URL=$NATS_URL \
+NATS_STREAMING_URL=$NATS_STREAMING_URL \
+NATS_STREAMING_CONCURRENCY=$NATS_STREAMING_URL \
+NATS_FORCE_TLS=$NATS_FORCE_TLS \
 ./.bin/ident_sudo "$@"

@@ -9,6 +9,7 @@ import (
 
 	"github.com/kthomas/go-auth0"
 	dbconf "github.com/kthomas/go-db-config"
+	natsutil "github.com/kthomas/go-natsutil"
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/token"
 	"github.com/provideapp/ident/user"
@@ -21,6 +22,7 @@ const defaultLegacyAuthTokenLength = 64
 const createSudoerCmd = "createsudoer"
 const createUserCmd = "createuser"
 const deleteUserCmd = "deleteuser"
+const natsPublishCmd = "natspublish"
 const syncAuth0Cmd = "syncauth0"
 const vendTokenCmd = "vendtoken"
 
@@ -67,6 +69,14 @@ func main() {
 	case deleteUserCmd:
 		email := strings.ToLower(argv[1])
 		deleteUser(email)
+	case natsPublishCmd:
+		subject := argv[1]
+		payload := argv[2]
+		streaming := false
+		if len(argv) == 4 {
+			streaming = argv[3] == "--streaming"
+		}
+		natsPublish(subject, payload, streaming)
 	case syncAuth0Cmd:
 		syncAuth0()
 	case vendTokenCmd:
@@ -145,6 +155,24 @@ func deleteUser(email string) {
 
 	if usr.Delete() {
 		common.Log.Debugf("deleted user: %s", *usr.Email)
+	}
+}
+
+func natsPublish(subject, payload string, streaming bool) {
+	if !streaming {
+		err := natsutil.NatsPublish(subject, []byte(payload))
+		if err != nil {
+			common.Log.Warningf("failed to publish %d-byte NATS message on subject: %s; %s", len(payload), subject, err.Error())
+		} else {
+			common.Log.Debugf("published %d-byte NATS streaming message on subject: %s", len(payload), subject)
+		}
+	} else {
+		err := natsutil.NatsStreamingPublish(subject, []byte(payload))
+		if err != nil {
+			common.Log.Warningf("failed to publish %d-byte NATS streaming message on subject: %s; %s", len(payload), subject, err.Error())
+		} else {
+			common.Log.Debugf("published %d-byte NATS streaming message on subject: %s", len(payload), subject)
+		}
 	}
 }
 
