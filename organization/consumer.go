@@ -195,7 +195,7 @@ func consumeOrganizationImplicitKeyExchangeInitMsg(msg *stan.Msg) {
 
 		if signingKey != nil {
 			c25519Key, err := orgVault.CreateC25519Keypair(
-				"ekho - single-use c25519 key exchange",
+				"ekho single-use c25519 key exchange",
 				fmt.Sprintf("ekho - single-use c25519 key exchange with peer organization: %s", peerOrganizationID),
 			)
 			if err != nil {
@@ -313,7 +313,7 @@ func consumeOrganizationImplicitKeyExchangeCompleteMsg(msg *stan.Msg) {
 
 		orgVault.ListKeysQuery(db).Find(&signingKeys)
 		for _, key := range signingKeys {
-			if key.Name != nil && strings.ToLower(*key.Name) == "ekho - signing" { // FIXME
+			if key.Name != nil && strings.ToLower(*key.Name) == "ekho signing" { // FIXME
 				signingKey = key
 				break
 			}
@@ -336,8 +336,8 @@ func consumeOrganizationImplicitKeyExchangeCompleteMsg(msg *stan.Msg) {
 				[]byte(peerPubKey),
 				[]byte(peerSigningKey),
 				[]byte(sig),
-				"ekho - shared secret",
-				fmt.Sprintf("ekho - shared secret with organization: %s", peerOrganizationID),
+				"ekho shared secret",
+				fmt.Sprintf("shared secret with organization: %s", peerOrganizationID),
 			)
 
 			if err == nil {

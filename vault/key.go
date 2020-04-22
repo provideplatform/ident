@@ -137,8 +137,8 @@ func (k *Key) CreateDiffieHellmanSharedSecret(peerPublicKey, peerSigningKey, pee
 
 	dhSecret := &Key{
 		VaultID:     k.VaultID,
-		Type:        common.StringOrNil(keyTypeAsymmetric),
-		Usage:       common.StringOrNil(keyUsageSignVerify),
+		Type:        common.StringOrNil(keyTypeSymmetric),
+		Usage:       common.StringOrNil(keyUsageEncryptDecrypt),
 		Spec:        common.StringOrNil(keySpecECCC25519),
 		Name:        common.StringOrNil(name),
 		Description: common.StringOrNil(description),
@@ -684,7 +684,7 @@ func (k *Key) validate() bool {
 		k.Errors = append(k.Errors, &provide.Error{
 			Message: common.StringOrNil(fmt.Sprintf("symmetric key requires %s usage mode", keyUsageEncryptDecrypt)),
 		})
-	} else if *k.Type == keyTypeSymmetric && *k.Usage == keyUsageEncryptDecrypt && (k.Spec == nil || *k.Spec != keySpecAES256GCM) {
+	} else if *k.Type == keyTypeSymmetric && *k.Usage == keyUsageEncryptDecrypt && (k.Spec == nil || (*k.Spec != keySpecAES256GCM && *k.Spec != keySpecECCC25519)) {
 		k.Errors = append(k.Errors, &provide.Error{
 			Message: common.StringOrNil(fmt.Sprintf("symmetric key in %s usage mode must be %s", keyUsageEncryptDecrypt, keySpecAES256GCM)), // TODO: support keySpecRSA2048, keySpecRSA3072, keySpecRSA4096
 		})

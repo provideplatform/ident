@@ -142,17 +142,17 @@ func (v *Vault) Create(tx *gorm.DB) bool {
 				if err != nil {
 					common.Log.Warningf("failed to create master key for vault: %s; %s", v.ID.String(), err.Error())
 				} else {
-					_, err = v.MasterKey.CreateSecp256k1Keypair("secp256k1", fmt.Sprintf("ethereum-compatible secp256k1 curve keypair for vault %s", v.ID))
+					_, err = v.MasterKey.CreateSecp256k1Keypair("secp256k1", "ethereum-compatible secp256k1 curve keypair")
 					if err != nil {
 						common.Log.Warningf("failed to create secp256k1 keypair; %s", err.Error())
 					}
 
-					_, err = v.MasterKey.CreateBabyJubJubKeypair("zksnarks", fmt.Sprintf("zksnark twisted edwards curve keypair for vault %s", v.ID))
+					_, err = v.MasterKey.CreateBabyJubJubKeypair("zksnark", "twisted edwards curve keypair for zksnark commitment signing and verification")
 					if err != nil {
 						common.Log.Warningf("failed to create babyJubJub keypair; %s", err.Error())
 					}
 
-					_, err := v.MasterKey.CreateEd25519Keypair("ekho - signing", fmt.Sprintf("Ed25519 keypair for vault %s", v.ID))
+					_, err := v.MasterKey.CreateEd25519Keypair("ekho signing", "Ed25519 keypair")
 					if err != nil {
 						common.Log.Warningf("failed to create Ed22519 keypair; %s", err.Error())
 					}
