@@ -65,14 +65,6 @@ type Key struct {
 	mutex     sync.Mutex `sql:"-"`
 }
 
-// KeyExchangeRequestResponse represents the API request/response parameters
-// // needed to initiate or reciprocate a Diffie-Hellman key exchange
-// type KeyExchangeRequestResponse struct {
-// 	PublicKey  *string `json:"public_key,omitempty"`
-// 	SigningKey *string `json:"signing_key,omitempty"`
-// 	Signature  *string `json:"signature,omitempty"`
-// }
-
 // KeySignVerifyRequestResponse represents the API request/response parameters
 // needed to sign or verify an arbitrary message
 type KeySignVerifyRequestResponse struct {

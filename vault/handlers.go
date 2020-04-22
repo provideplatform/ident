@@ -24,6 +24,7 @@ func InstallVaultAPI(r *gin.Engine) {
 	r.DELETE("/api/v1/vaults/:id", deleteVaultHandler)
 
 	r.GET("/api/v1/vaults/:id/keys", vaultKeysListHandler)
+	r.POST("/api/v1/vaults/:id/keys", createVaultKeyHandler)
 	r.POST("/api/v1/vaults/:vaultId/keys/:id/sign", vaultKeySignHandler)
 	r.POST("/api/v1/vaults/:vaultId/keys/:id/verify", vaultKeyVerifyHandler)
 
@@ -177,6 +178,62 @@ func vaultKeysListHandler(c *gin.Context) {
 		key.Enrich()
 	}
 	provide.Render(keys, 200, c)
+}
+
+func createVaultKeyHandler(c *gin.Context) {
+	bearer := token.InContext(c)
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	key := &Key{}
+	err = json.Unmarshal(buf, &key)
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	if key.VaultID != nil {
+		provide.RenderError("vault_id cannot be set explicitly", 422, c)
+		return
+	}
+
+	if key.PublicKey != nil {
+		provide.RenderError("importing key material is not currently supported; public_key should not be provided", 422, c)
+		return
+	}
+
+	vault := &Vault{}
+	db := dbconf.DatabaseConnection()
+	var query *gorm.DB
+
+	query = db.Where("vault_id = ?", c.Param("id"))
+	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
+		query = query.Where("application_id = ?", bearer.ApplicationID)
+	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
+		query = query.Where("organization_id = ?", bearer.OrganizationID)
+	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
+		query = query.Where("user_id = ?", bearer.UserID)
+	}
+	query.Find(&vault)
+
+	if vault == nil || vault.ID == uuid.Nil {
+		provide.RenderError("vault not found", 404, c)
+		return
+	}
+
+	key.VaultID = &vault.ID
+
+	if key.Create(db) {
+		provide.Render(key, 201, c)
+	} else {
+		obj := map[string]interface{}{}
+		obj["errors"] = key.Errors
+		provide.Render(obj, 422, c)
+	}
 }
 
 func vaultKeySignHandler(c *gin.Context) {

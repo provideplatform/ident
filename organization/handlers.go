@@ -40,7 +40,7 @@ func InstallOrganizationVaultsAPI(r *gin.Engine) {
 	r.GET("/api/v1/organizations/:id/vaults", organizationVaultsListHandler)
 
 	r.GET("/api/v1/organizations/:id/vaults/:vaultId/keys", organizationVaultKeysListHandler)
-	// r.POST("/api/v1/organizations/:id/vaults/:vaultId/keys", createOrganizationVaultKeyHandler)
+	r.POST("/api/v1/organizations/:id/vaults/:vaultId/keys", createOrganizationVaultKeyHandler)
 	// r.DELETE("/api/v1/organizations/:id/vaults/:vaultId/keys/:keyId", deleteOrganizationVaultKeyHandler)
 	r.POST("/api/v1/organizations/:id/vaults/:vaultId/keys/:keyId/sign", organizationVaultKeySignHandler)
 	r.POST("/api/v1/organizations/:id/vaults/:vaultId/keys/:keyId/verify", organizationVaultKeyVerifyHandler)
@@ -523,6 +523,78 @@ func organizationVaultKeysListHandler(c *gin.Context) {
 		key.Enrich()
 	}
 	provide.Render(keys, 200, c)
+}
+
+func createOrganizationVaultKeyHandler(c *gin.Context) {
+	bearer := token.InContext(c)
+	userID := bearer.UserID
+	applicationID := bearer.ApplicationID
+
+	if (userID == nil || *userID == uuid.Nil) && (applicationID == nil || *applicationID == uuid.Nil) {
+		provide.RenderError("unauthorized", 401, c)
+		return
+	}
+
+	organizationID, err := uuid.FromString(c.Param("id"))
+	if err != nil {
+		provide.RenderError(err.Error(), 422, c)
+		return
+	}
+
+	db := dbconf.DatabaseConnection()
+
+	org := &Organization{}
+	resolveOrganization(db, &organizationID, applicationID, userID).Find(&org)
+
+	if org == nil || org.ID == uuid.Nil {
+		provide.RenderError("unauthorized", 401, c)
+		return
+	}
+
+	vlt := &vault.Vault{}
+	db.Where("vaults.id = ? AND vaults.organization_id = ?", c.Param("vaultId"), org.ID).Find(&vlt)
+	if vlt == nil || vlt.ID == uuid.Nil {
+		provide.RenderError("vault not found", 404, c)
+		return
+	}
+
+	if vlt == nil || vlt.ID == uuid.Nil {
+		provide.RenderError("vault not found", 404, c)
+		return
+	}
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	key := &vault.Key{}
+	err = json.Unmarshal(buf, &key)
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	if key.VaultID != nil {
+		provide.RenderError("vault_id cannot be set explicitly", 422, c)
+		return
+	}
+
+	if key.PublicKey != nil {
+		provide.RenderError("importing key material is not currently supported; public_key should not be provided", 422, c)
+		return
+	}
+
+	key.VaultID = &vlt.ID
+
+	if key.Create(db) {
+		provide.Render(key, 201, c)
+	} else {
+		obj := map[string]interface{}{}
+		obj["errors"] = key.Errors
+		provide.Render(obj, 422, c)
+	}
 }
 
 func organizationVaultKeySignHandler(c *gin.Context) {
