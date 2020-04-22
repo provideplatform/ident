@@ -461,20 +461,27 @@ func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 	k.decryptFields()
 	defer k.encryptFields()
 
-	key := []byte(*k.PrivateKey)
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt using key: %s; %s", k.ID, err.Error())
-	}
+	var plaintext []byte
 
-	aesgcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt using key: %s; %s", k.ID, err.Error())
-	}
+	switch *k.Spec {
+	case keySpecAES256GCM:
+		key := []byte(*k.PrivateKey)
+		block, err := aes.NewCipher(key)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decrypt using key: %s; %s", k.ID, err.Error())
+		}
 
-	plaintext, err := aesgcm.Open(nil, nonce, ciphertext, nil)
-	if err != nil {
-		panic(err.Error())
+		aesgcm, err := cipher.NewGCM(block)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decrypt using key: %s; %s", k.ID, err.Error())
+		}
+
+		plaintext, err = aesgcm.Open(nil, nonce, ciphertext, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decrypt using key: %s; %s", k.ID, err.Error())
+		}
+	case keySpecECCC25519:
+		// TODO -- implement chacha20 XOR encryption
 	}
 
 	return plaintext, nil
@@ -555,24 +562,33 @@ func (k *Key) encryptSymmetric(plaintext []byte) ([]byte, error) {
 	k.decryptFields()
 	defer k.encryptFields()
 
-	key := []byte(*k.PrivateKey)
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encrypt using key: %s; %s", k.ID, err.Error())
+	var nonce []byte
+	var ciphertext []byte
+
+	switch *k.Spec {
+	case keySpecAES256GCM:
+		key := []byte(*k.PrivateKey)
+		block, err := aes.NewCipher(key)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encrypt using key: %s; %s", k.ID, err.Error())
+		}
+
+		// Never use more than 2^32 random nonces with a given key because of the risk of a repeat.
+		nonce = make([]byte, 12)
+		if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+			return nil, fmt.Errorf("failed to encrypt using key: %s; %s", k.ID, err.Error())
+		}
+
+		aesgcm, err := cipher.NewGCM(block)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encrypt using key: %s; %s", k.ID, err.Error())
+		}
+
+		ciphertext = aesgcm.Seal(nil, nonce, plaintext, nil)
+	case keySpecECCC25519:
+		// TODO -- implement chacha20 XOR encryption
 	}
 
-	// Never use more than 2^32 random nonces with a given key because of the risk of a repeat.
-	nonce := make([]byte, 12)
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return nil, fmt.Errorf("failed to encrypt using key: %s; %s", k.ID, err.Error())
-	}
-
-	aesgcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encrypt using key: %s; %s", k.ID, err.Error())
-	}
-
-	ciphertext := aesgcm.Seal(nil, nonce, plaintext, nil)
 	return append(nonce[:], ciphertext[:]...), nil
 }
 
