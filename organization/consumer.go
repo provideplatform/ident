@@ -197,6 +197,7 @@ func consumeOrganizationImplicitKeyExchangeInitMsg(msg *stan.Msg) {
 			c25519Key, err := orgVault.CreateC25519Keypair(
 				"ekho single-use c25519 key exchange",
 				fmt.Sprintf("ekho - single-use c25519 key exchange with peer organization: %s", peerOrganizationID),
+				true,
 			)
 			if err != nil {
 				common.Log.Warningf("failed to generate single-use c25519 public key for implicit key exchange; organization id: %s; %s", organizationID, err.Error())

@@ -167,7 +167,7 @@ func (v *Vault) Create(tx *gorm.DB) bool {
 }
 
 // CreateC25519Keypair creates an c25519 keypair suitable for Diffie-Hellman key exchange
-func (v *Vault) CreateC25519Keypair(name, description string) (*Key, error) {
+func (v *Vault) CreateC25519Keypair(name, description string, ephemeral bool) (*Key, error) {
 	publicKey, privateKey, err := provide.C25519GenerateKeyPair()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create C25519 keypair; %s", err.Error())
@@ -186,12 +186,15 @@ func (v *Vault) CreateC25519Keypair(name, description string) (*Key, error) {
 		PrivateKey:  common.StringOrNil(string(privateKey)),
 	}
 
-	db := dbconf.DatabaseConnection()
-	if !c25519Key.Create(db) {
-		return nil, fmt.Errorf("failed to create C25519 key in vault: %s; %s", v.ID, *c25519Key.Errors[0].Message)
+	if !ephemeral {
+		db := dbconf.DatabaseConnection()
+		if !c25519Key.Create(db) {
+			return nil, fmt.Errorf("failed to create C25519 key in vault: %s; %s", v.ID, *c25519Key.Errors[0].Message)
+		}
+
+		common.Log.Debugf("created C25519 key %s in vault: %s; public key: %s", c25519Key.ID, v.ID, publicKeyHex)
 	}
 
-	common.Log.Debugf("created C25519 key %s in vault: %s; public key: %s", c25519Key.ID, v.ID, publicKeyHex)
 	return c25519Key, nil
 }
 
