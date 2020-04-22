@@ -480,6 +480,37 @@ func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 	return plaintext, nil
 }
 
+// DeriveSymmetric derives a symmetric key from the secret stored in k.PrivateKey
+// using the given nonce and key generation context identifier; note that the nonce
+// must not be reused or the secret will be exposed...
+func (k *Key) DeriveSymmetric(nonce, context []byte) ([]byte, error) {
+	if k.Type == nil && *k.Type != keyTypeSymmetric {
+		return nil, fmt.Errorf("failed to derive symmetric key from key: %s; nil or invalid key type", k.ID)
+	}
+
+	if k.Usage == nil || *k.Usage != keyUsageEncryptDecrypt {
+		return nil, fmt.Errorf("failed to derive symmetric key from key: %s; nil or invalid key usage", k.ID)
+	}
+
+	if k.Spec == nil || (*k.Spec != keySpecECCC25519) {
+		return nil, fmt.Errorf("failed to derive symmetric key from key: %s; nil or invalid key spec", k.ID)
+	}
+
+	if k.PrivateKey == nil {
+		return nil, fmt.Errorf("failed to derive symmetric key from key: %s; nil private key", k.ID)
+	}
+
+	k.decryptFields()
+	defer k.encryptFields()
+
+	switch *k.Spec {
+	case keySpecECCC25519:
+		// TODO -- implement standard KBKDF
+	}
+
+	return nil, fmt.Errorf("failed to derive symmetric key from key: %s; %s key spec not implemented", k.ID, *k.Spec)
+}
+
 // Encrypt the given plaintext with the key, according to its spec
 func (k *Key) Encrypt(plaintext []byte) ([]byte, error) {
 	if k.Usage == nil || *k.Usage != keyUsageEncryptDecrypt {
