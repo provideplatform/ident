@@ -195,6 +195,7 @@ func (app *Application) initImplicitDiffieHellmanKeyExchange(db *gorm.DB, organi
 func (app *Application) initOrgRegistration(db *gorm.DB, organizationID uuid.UUID) error {
 	common.Log.Debugf("dispatching async org registration for application: %s; new organization: %s", app.ID, organizationID)
 	payload, _ := json.Marshal(map[string]interface{}{
+		"application_id":  app.ID.String(),
 		"organization_id": organizationID.String(),
 	})
 	return natsutil.NatsStreamingPublish(natsOrganizationRegistrationSubject, payload)
