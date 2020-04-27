@@ -55,6 +55,7 @@ func init() {
 	createNatsOrganizationCreatedSubscriptions(&waitGroup)
 	createNatsOrganizationImplicitKeyExchangeCompleteSubscriptions(&waitGroup)
 	createNatsOrganizationImplicitKeyExchangeSubscriptions(&waitGroup)
+	createNatsOrganizationRegistrationSubscriptions(&waitGroup)
 }
 
 func createNatsOrganizationCreatedSubscriptions(wg *sync.WaitGroup) {
