@@ -466,9 +466,17 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 			for _, c := range cntrcts {
 				if cntrct, contractOk := c.(map[string]interface{}); contractOk {
 					if cntrctID, contractIDOk := cntrct["id"].(string); contractIDOk {
-						contractID = common.StringOrNil(cntrctID)
+						status, resp, err = provide.GetContractDetails(*jwtToken, cntrctID, map[string]interface{}{})
+						if err != nil || status != 200 {
+							common.Log.Warningf("failed to resolve organization registry contract to which the organization registration tx should be sent; organization id: %s", organizationID)
+							natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+							return
+						}
 
-						if contractParams, contractParamsOk := cntrct["params"].(map[string]interface{}); contractParamsOk {
+						contractID = common.StringOrNil(cntrctID)
+						contract := resp.(map[string]interface{})
+
+						if contractParams, contractParamsOk := contract["params"].(map[string]interface{}); contractParamsOk {
 							if wlltID, wlltIDOk := contractParams["wallet_id"].(string); wlltIDOk {
 								walletID = common.StringOrNil(wlltID)
 							}
@@ -482,6 +490,20 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 			}
 		}
 
+		if contractID == nil {
+			common.Log.Warningf("failed to resolve organization registry contract; application id: %s", applicationID)
+			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+			return
+		}
+
+		if walletID == nil || hdDerivationPath == nil {
+			common.Log.Warningf("failed to resolve HD wallet for signing organization registry transaction; organization id: %s", organizationID)
+			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+			return
+		}
+
+		// FIXME? should the below logic be added if the wallet/hd derivation path aren't set? may apply to future protocols
+		// else {
 		// status, resp, err = provide.ListWallets(*jwtToken, map[string]interface{}{})
 		// if err != nil || status != 200 {
 		// 	common.Log.Warningf("failed to resolve HD wallet for signing organization registry transaction; organization id: %s", organizationID)
@@ -508,18 +530,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 		// 		}
 		// 	}
 		// }
-
-		if contractID == nil {
-			common.Log.Warningf("failed to resolve organization registry contract; application id: %s", applicationID)
-			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
-			return
-		}
-
-		if walletID == nil || hdDerivationPath == nil {
-			common.Log.Warningf("failed to resolve HD wallet for signing organization registry transaction; organization id: %s", organizationID)
-			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
-			return
-		}
+		// }
 
 		status, _, err = provide.ExecuteContract(*jwtToken, *contractID, map[string]interface{}{
 			"wallet_id":          walletID,
