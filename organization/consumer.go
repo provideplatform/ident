@@ -452,6 +452,12 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 		return
 	}
 
+	if orgZeroKnowledgePublicKey == nil {
+		common.Log.Warningf("failed to resolve organization zero-knowledge public key for storage in the public org registry; organization id: %s", organizationID)
+		natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+		return
+	}
+
 	var tokens []*token.Token
 	db.Where("tokens.application_id = ?", applicationID).Find(&tokens) // FIXME-- if the org registry contract moves away from onlyOwner, this needs to be resolved to the organization instead of the application
 
