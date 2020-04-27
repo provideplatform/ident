@@ -39,6 +39,12 @@ const natsOrganizationRegistrationMaxInFlight = 2048
 const natsOrganizationRegistrationAckWait = time.Second * 30
 const organizationRegistrationTimeout = int64(natsOrganizationRegistrationAckWait * 3)
 const organizationRegistrationMethod = "registerOrg"
+const organizationSetInterfaceImplementerMethod = "setInterfaceImplementer"
+
+const contractTypeRegistry = "registry"
+const contractTypeERC1820Registry = "erc1820-registry"
+const contractTypeShield = "shield"
+const contractTypeVerifier = "verifier"
 
 const natsSiaOrganizationNotificationSubject = "sia.organization.notification"
 
@@ -464,16 +470,22 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 	if len(tokens) > 0 {
 		jwtToken := tokens[0].Token
 
-		status, resp, err := provide.ListContracts(*jwtToken, map[string]interface{}{
-			"type": "registry", // FIXME -- should type be "orgregistry" here? probably...
-		})
+		status, resp, err := provide.ListContracts(*jwtToken, map[string]interface{}{})
 		if err != nil || status != 200 {
 			common.Log.Warningf("failed to resolve organization registry contract to which the organization registration tx should be sent; organization id: %s", organizationID)
 			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
 			return
 		}
 
-		var contractID *string
+		var erc1820RegistryContractID *string
+		var erc1820RegistryContractAddress *string
+		var orgRegistryContractID *string
+		var orgRegistryContractAddress *string
+		var verifierContractID *string
+		var verifierContractAddress *string
+		var shieldContractID *string
+		var shieldContractAddress *string
+
 		var walletID *string
 		var hdDerivationPath *string
 
@@ -488,16 +500,34 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 							return
 						}
 
-						contractID = common.StringOrNil(cntrctID)
 						contract := resp.(map[string]interface{})
+						contractAddress, _ := contract["address"].(string)
+						contractType, contractTypeOk := contract["type"].(string)
 
-						if contractParams, contractParamsOk := contract["params"].(map[string]interface{}); contractParamsOk {
-							if wlltID, wlltIDOk := contractParams["wallet_id"].(string); wlltIDOk {
-								walletID = common.StringOrNil(wlltID)
-							}
+						if contractTypeOk {
+							switch contractType {
+							case contractTypeERC1820Registry:
+								erc1820RegistryContractID = common.StringOrNil(cntrctID)
+								erc1820RegistryContractAddress = common.StringOrNil(contractAddress)
+							case contractTypeRegistry:
+								orgRegistryContractID = common.StringOrNil(cntrctID)
+								orgRegistryContractAddress = common.StringOrNil(contractAddress)
 
-							if wlltHDDerivationPath, wlltHDDerivationPathOk := contractParams["hd_derivation_path"].(string); wlltHDDerivationPathOk {
-								hdDerivationPath = common.StringOrNil(wlltHDDerivationPath)
+								if contractParams, contractParamsOk := contract["params"].(map[string]interface{}); contractParamsOk {
+									if wlltID, wlltIDOk := contractParams["wallet_id"].(string); wlltIDOk {
+										walletID = common.StringOrNil(wlltID)
+									}
+
+									if wlltHDDerivationPath, wlltHDDerivationPathOk := contractParams["hd_derivation_path"].(string); wlltHDDerivationPathOk {
+										hdDerivationPath = common.StringOrNil(wlltHDDerivationPath)
+									}
+								}
+							case contractTypeShield:
+								shieldContractID = common.StringOrNil(cntrctID)
+								shieldContractAddress = common.StringOrNil(contractAddress)
+							case contractTypeVerifier:
+								verifierContractID = common.StringOrNil(cntrctID)
+								verifierContractAddress = common.StringOrNil(contractAddress)
 							}
 						}
 					}
@@ -505,8 +535,26 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 			}
 		}
 
-		if contractID == nil {
+		if erc1820RegistryContractID == nil || erc1820RegistryContractAddress == nil {
+			common.Log.Warningf("failed to resolve ERC1820 registry contract; application id: %s", applicationID)
+			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+			return
+		}
+
+		if orgRegistryContractID == nil || orgRegistryContractAddress == nil {
 			common.Log.Warningf("failed to resolve organization registry contract; application id: %s", applicationID)
+			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+			return
+		}
+
+		if verifierContractID == nil || verifierContractAddress == nil {
+			common.Log.Warningf("failed to resolve default verifier contract; application id: %s", applicationID)
+			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+			return
+		}
+
+		if shieldContractID == nil || shieldContractAddress == nil {
+			common.Log.Warningf("failed to resolve default shield contract; application id: %s", applicationID)
 			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
 			return
 		}
@@ -547,7 +595,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 		// }
 		// }
 
-		status, _, err = provide.ExecuteContract(*jwtToken, *contractID, map[string]interface{}{
+		registerOrgStatus, _, err := provide.ExecuteContract(*jwtToken, *orgRegistryContractID, map[string]interface{}{
 			"wallet_id":          walletID,
 			"hd_derivation_path": hdDerivationPath,
 			"method":             organizationRegistrationMethod,
@@ -560,15 +608,82 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 			},
 			"value": 0,
 		})
-
-		if err == nil && status == 202 {
-			common.Log.Debugf("broadcast registry transaction on behalf of organization: %s", organizationID)
-			msg.Ack()
-		} else {
-			common.Log.Warningf("failed broadcast registry transaction on behalf of organization: %s; %s", organizationID, err.Error())
+		if err != nil || registerOrgStatus != 202 {
+			common.Log.Warningf("organization registry transaction broadcast failed on behalf of organization: %s; %s", organizationID, err.Error())
 			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+			return
 		}
 
+		setOrgInterfaceIShieldImplStatus, _, err := provide.ExecuteContract(*jwtToken, *erc1820RegistryContractID, map[string]interface{}{
+			"wallet_id":          walletID,
+			"hd_derivation_path": hdDerivationPath,
+			"method":             organizationSetInterfaceImplementerMethod,
+			"params": []interface{}{
+				orgAddress,
+				string(provide.Keccak256("IOrgRegistry")),
+				*orgRegistryContractAddress,
+			},
+			"value": 0,
+		})
+		if err != nil || setOrgInterfaceIShieldImplStatus != 202 {
+			common.Log.Warningf("organization registry IOrgRegistry impl transaction broadcast failed on behalf of organization: %s; %s", organizationID, err.Error())
+			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+			return
+		}
+
+		setOrgInterfaceIOrgRegistryImplStatus, _, err := provide.ExecuteContract(*jwtToken, *erc1820RegistryContractID, map[string]interface{}{
+			"wallet_id":          walletID,
+			"hd_derivation_path": hdDerivationPath,
+			"method":             organizationSetInterfaceImplementerMethod,
+			"params": []interface{}{
+				orgAddress,
+				string(provide.Keccak256("IShield")),
+				*shieldContractAddress,
+			},
+			"value": 0,
+		})
+		if err != nil || setOrgInterfaceIOrgRegistryImplStatus != 202 {
+			common.Log.Warningf("organization registry interface impl transaction broadcast failed on behalf of organization: %s; %s", organizationID, err.Error())
+			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+			return
+		}
+
+		setOrgInterfaceIVerifierImplStatus, _, err := provide.ExecuteContract(*jwtToken, *erc1820RegistryContractID, map[string]interface{}{
+			"wallet_id":          walletID,
+			"hd_derivation_path": hdDerivationPath,
+			"method":             organizationSetInterfaceImplementerMethod,
+			"params": []interface{}{
+				orgAddress,
+				string(provide.Keccak256("IVerifier")),
+				*verifierContractAddress,
+			},
+			"value": 0,
+		})
+		if err != nil || setOrgInterfaceIVerifierImplStatus != 202 {
+			common.Log.Warningf("organization registry IVerifier interface impl transaction broadcast failed on behalf of organization: %s; %s", organizationID, err.Error())
+			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+			return
+		}
+
+		registerOrgInterfaceImplStatus, _, err := provide.ExecuteContract(*jwtToken, *orgRegistryContractID, map[string]interface{}{
+			"wallet_id":          walletID,
+			"hd_derivation_path": hdDerivationPath,
+			"method":             organizationSetInterfaceImplementerMethod,
+			"params": []interface{}{
+				orgAddress,
+				string(provide.Keccak256("IShield")),
+				*shieldContractAddress,
+			},
+			"value": 0,
+		})
+		if err != nil || registerOrgInterfaceImplStatus != 202 {
+			common.Log.Warningf("organization registry interface impl transaction broadcast failed on behalf of organization: %s; %s", organizationID, err.Error())
+			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+			return
+		}
+
+		common.Log.Debugf("broadcast organization registry and interface impl transactions on behalf of organization: %s", organizationID)
+		msg.Ack()
 	} else {
 		common.Log.Warningf("failed to resolve API token during registration message handler; organization id: %s", organizationID)
 		natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
