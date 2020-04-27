@@ -462,17 +462,21 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 		var walletID *string
 		var hdDerivationPath *string
 
-		if cntrct, contractOk := resp.(map[string]interface{}); contractOk {
-			if cntrctID, contractIDOk := cntrct["id"].(string); contractIDOk {
-				contractID = common.StringOrNil(cntrctID)
+		if cntrcts, contractsOk := resp.([]interface{}); contractsOk {
+			for _, c := range cntrcts {
+				if cntrct, contractOk := c.(map[string]interface{}); contractOk {
+					if cntrctID, contractIDOk := cntrct["id"].(string); contractIDOk {
+						contractID = common.StringOrNil(cntrctID)
 
-				if contractParams, contractParamsOk := cntrct["params"].(map[string]interface{}); contractParamsOk {
-					if wlltID, wlltIDOk := contractParams["wallet_id"].(string); wlltIDOk {
-						walletID = common.StringOrNil(wlltID)
-					}
+						if contractParams, contractParamsOk := cntrct["params"].(map[string]interface{}); contractParamsOk {
+							if wlltID, wlltIDOk := contractParams["wallet_id"].(string); wlltIDOk {
+								walletID = common.StringOrNil(wlltID)
+							}
 
-					if wlltHDDerivationPath, wlltHDDerivationPathOk := contractParams["hd_derivation_path"].(string); wlltHDDerivationPathOk {
-						hdDerivationPath = common.StringOrNil(wlltHDDerivationPath)
+							if wlltHDDerivationPath, wlltHDDerivationPathOk := contractParams["hd_derivation_path"].(string); wlltHDDerivationPathOk {
+								hdDerivationPath = common.StringOrNil(wlltHDDerivationPath)
+							}
+						}
 					}
 				}
 			}
