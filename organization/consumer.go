@@ -8,11 +8,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/provideservices/provide-go"
+
 	dbconf "github.com/kthomas/go-db-config"
 	natsutil "github.com/kthomas/go-natsutil"
 	uuid "github.com/kthomas/go.uuid"
 	stan "github.com/nats-io/stan.go"
 	"github.com/provideapp/ident/common"
+	"github.com/provideapp/ident/token"
 	"github.com/provideapp/ident/vault"
 )
 
@@ -30,6 +33,12 @@ const natsOrganizationImplicitKeyExchangeInitSubject = "ident.organization.keys.
 const natsOrganizationImplicitKeyExchangeMaxInFlight = 2048
 const natsOrganizationImplicitKeyExchangeInitAckWait = time.Second * 5
 const organizationImplicitKeyExchangeInitTimeout = int64(time.Second * 20)
+
+const natsOrganizationRegistrationSubject = "ident.organization.registration"
+const natsOrganizationRegistrationMaxInFlight = 2048
+const natsOrganizationRegistrationAckWait = time.Second * 30
+const organizationRegistrationTimeout = int64(natsOrganizationRegistrationAckWait * 3)
+const organizationRegistrationMethod = "registerOrg"
 
 const natsSiaOrganizationNotificationSubject = "sia.organization.notification"
 
@@ -85,6 +94,20 @@ func createNatsOrganizationImplicitKeyExchangeSubscriptions(wg *sync.WaitGroup) 
 			consumeOrganizationImplicitKeyExchangeInitMsg,
 			natsOrganizationImplicitKeyExchangeInitAckWait,
 			natsOrganizationImplicitKeyExchangeMaxInFlight,
+			nil,
+		)
+	}
+}
+
+func createNatsOrganizationRegistrationSubscriptions(wg *sync.WaitGroup) {
+	for i := uint64(0); i < natsutil.GetNatsConsumerConcurrency(); i++ {
+		natsutil.RequireNatsStreamingSubscription(wg,
+			natsOrganizationRegistrationAckWait,
+			natsOrganizationRegistrationSubject,
+			natsOrganizationRegistrationSubject,
+			consumeOrganizationRegistrationMsg,
+			natsOrganizationRegistrationAckWait,
+			natsOrganizationRegistrationMaxInFlight,
 			nil,
 		)
 	}
@@ -356,6 +379,167 @@ func consumeOrganizationImplicitKeyExchangeCompleteMsg(msg *stan.Msg) {
 		}
 	} else {
 		common.Log.Warningf("failed to resolve signing key during implicit key exchange message handler; organization id: %s; %d associated vaults", organizationID, len(vaults))
+		natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
+	}
+}
+
+func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
+	defer func() {
+		if r := recover(); r != nil {
+			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+		}
+	}()
+
+	common.Log.Debugf("consuming %d-byte NATS organization registration message on subject: %s", msg.Size(), msg.Subject)
+
+	params := map[string]interface{}{}
+	err := json.Unmarshal(msg.Data, &params)
+	if err != nil {
+		common.Log.Warningf("failed to unmarshal organization registration message; %s", err.Error())
+		natsutil.Nack(msg)
+		return
+	}
+
+	organizationID, organizationIDOk := params["organization_id"].(string)
+	if !organizationIDOk {
+		common.Log.Warning("failed to parse organization_id during organization registration message handler")
+		natsutil.Nack(msg)
+		return
+	}
+
+	applicationID, applicationIDOk := params["application_id"].(string)
+	if !applicationIDOk {
+		common.Log.Warning("failed to parse application_id during organization registration message handler")
+		natsutil.Nack(msg)
+		return
+	}
+
+	db := dbconf.DatabaseConnection()
+
+	organization := &Organization{}
+	db.Where("id = ?", organizationID).Find(&organization)
+
+	if organization == nil || organization.ID == uuid.Nil {
+		common.Log.Warningf("failed to resolve organization during registration message handler; organization id: %s", organizationID)
+		natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+		return
+	}
+
+	var orgAddress *string
+	var orgMessagingEndpoint *string
+
+	organization.Enrich(db, nil)
+	for _, key := range organization.Keys {
+		if key.Spec != nil && *key.Spec == "secp256k1" && key.Address != nil {
+			orgAddress = common.StringOrNil(*key.Address)
+			orgMessagingEndpoint = common.StringOrNil(fmt.Sprintf("0x%s", common.SHA256(*orgAddress))) // FIXME-- this derivation can be removed as we don't need to store it in the blockchain
+		}
+	}
+
+	if orgAddress == nil || orgMessagingEndpoint == nil {
+		common.Log.Warningf("failed to resolve organization public address for storage in the public org registry; organization id: %s", organizationID)
+		natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+		return
+	}
+
+	var tokens []*token.Token
+	db.Where("tokens.application_id = ?", applicationID).Find(&tokens) // FIXME-- if the org registry contract moves away from onlyOwner, this needs to be resolved to the organization instead of the application
+
+	if len(tokens) > 0 {
+		jwtToken := tokens[0].Token
+
+		status, resp, err := provide.ListContracts(*jwtToken, map[string]interface{}{
+			"type": "registry", // FIXME -- should type be "orgregistry" here? probably...
+		})
+		if err != nil || status != 200 {
+			common.Log.Warningf("failed to resolve organization registry contract to which the organization registration tx should be sent; organization id: %s", organizationID)
+			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+			return
+		}
+
+		var contractID *string
+		var walletID *string
+		var hdDerivationPath *string
+
+		if cntrct, contractOk := resp.(map[string]interface{}); contractOk {
+			if cntrctID, contractIDOk := cntrct["id"].(string); contractIDOk {
+				contractID = common.StringOrNil(cntrctID)
+
+				if contractParams, contractParamsOk := cntrct["params"].(map[string]interface{}); contractParamsOk {
+					if wlltID, wlltIDOk := contractParams["wallet_id"].(string); wlltIDOk {
+						walletID = common.StringOrNil(wlltID)
+					}
+
+					if wlltHDDerivationPath, wlltHDDerivationPathOk := contractParams["hd_derivation_path"].(string); wlltHDDerivationPathOk {
+						hdDerivationPath = common.StringOrNil(wlltHDDerivationPath)
+					}
+				}
+			}
+		}
+
+		// status, resp, err = provide.ListWallets(*jwtToken, map[string]interface{}{})
+		// if err != nil || status != 200 {
+		// 	common.Log.Warningf("failed to resolve HD wallet for signing organization registry transaction; organization id: %s", organizationID)
+		// 	natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+		// 	return
+		// }
+
+		// if status == 200 {
+		// 	if wllt, walletOk := resp.(map[string]interface{}); walletOk {
+		// 		if wlltID, wlltIDOk := wllt["id"].(string); wlltIDOk {
+		// 			status, resp, err := provide.ListWallets(*jwtToken, map[string]interface{}{})
+		// 			if err != nil || status != 200 {
+		// 				common.Log.Warningf("failed to resolve HD derivation path for signing organization registry transaction; organization id: %s", organizationID)
+		// 				natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+		// 				return
+		// 			}
+
+		// 			if acct, accountOk := resp.(map[string]interface{}); accountOk {
+		// 				if acctHDDerivationPath, acctHDDerivationPathOk := acct["hd_derivation_path"].(string); acctHDDerivationPathOk {
+		// 					walletID = common.StringOrNil(wlltID)
+		// 					hdDerivationPath = common.StringOrNil(acctHDDerivationPath)
+		// 				}
+		// 			}
+		// 		}
+		// 	}
+		// }
+
+		if contractID == nil {
+			common.Log.Warningf("failed to resolve organization registry contract; application id: %s", applicationID)
+			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+			return
+		}
+
+		if walletID == nil || hdDerivationPath == nil {
+			common.Log.Warningf("failed to resolve HD wallet for signing organization registry transaction; organization id: %s", organizationID)
+			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+			return
+		}
+
+		status, _, err = provide.ExecuteContract(*jwtToken, *contractID, map[string]interface{}{
+			"wallet_id":          walletID,
+			"hd_derivation_path": hdDerivationPath,
+			"method":             organizationRegistrationMethod,
+			"params": []interface{}{
+				orgAddress,
+				*organization.Name,
+				0,
+				*orgAddress,
+				*orgMessagingEndpoint,
+			},
+			"value": 0,
+		})
+
+		if err == nil && status == 202 {
+			common.Log.Debugf("broadcast registry transaction on behalf of organization: %s", organizationID)
+			msg.Ack()
+		} else {
+			common.Log.Warningf("failed broadcast registry transaction on behalf of organization: %s; %s", organizationID, err.Error())
+			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+		}
+
+	} else {
+		common.Log.Warningf("failed to resolve API token during registration message handler; organization id: %s", organizationID)
 		natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
 	}
 }

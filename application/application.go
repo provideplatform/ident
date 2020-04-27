@@ -21,6 +21,7 @@ import (
 
 const applicationResourceKey = "application"
 const natsOrganizationImplicitKeyExchangeInitSubject = "ident.organization.keys.exchange.init"
+const natsOrganizationRegistrationSubject = "ident.organization.registration"
 const natsSiaApplicationNotificationSubject = "sia.application.notification"
 
 // Application model which is initially owned by the user who created it
@@ -189,6 +190,16 @@ func (app *Application) initImplicitDiffieHellmanKeyExchange(db *gorm.DB, organi
 	return nil
 }
 
+// initOrgRegistration dispatches a NATS message to attempt async registration of the org;
+// this is an opaque method; subscriber implementations define all business rules
+func (app *Application) initOrgRegistration(db *gorm.DB, organizationID uuid.UUID) error {
+	common.Log.Debugf("dispatching async org registration for application: %s; new organization: %s", app.ID, organizationID)
+	payload, _ := json.Marshal(map[string]interface{}{
+		"organization_id": organizationID.String(),
+	})
+	return natsutil.NatsStreamingPublish(natsOrganizationRegistrationSubject, payload)
+}
+
 func (app *Application) addOrganization(tx *gorm.DB, org organization.Organization, permissions common.Permission) bool {
 	var db *gorm.DB
 	if tx != nil {
@@ -203,7 +214,12 @@ func (app *Application) addOrganization(tx *gorm.DB, org organization.Organizati
 	if success {
 		common.Log.Debugf("added organization %s to application: %s", org.ID, app.ID)
 		db.Exec("DELETE FROM applications_users WHERE applications_users.application_id=? AND applications_users.user_id IN (SELECT user_id FROM organizations_users WHERE organizations_users.organization_id=?)", app.ID, org.ID)
-		go app.initImplicitDiffieHellmanKeyExchange(db, org.ID)
+
+		cfg := app.ParseConfig()
+		if isBaseline, baselinedOk := cfg["baselined"].(bool); baselinedOk && isBaseline {
+			go app.initOrgRegistration(db, org.ID)
+			go app.initImplicitDiffieHellmanKeyExchange(db, org.ID)
+		}
 	} else {
 		common.Log.Warningf("failed to add organization %s to application: %s", org.ID, app.ID)
 	}
