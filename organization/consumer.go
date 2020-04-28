@@ -553,34 +553,38 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 							return
 						}
 
-						contract := resp.(map[string]interface{})
-						contractAddress, _ := contract["address"].(string)
-						contractType, contractTypeOk := contract["type"].(string)
+						contractDetails := resp.(map[string]interface{})
+						contractAddress, _ := cntrct["address"].(string)
+						contractType, contractTypeOk := cntrct["type"].(string)
 
 						if contractTypeOk {
 							switch contractType {
 							case contractTypeERC1820Registry:
 								erc1820RegistryContractID = common.StringOrNil(cntrctID)
 								erc1820RegistryContractAddress = common.StringOrNil(contractAddress)
+								common.Log.Debugf("handling erc1820-registry registry contract: %s", *erc1820RegistryContractAddress)
 							case contractTypeOrgRegistry:
 								orgRegistryContractID = common.StringOrNil(cntrctID)
 								orgRegistryContractAddress = common.StringOrNil(contractAddress)
 
-								if contractParams, contractParamsOk := contract["params"].(map[string]interface{}); contractParamsOk {
+								common.Log.Debugf("handling org registry contract: %s", *orgRegistryContractAddress)
+								if contractParams, contractParamsOk := contractDetails["params"].(map[string]interface{}); contractParamsOk {
 									if wlltID, wlltIDOk := contractParams["wallet_id"].(string); wlltIDOk {
 										walletID = common.StringOrNil(wlltID)
 									}
 
-									if wlltHDDerivationPath, wlltHDDerivationPathOk := contractParams["hd_derivation_path"].(string); wlltHDDerivationPathOk {
+									if wlltHDDerivationPath, wlltHDDerivationPathOk := contractDetails["hd_derivation_path"].(string); wlltHDDerivationPathOk {
 										hdDerivationPath = common.StringOrNil(wlltHDDerivationPath)
 									}
 								}
 							case contractTypeShield:
 								shieldContractID = common.StringOrNil(cntrctID)
 								shieldContractAddress = common.StringOrNil(contractAddress)
+								common.Log.Debugf("handling shield contract: %s", *shieldContractAddress)
 							case contractTypeVerifier:
 								verifierContractID = common.StringOrNil(cntrctID)
 								verifierContractAddress = common.StringOrNil(contractAddress)
+								common.Log.Debugf("handling verifier contract: %s", *verifierContractAddress)
 							}
 						}
 					}
