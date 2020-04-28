@@ -511,7 +511,9 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 			return
 		}
 
-		status, orgWalletResp, err := provide.CreateWallet(*orgToken.Token, map[string]interface{}{})
+		status, orgWalletResp, err := provide.CreateWallet(*orgToken.Token, map[string]interface{}{
+			"purpose": 44,
+		})
 		if err != nil || status != 201 {
 			common.Log.Warningf("failed to create organization HD wallet for organization registration tx should be sent; organization id: %s", organizationID)
 			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
