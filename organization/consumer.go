@@ -42,6 +42,7 @@ const organizationRegistrationMethod = "registerOrg"
 const organizationSetInterfaceImplementerMethod = "setInterfaceImplementer"
 
 const contractTypeRegistry = "registry"
+const contractTypeOrgRegistry = "organization-registry"
 const contractTypeERC1820Registry = "erc1820-registry"
 const contractTypeShield = "shield"
 const contractTypeVerifier = "verifier"
@@ -512,7 +513,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 							case contractTypeERC1820Registry:
 								erc1820RegistryContractID = common.StringOrNil(cntrctID)
 								erc1820RegistryContractAddress = common.StringOrNil(contractAddress)
-							case contractTypeRegistry:
+							case contractTypeOrgRegistry:
 								orgRegistryContractID = common.StringOrNil(cntrctID)
 								orgRegistryContractAddress = common.StringOrNil(contractAddress)
 
