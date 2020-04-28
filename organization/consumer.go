@@ -501,12 +501,50 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 		var orgWalletID *string
 		var orgHDDerivationPath *string
 
+		// app hd wallet
+
+		status, walletResp, err := provide.ListWallets(*jwtToken, map[string]interface{}{})
+		if err != nil || status != 200 {
+			common.Log.Warningf("failed to fetch HD wallet for organization registration tx signing; organization id: %s", organizationID)
+			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+			return
+		}
+
+		if appWallets, appWalletsOk := walletResp.([]interface{}); appWalletsOk {
+			if len(appWallets) > 0 {
+				if appWllt, appWlltOk := appWallets[0].(map[string]interface{}); appWlltOk {
+					if appWlltID, appWlltIDOk := appWllt["id"].(string); appWlltIDOk {
+						walletID = common.StringOrNil(appWlltID)
+						common.Log.Debugf("resolved HD wallet %s for organiation registration tx signing %s", *walletID, organization.ID)
+
+						status, accountsResp, err := provide.ListWalletAccounts(*jwtToken, *walletID, map[string]interface{}{})
+						if err != nil || status != 200 {
+							common.Log.Warningf("failed to derive HD wallet accounts for organization registration tx; organization id: %s", organizationID)
+							natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+							return
+						}
+
+						if accts, acctsOk := accountsResp.([]interface{}); acctsOk {
+							if len(accts) > 0 {
+								if acct, acctOk := accts[0].(map[string]interface{}); acctOk {
+									hdDerivationPath = common.StringOrNil(acct["hd_derivation_path"].(string))
+								}
+							}
+						}
+					}
+				}
+			}
+
+		}
+
+		// org api token & hd wallet
+
 		orgToken := &token.Token{
 			ApplicationID:  &applicationUUID,
 			OrganizationID: &organization.ID,
 		}
 		if !orgToken.Vend() {
-			common.Log.Warningf("failed to vend signed JWT for organization registration tx should be sent; organization id: %s", organizationID)
+			common.Log.Warningf("failed to vend signed JWT for organization registration tx signing; organization id: %s", organizationID)
 			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
 			return
 		}
@@ -553,7 +591,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 							return
 						}
 
-						contract := resp.(map[string]interface{})
+						contract, _ := resp.(map[string]interface{})
 						contractAddress, _ := contract["address"].(string)
 						contractType, contractTypeOk := contract["type"].(string)
 
@@ -565,16 +603,6 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 							case contractTypeOrgRegistry:
 								orgRegistryContractID = common.StringOrNil(cntrctID)
 								orgRegistryContractAddress = common.StringOrNil(contractAddress)
-
-								if contractParams, contractParamsOk := contract["params"].(map[string]interface{}); contractParamsOk {
-									if wlltID, wlltIDOk := contractParams["wallet_id"].(string); wlltIDOk {
-										walletID = common.StringOrNil(wlltID)
-									}
-
-									if wlltHDDerivationPath, wlltHDDerivationPathOk := contractParams["hd_derivation_path"].(string); wlltHDDerivationPathOk {
-										hdDerivationPath = common.StringOrNil(wlltHDDerivationPath)
-									}
-								}
 							case contractTypeShield:
 								shieldContractID = common.StringOrNil(cntrctID)
 								shieldContractAddress = common.StringOrNil(contractAddress)
@@ -626,7 +654,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 
 		// registerOrg
 
-		registerOrgStatus, _, err := provide.ExecuteContract(*orgToken.Token, *orgRegistryContractID, map[string]interface{}{
+		registerOrgStatus, _, err := provide.ExecuteContract(*jwtToken, *orgRegistryContractID, map[string]interface{}{
 			"wallet_id":          walletID,
 			"hd_derivation_path": hdDerivationPath,
 			"method":             organizationRegistrationMethod,
@@ -666,7 +694,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 
 		// setInterfaceImplementer -- IShield
 
-		setShieldInterfaceImplStatus, _, err := provide.ExecuteContract(*jwtToken, *erc1820RegistryContractID, map[string]interface{}{
+		setShieldInterfaceImplStatus, _, err := provide.ExecuteContract(*orgToken.Token, *erc1820RegistryContractID, map[string]interface{}{
 			"wallet_id":          orgWalletID,
 			"hd_derivation_path": orgHDDerivationPath,
 			"method":             organizationSetInterfaceImplementerMethod,
