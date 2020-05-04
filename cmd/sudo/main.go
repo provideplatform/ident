@@ -105,7 +105,7 @@ func main() {
 			}
 			ttl = &parsedttl
 		}
-		vendApplicationToken(email, ttl)
+		vendApplicationToken(appID, ttl)
 	default:
 		common.Log.Warningf("sudo cmd not implemented: %s", cmd)
 		os.Exit(1)
