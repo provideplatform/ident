@@ -59,8 +59,11 @@ func ApplicationsByUserID(userID *uuid.UUID, hidden bool) []Application {
 // FindByID retrieves an application by id
 func FindByID(appID uuid.UUID) *Application {
 	db := dbconf.DatabaseConnection()
-	var app *Application
+	app := &Application{}
 	db.Where("id = ?", appID.String()).Find(&app)
+	if app == nil || app.ID == uuid.Nil {
+		return nil
+	}
 	return app
 }
 
