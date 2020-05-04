@@ -10,6 +10,8 @@ import (
 	"github.com/kthomas/go-auth0"
 	dbconf "github.com/kthomas/go-db-config"
 	natsutil "github.com/kthomas/go-natsutil"
+	uuid "github.com/kthomas/go.uuid"
+	"github.com/provideapp/ident/application"
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/token"
 	"github.com/provideapp/ident/user"
@@ -25,6 +27,7 @@ const deleteUserCmd = "deleteuser"
 const natsPublishCmd = "natspublish"
 const syncAuth0Cmd = "syncauth0"
 const vendTokenCmd = "vendtoken"
+const vendApplicationTokenCmd = "vendapptoken"
 
 func init() {
 	auth0.RequireAuth0()
@@ -91,6 +94,18 @@ func main() {
 			ttl = &parsedttl
 		}
 		vendToken(email, ttl)
+	case vendApplicationTokenCmd:
+		appID := strings.ToLower(argv[1])
+
+		var ttl *int
+		if len(argv) == 3 {
+			parsedttl, err := strconv.Atoi(argv[2])
+			if err != nil {
+				exit(fmt.Sprintf("failed to vend auth token for application: %s; could not parse ttl for expiration; %s", appID, err.Error()), 1)
+			}
+			ttl = &parsedttl
+		}
+		vendApplicationToken(email, ttl)
 	default:
 		common.Log.Warningf("sudo cmd not implemented: %s", cmd)
 		os.Exit(1)
@@ -207,4 +222,25 @@ func vendToken(email string, ttl *int) {
 	if token.HasPermission(common.Sudo) {
 		common.Log.Debug("with great power comes great responsibility...")
 	}
+}
+
+func vendApplicationToken(appID string, ttl *int) {
+	appUUID, _ := uuid.FromString(appID)
+	app := application.FindByID(appUUID)
+	if app == nil {
+		exit(fmt.Sprintf("app does not exist: %s", appID), 1)
+	}
+
+	common.Log.Debugf("attempting to vend bearer token for application: %s", appID)
+	token := &token.Token{
+		ApplicationID: &app.ID,
+	}
+	if ttl != nil {
+		token.TTL = ttl
+	}
+	if !token.Vend() {
+		exit(fmt.Sprintf("failed to vend bearer token for application: %s", appID), 1)
+	}
+
+	common.Log.Debugf("bearer token created for application: %s\n\n\t%s\n\nPlease keep this in a safe place and treat it as you would other private keys.", appID, *token.Token)
 }

@@ -56,6 +56,14 @@ func ApplicationsByUserID(userID *uuid.UUID, hidden bool) []Application {
 	return apps
 }
 
+// FindByID retrieves an application by id
+func FindByID(appID uuid.UUID) *Application {
+	db := dbconf.DatabaseConnection()
+	var app *Application
+	db.Where("id = ?", appID.String()).Find(&app)
+	return app
+}
+
 // OrganizationsListQuery returns a db query which joins the organization applications and returns the query for pagination
 func (app *Application) OrganizationsListQuery(db *gorm.DB) *gorm.DB {
 	query := db.Select("organizations.id, organizations.created_at, organizations.user_id, organizations.name, organizations.description, ao.permissions as permissions")
