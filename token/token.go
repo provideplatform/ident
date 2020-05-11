@@ -870,6 +870,7 @@ func (t *Token) encodeJWTNatsClaims() (map[string]interface{}, error) {
 		}
 	} else {
 		// FIXME-- put these defaults in configuration and read them from there...
+		subscribeAllow = append(subscribeAllow, "network.*.connector.*")
 		subscribeAllow = append(subscribeAllow, "network.*.status")
 		subscribeAllow = append(subscribeAllow, "platform.>")
 	}
