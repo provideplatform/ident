@@ -97,6 +97,7 @@ func createTokenHandler(c *gin.Context) {
 		}
 		orgID = &orgUUID
 		scope = nil // unset scope in this context; it's an edge-case and needs documentation
+		// FIXME!!!!! authorize the user<>org relationship...
 	}
 
 	var audience *string
