@@ -501,7 +501,12 @@ func (t *Token) vendRefreshToken() bool {
 // VendApplicationToken creates a new token on behalf of the application;
 // these tokens should be used for machine-to-machine applications, and so
 // are persisted as "legacy" tokens as described in the VendLegacyToken docs
-func VendApplicationToken(tx *gorm.DB, applicationID, organizationID, userID *uuid.UUID, extPermissions map[string]common.Permission) (*Token, error) {
+func VendApplicationToken(
+	tx *gorm.DB,
+	applicationID, organizationID, userID *uuid.UUID,
+	extPermissions map[string]common.Permission,
+	audience *string,
+) (*Token, error) {
 	var db *gorm.DB
 	if tx != nil {
 		db = tx
@@ -522,6 +527,7 @@ func VendApplicationToken(tx *gorm.DB, applicationID, organizationID, userID *uu
 		UserID:              userID,
 		Permissions:         common.DefaultApplicationResourcePermission,
 		ExtendedPermissions: &extPermissionsJSON,
+		Audience:            audience,
 	}
 
 	if !t.validate() {

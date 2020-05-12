@@ -2,6 +2,8 @@ package token
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	dbconf "github.com/kthomas/go-db-config"
@@ -64,6 +66,11 @@ func createTokenHandler(c *gin.Context) {
 		grantType = &reqGrantType
 	}
 
+	var scope *string
+	if reqScope, reqScopeOk := params["scope"].(string); reqScopeOk {
+		scope = &reqScope
+	}
+
 	var appID *uuid.UUID
 	if applicationID, ok := params["application_id"].(string); ok {
 		appUUID, err := uuid.FromString(applicationID)
@@ -82,16 +89,50 @@ func createTokenHandler(c *gin.Context) {
 		}
 	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
 		orgID = bearer.OrganizationID
+	} else if scope != nil && strings.HasPrefix(*scope, "organization:") {
+		orgUUID, err := uuid.FromString((*scope)[13:])
+		if err != nil {
+			provide.RenderError(fmt.Sprintf("invalid organization scope; %s", err.Error()), 422, c)
+			return
+		}
+		orgID = &orgUUID
+		scope = nil // unset scope in this context; it's an edge-case and needs documentation
+	}
+
+	var audience *string
+	if aud, audOk := params["aud"].(string); audOk {
+		altAudience, altAudienceOk := common.JWTAlternativeAuthorizationAudiences[aud].(string)
+		if !altAudienceOk {
+			provide.RenderError(fmt.Sprintf("invalid aud: %s", aud), 400, c)
+			return
+		}
+		audience = &altAudience
 	}
 
 	if appID != nil {
 		db := dbconf.DatabaseConnection()
-		resp, err := VendApplicationToken(db, appID, orgID, nil, nil) // FIXME-- support users and extended permissions
+		resp, err := VendApplicationToken(db, appID, orgID, nil, nil, audience) // FIXME-- support users and extended permissions
 		if err != nil {
 			provide.RenderError(err.Error(), 401, c)
 			return
 		}
 		provide.Render(resp.AsResponse(), 201, c)
+		return
+	} else if orgID != nil {
+		// db := dbconf.DatabaseConnection()
+		// resp, err := VendApplicationToken(db, appID, orgID, nil, nil, audience) // FIXME-- extended permissions
+		tkn := &Token{
+			OrganizationID: orgID,
+			Scope:          scope,
+			Audience:       audience,
+		}
+
+		if !tkn.Vend() {
+			provide.RenderError(*tkn.Errors[0].Message, 401, c)
+			return
+		}
+
+		provide.Render(tkn.AsResponse(), 201, c)
 		return
 	} else if grantType != nil && *grantType == authorizationGrantRefreshToken {
 		refreshAccessToken(c)

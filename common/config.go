@@ -2,6 +2,7 @@ package common
 
 import (
 	"crypto/rsa"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -89,6 +90,9 @@ var (
 	// JWTAuthorizationAudience is the audience who will consume the JWT; this will be set as the JWT "aud" claim
 	JWTAuthorizationAudience string
 
+	// JWTAlternativeAuthorizationAudiences are additional valid audiences who will consume signed JWTs, keyed on a scope; these will be allowed to be set as the JWT "aud" claim
+	JWTAlternativeAuthorizationAudiences map[string]interface{}
+
 	// JWTAuthorizationIssuer is the common name of the operator of the token vending machine; this will be set as the JWT "iss" claim
 	JWTAuthorizationIssuer string
 
@@ -171,6 +175,14 @@ func RequireJWT() {
 	JWTAuthorizationAudience = os.Getenv("JWT_AUTHORIZATION_AUDIENCE")
 	if JWTAuthorizationAudience == "" {
 		JWTAuthorizationAudience = defaultAuthorizationAudience
+	}
+
+	JWTAlternativeAuthorizationAudiences = map[string]interface{}{}
+	if os.Getenv("JWT_ALT_AUTHORIZATION_AUDIENCES") != "" {
+		err := json.Unmarshal([]byte(os.Getenv("JWT_ALT_AUTHORIZATION_AUDIENCES")), &JWTAlternativeAuthorizationAudiences)
+		if err != nil {
+			log.Panicf("failed to parse JWT_ALT_AUTHORIZATION_AUDIENCES from environment; %s", err.Error())
+		}
 	}
 
 	JWTAuthorizationIssuer = os.Getenv("JWT_AUTHORIZATION_ISSUER")
