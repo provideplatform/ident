@@ -19,7 +19,7 @@ import (
 
 const apiAccountingAddressEnvVar = "API_ACCOUNTING_ADDRESS"
 const defaultAuth0APINamespace = "v2"
-const defaultAuthorizationAudience = "https://provide.services"
+const defaultAuthorizationAudience = "https://provide.services/api/v1"
 const defaultAuthorizationIssuer = "https://ident.provide.services"
 const defaultAuthorizationTTL = time.Hour * 24
 const defaultBannedErrorMessage = "Your IP address has been banned from making API calls"
