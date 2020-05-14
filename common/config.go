@@ -78,6 +78,9 @@ var (
 	// ListenAddr is the http server listen address
 	ListenAddr string
 
+	// ListenPort is the http server listen port
+	ListenPort string
+
 	// CertificatePath is the SSL certificate path used by HTTPS listener
 	CertificatePath string
 
@@ -175,6 +178,12 @@ func RequireJWT() {
 	JWTAuthorizationAudience = os.Getenv("JWT_AUTHORIZATION_AUDIENCE")
 	if JWTAuthorizationAudience == "" {
 		JWTAuthorizationAudience = defaultAuthorizationAudience
+	} else if JWTAuthorizationAudience == "_self" {
+		ip, err := ResolvePublicIP()
+		if err != nil {
+			log.Panicf("failed to resolve public ip; %s", err.Error())
+		}
+		JWTAuthorizationAudience = fmt.Sprintf("http://%s:%s/api/v1", *ip, ListenPort)
 	}
 
 	JWTAlternativeAuthorizationAudiences = map[string]interface{}{}
@@ -336,11 +345,11 @@ func requireEmailVerification() {
 func requireGin() {
 	ListenAddr = os.Getenv("LISTEN_ADDR")
 	if ListenAddr == "" {
-		listenPort := os.Getenv("PORT")
-		if listenPort == "" {
-			listenPort = "8080"
+		ListenPort = os.Getenv("PORT")
+		if ListenPort == "" {
+			ListenPort = "8080"
 		}
-		ListenAddr = fmt.Sprintf("0.0.0.0:%s", listenPort)
+		ListenAddr = fmt.Sprintf("0.0.0.0:%s", ListenPort)
 	}
 
 	requireTLSConfiguration()
