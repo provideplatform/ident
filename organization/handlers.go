@@ -51,9 +51,9 @@ func InstallOrganizationVaultsAPI(r *gin.Engine) {
 }
 
 func resolveOrganization(db *gorm.DB, orgID, appID, userID *uuid.UUID) *gorm.DB {
-	query := db.Joins("JOIN applications_organizations as ao ON ao.organization_id = organizations.id")
+	query := db.Where("organizations.enabled = true")
 	if appID != nil {
-		query = query.Where("ao.application_id = ?", appID)
+		query = db.Joins("JOIN applications_organizations as ao ON ao.organization_id = organizations.id").Where("ao.application_id = ?", appID)
 	}
 	if orgID != nil {
 		query = query.Where("ao.organization_id = ?", orgID)
@@ -61,7 +61,7 @@ func resolveOrganization(db *gorm.DB, orgID, appID, userID *uuid.UUID) *gorm.DB 
 	if userID != nil {
 		query = query.Joins("JOIN organizations_users as ou ON ou.organization_id = organizations.id").Where("ou.user_id = ?", userID)
 	}
-	return query.Where("organizations.enabled = true").Order("organizations.name DESC").Group("organizations.id")
+	return query.Order("organizations.name DESC").Group("organizations.id")
 }
 
 func resolveOrganizationUsers(db *gorm.DB, orgID uuid.UUID, appID *uuid.UUID) *gorm.DB {
