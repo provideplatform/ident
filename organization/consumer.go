@@ -36,8 +36,8 @@ const organizationImplicitKeyExchangeInitTimeout = int64(time.Second * 20)
 
 const natsOrganizationRegistrationSubject = "ident.organization.registration"
 const natsOrganizationRegistrationMaxInFlight = 2048
-const natsOrganizationRegistrationAckWait = time.Second * 30
-const organizationRegistrationTimeout = int64(natsOrganizationRegistrationAckWait * 3)
+const natsOrganizationRegistrationAckWait = time.Second * 60
+const organizationRegistrationTimeout = int64(natsOrganizationRegistrationAckWait * 10)
 const organizationRegistrationMethod = "registerOrg"
 const organizationSetInterfaceImplementerMethod = "setInterfaceImplementer"
 
@@ -487,13 +487,13 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 
 		var erc1820RegistryContractID *string
 		var orgRegistryContractID *string
-		var shieldContractID *string
-		var verifierContractID *string
+		// var shieldContractID *string
+		// var verifierContractID *string
 
 		var erc1820RegistryContractAddress *string
 		var orgRegistryContractAddress *string
-		var shieldContractAddress *string
-		var verifierContractAddress *string
+		// var shieldContractAddress *string
+		// var verifierContractAddress *string
 
 		var walletID *string
 		var hdDerivationPath *string
@@ -603,12 +603,12 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 							case contractTypeOrgRegistry:
 								orgRegistryContractID = common.StringOrNil(cntrctID)
 								orgRegistryContractAddress = common.StringOrNil(contractAddress)
-							case contractTypeShield:
-								shieldContractID = common.StringOrNil(cntrctID)
-								shieldContractAddress = common.StringOrNil(contractAddress)
-							case contractTypeVerifier:
-								verifierContractID = common.StringOrNil(cntrctID)
-								verifierContractAddress = common.StringOrNil(contractAddress)
+								// case contractTypeShield:
+								// 	shieldContractID = common.StringOrNil(cntrctID)
+								// 	shieldContractAddress = common.StringOrNil(contractAddress)
+								// case contractTypeVerifier:
+								// 	verifierContractID = common.StringOrNil(cntrctID)
+								// 	verifierContractAddress = common.StringOrNil(contractAddress)
 							}
 						}
 					}
@@ -628,17 +628,17 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 			return
 		}
 
-		if verifierContractID == nil || verifierContractAddress == nil {
-			common.Log.Warningf("failed to resolve default verifier contract; application id: %s", applicationID)
-			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
-			return
-		}
+		// if verifierContractID == nil || verifierContractAddress == nil {
+		// 	common.Log.Warningf("failed to resolve default verifier contract; application id: %s", applicationID)
+		// 	natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+		// 	return
+		// }
 
-		if shieldContractID == nil || shieldContractAddress == nil {
-			common.Log.Warningf("failed to resolve default shield contract; application id: %s", applicationID)
-			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
-			return
-		}
+		// if shieldContractID == nil || shieldContractAddress == nil {
+		// 	common.Log.Warningf("failed to resolve default shield contract; application id: %s", applicationID)
+		// 	natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+		// 	return
+		// }
 
 		if walletID == nil || hdDerivationPath == nil {
 			common.Log.Warningf("failed to resolve HD wallet for signing organization registry transaction; organization id: %s", organizationID)
@@ -675,60 +675,60 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 
 		// setInterfaceImplementer -- IOrgRegistry
 
-		setOrgRegistryInterfaceImplStatus, _, err := provide.ExecuteContract(*orgToken.Token, *erc1820RegistryContractID, map[string]interface{}{
-			"wallet_id":          orgWalletID,
-			"hd_derivation_path": orgHDDerivationPath,
-			"method":             organizationSetInterfaceImplementerMethod,
-			"params": []interface{}{
-				orgAddress,
-				string(provide.Keccak256("IOrgRegistry")),
-				*orgRegistryContractAddress,
-			},
-			"value": 0,
-		})
-		if err != nil || setOrgRegistryInterfaceImplStatus != 202 {
-			common.Log.Warningf("organization IOrgRegistry impl transaction broadcast failed on behalf of organization: %s; %s", organizationID, err.Error())
-			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
-			return
-		}
+		// setOrgRegistryInterfaceImplStatus, _, err := provide.ExecuteContract(*orgToken.Token, *erc1820RegistryContractID, map[string]interface{}{
+		// 	"wallet_id":          orgWalletID,
+		// 	"hd_derivation_path": orgHDDerivationPath,
+		// 	"method":             organizationSetInterfaceImplementerMethod,
+		// 	"params": []interface{}{
+		// 		orgAddress,
+		// 		string(provide.Keccak256("IOrgRegistry")),
+		// 		*orgRegistryContractAddress,
+		// 	},
+		// 	"value": 0,
+		// })
+		// if err != nil || setOrgRegistryInterfaceImplStatus != 202 {
+		// 	common.Log.Warningf("organization IOrgRegistry impl transaction broadcast failed on behalf of organization: %s; %s", organizationID, err.Error())
+		// 	natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+		// 	return
+		// }
 
 		// setInterfaceImplementer -- IShield
 
-		setShieldInterfaceImplStatus, _, err := provide.ExecuteContract(*orgToken.Token, *erc1820RegistryContractID, map[string]interface{}{
-			"wallet_id":          orgWalletID,
-			"hd_derivation_path": orgHDDerivationPath,
-			"method":             organizationSetInterfaceImplementerMethod,
-			"params": []interface{}{
-				orgAddress,
-				string(provide.Keccak256("IShield")),
-				*shieldContractAddress,
-			},
-			"value": 0,
-		})
-		if err != nil || setShieldInterfaceImplStatus != 202 {
-			common.Log.Warningf("organization IShield impl transaction broadcast failed on behalf of organization: %s; %s", organizationID, err.Error())
-			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
-			return
-		}
+		// setShieldInterfaceImplStatus, _, err := provide.ExecuteContract(*orgToken.Token, *erc1820RegistryContractID, map[string]interface{}{
+		// 	"wallet_id":          orgWalletID,
+		// 	"hd_derivation_path": orgHDDerivationPath,
+		// 	"method":             organizationSetInterfaceImplementerMethod,
+		// 	"params": []interface{}{
+		// 		orgAddress,
+		// 		string(provide.Keccak256("IShield")),
+		// 		*shieldContractAddress,
+		// 	},
+		// 	"value": 0,
+		// })
+		// if err != nil || setShieldInterfaceImplStatus != 202 {
+		// 	common.Log.Warningf("organization IShield impl transaction broadcast failed on behalf of organization: %s; %s", organizationID, err.Error())
+		// 	natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+		// 	return
+		// }
 
-		// setInterfaceImplementer -- IVerifier
+		// // setInterfaceImplementer -- IVerifier
 
-		setVerifierInterfaceImplStatus, _, err := provide.ExecuteContract(*orgToken.Token, *erc1820RegistryContractID, map[string]interface{}{
-			"wallet_id":          orgWalletID,
-			"hd_derivation_path": orgHDDerivationPath,
-			"method":             organizationSetInterfaceImplementerMethod,
-			"params": []interface{}{
-				orgAddress,
-				string(provide.Keccak256("IVerifier")),
-				*verifierContractAddress,
-			},
-			"value": 0,
-		})
-		if err != nil || setVerifierInterfaceImplStatus != 202 {
-			common.Log.Warningf("organization IVerifier interface impl transaction broadcast failed on behalf of organization: %s; %s", organizationID, err.Error())
-			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
-			return
-		}
+		// setVerifierInterfaceImplStatus, _, err := provide.ExecuteContract(*orgToken.Token, *erc1820RegistryContractID, map[string]interface{}{
+		// 	"wallet_id":          orgWalletID,
+		// 	"hd_derivation_path": orgHDDerivationPath,
+		// 	"method":             organizationSetInterfaceImplementerMethod,
+		// 	"params": []interface{}{
+		// 		orgAddress,
+		// 		string(provide.Keccak256("IVerifier")),
+		// 		*verifierContractAddress,
+		// 	},
+		// 	"value": 0,
+		// })
+		// if err != nil || setVerifierInterfaceImplStatus != 202 {
+		// 	common.Log.Warningf("organization IVerifier interface impl transaction broadcast failed on behalf of organization: %s; %s", organizationID, err.Error())
+		// 	natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+		// 	return
+		// }
 
 		common.Log.Debugf("broadcast organization registry and interface impl transactions on behalf of organization: %s", organizationID)
 		msg.Ack()
