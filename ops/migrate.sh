@@ -25,7 +25,7 @@ if [[ -z "${DATABASE_SUPERUSER}" ]]; then
 fi
 
 if [[ -z "${DATABASE_SUPERUSER_PASSWORD}" ]]; then
-  DATABASE_PASSWORD=prvdp455
+  DATABASE_SUPERUSER_PASSWORD=prvdp455
 fi
 
 if [[ -z "${DATABASE_LOGGING}" ]]; then
