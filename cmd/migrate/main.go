@@ -34,25 +34,25 @@ func main() {
 
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		common.Log.Warningf("migrations failed: %s", err.Error())
+		common.Log.Warningf("migrations failed 1: %s", err.Error())
 		panic(err)
 	}
 
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
-		common.Log.Warningf("migrations failed: %s", err.Error())
+		common.Log.Warningf("migrations failed 2: %s config: %a", err.Error(), &postgres.Config{})
 		panic(err)
 	}
 
 	m, err := migrate.NewWithDatabaseInstance("file://./ops/migrations", cfg.DatabaseName, driver)
 	if err != nil {
-		common.Log.Warningf("migrations failed: %s", err.Error())
+		common.Log.Warningf("migrations failed 3: %s", err.Error())
 		panic(err)
 	}
 
 	err = m.Up()
 	if err != nil && err != migrate.ErrNoChange {
-		common.Log.Warningf("migrations failed: %s", err.Error())
+		common.Log.Warningf("migrations failed 4: %s", err.Error())
 	}
 }
 
@@ -68,31 +68,41 @@ func initIfNotExists(cfg *dbconf.DBConfig, superuser, password string) error {
 	}
 
 	superuserCfg := &dbconf.DBConfig{
+		DatabaseName:     cfg.DatabaseName,
 		DatabaseHost:     cfg.DatabaseHost,
 		DatabasePort:     cfg.DatabasePort,
-		DatabaseName:     superuser,
 		DatabaseUser:     superuser,
 		DatabasePassword: password,
 		DatabaseSSLMode:  "require",
 	}
 
+	//should retry here, sleeping each time until we can connect
 	client, err := dbconf.DatabaseConnectionFactory(superuserCfg)
+
 	if err != nil {
-		common.Log.Warningf("migrations failed: %s", err.Error())
+		common.Log.Warningf("migrations failed 5: %s :debug: host name %s, port name %d", err.Error(), superuserCfg.DatabaseHost, superuserCfg.DatabasePort)
 		return err
 	}
 	defer client.Close()
 
+	// create the ident user if it doesn't exist
+	//HACK: this throws an unfriendly error, but the migration fail without it, so more investigation needed here...
+	common.Log.Debugf("ident.main.initIfNotExists: creating db user.")
+	if err := client.Exec(fmt.Sprintf("CREATE ROLE %s WITH LOGIN NOSUPERUSER", cfg.DatabaseUser)); err != nil {
+		common.Log.Warningf("ident.main.initIfNotExists: Error creating user %s, error: ", cfg.DatabaseUser, err)
+	}
+
 	result := client.Exec(fmt.Sprintf("ALTER USER %s WITH SUPERUSER PASSWORD '%s'", cfg.DatabaseUser, cfg.DatabasePassword))
 	if err != nil {
-		common.Log.Warningf("migrations failed: %s", err.Error())
+		common.Log.Warningf("migrations failed-alteruser: %s with parameters %s %s", err.Error(), cfg.DatabaseName, cfg.DatabaseUser)
 		return err
 	}
+
 	if err == nil {
 		result = client.Exec(fmt.Sprintf("CREATE DATABASE %s OWNER %s", cfg.DatabaseName, cfg.DatabaseUser))
 		err = result.Error
 		if err != nil {
-			common.Log.Warningf("migrations failed: %s", err.Error())
+			common.Log.Warningf("migrations failed-createdb: %s for parameters %a %b", err.Error(), cfg.DatabaseName, cfg.DatabaseUser)
 			return err
 		}
 	}

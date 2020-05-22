@@ -12,6 +12,10 @@ if [[ -z "${DATABASE_NAME}" ]]; then
   DATABASE_NAME=ident_dev
 fi
 
+if [[ -z "${DATABASE_PORT}" ]]; then
+  DATABASE_PORT=5432
+fi
+
 if [[ -z "${DATABASE_USER}" ]]; then
   DATABASE_USER=ident
 fi
@@ -32,7 +36,7 @@ if [[ -z "${DATABASE_LOGGING}" ]]; then
   DATABASE_LOGGING=false
 fi
 
-./ops/await_tcp.sh $DATABASE_HOST
+./ops/await_tcp.sh $DATABASE_HOST:$DATABASE_PORT
 
 DATABASE_HOST=$DATABASE_HOST \
 DATABASE_NAME=$DATABASE_NAME \
