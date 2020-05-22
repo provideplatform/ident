@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/url"
+	"os"
 
 	"github.com/provideapp/ident/common"
 
@@ -16,7 +17,14 @@ import (
 
 func main() {
 	cfg := dbconf.GetDBConfig()
-	dsn := fmt.Sprintf("postgres://%s/%s?user=%s&password=%s&sslmode=%s",
+	initIfNotExists(
+		cfg,
+		os.Getenv("DATABASE_SUPERUSER"),
+		os.Getenv("DATABASE_SUPERUSER_PASSWORD"),
+	)
+
+	dsn := fmt.Sprintf(
+		"postgres://%s/%s?user=%s&password=%s&sslmode=%s",
 		cfg.DatabaseHost,
 		cfg.DatabaseName,
 		cfg.DatabaseUser,
@@ -46,4 +54,48 @@ func main() {
 	if err != nil && err != migrate.ErrNoChange {
 		common.Log.Warningf("migrations failed: %s", err.Error())
 	}
+}
+
+func initIfNotExists(cfg *dbconf.DBConfig, superuser, password string) error {
+	defer func() {
+		if r := recover(); r != nil {
+			common.Log.Debugf("migrations recovered during user/db setup; %s", r)
+		}
+	}()
+
+	if superuser == "" || password == "" {
+		return nil
+	}
+
+	superuserCfg := &dbconf.DBConfig{
+		DatabaseHost:     cfg.DatabaseHost,
+		DatabasePort:     cfg.DatabasePort,
+		DatabaseName:     superuser,
+		DatabaseUser:     superuser,
+		DatabasePassword: password,
+		DatabaseSSLMode:  "require",
+	}
+
+	client, err := dbconf.DatabaseConnectionFactory(superuserCfg)
+	if err != nil {
+		common.Log.Warningf("migrations failed: %s", err.Error())
+		return err
+	}
+	defer client.Close()
+
+	result := client.Exec(fmt.Sprintf("ALTER USER %s WITH SUPERUSER PASSWORD '%s'", cfg.DatabaseUser, cfg.DatabasePassword))
+	if err != nil {
+		common.Log.Warningf("migrations failed: %s", err.Error())
+		return err
+	}
+	if err == nil {
+		result = client.Exec(fmt.Sprintf("CREATE DATABASE %s OWNER %s", cfg.DatabaseName, cfg.DatabaseUser))
+		err = result.Error
+		if err != nil {
+			common.Log.Warningf("migrations failed: %s", err.Error())
+			return err
+		}
+	}
+
+	return nil
 }
