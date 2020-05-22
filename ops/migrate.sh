@@ -24,7 +24,7 @@ if [[ -z "${DATABASE_LOGGING}" ]]; then
   DATABASE_LOGGING=false
 fi
 
-./ops/await_tcp $DATABASE_HOST
+./ops/await_tcp.sh $DATABASE_HOST
 
 createuser $DATABASE_USER --superuser 2>/dev/null
 createdb $DATABASE_NAME -O $DATABASE_USER 2>/dev/null
