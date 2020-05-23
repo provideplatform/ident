@@ -21,11 +21,16 @@ const initIfNotExistTimeout = time.Second * 30
 
 func main() {
 	cfg := dbconf.GetDBConfig()
-	initIfNotExists(
+
+	err := initIfNotExists(
 		cfg,
 		os.Getenv("DATABASE_SUPERUSER"),
 		os.Getenv("DATABASE_SUPERUSER_PASSWORD"),
 	)
+	if err != nil {
+		common.Log.Warningf("migrations failed; %s", err.Error())
+		panic(err)
+	}
 
 	dsn := fmt.Sprintf(
 		"postgres://%s/%s?user=%s&password=%s&sslmode=%s",
@@ -61,12 +66,6 @@ func main() {
 }
 
 func initIfNotExists(cfg *dbconf.DBConfig, superuser, password string) error {
-	defer func() {
-		if r := recover(); r != nil {
-			common.Log.Debugf("migrations recovered during user/db setup; %s", r)
-		}
-	}()
-
 	if superuser == "" || password == "" {
 		return nil
 	}
