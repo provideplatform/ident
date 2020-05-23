@@ -17,7 +17,8 @@ import (
 	dbconf "github.com/kthomas/go-db-config"
 )
 
-const initIfNotExistTimeout = time.Second * 30
+const initIfNotExistsRetryInterval = time.Second * 5
+const initIfNotExistsTimeout = time.Second * 30
 
 func main() {
 	cfg := dbconf.GetDBConfig()
@@ -82,7 +83,7 @@ func initIfNotExists(cfg *dbconf.DBConfig, superuser, password string) error {
 	var client *gorm.DB
 	var err error
 
-	ticker := time.NewTicker(initIfNotExistTimeout)
+	ticker := time.NewTicker(initIfNotExistsRetryInterval)
 	startedAt := time.Now()
 	for {
 		select {
@@ -93,7 +94,7 @@ func initIfNotExists(cfg *dbconf.DBConfig, superuser, password string) error {
 				break
 			}
 
-			if time.Now().Sub(startedAt) >= initIfNotExistTimeout {
+			if time.Now().Sub(startedAt) >= initIfNotExistsTimeout {
 				ticker.Stop()
 				panic(fmt.Sprintf("migrations failed; initIfNotExists timed out connecting to %s:%d", superuserCfg.DatabaseHost, superuserCfg.DatabasePort))
 			}
