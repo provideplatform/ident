@@ -110,9 +110,9 @@ func initIfNotExists(cfg *dbconf.DBConfig, superuser, password string) error {
 		return err
 	}
 
-	result := client.Exec(fmt.Sprintf("ALTER USER %s WITH SUPERUSER PASSWORD '%s'", cfg.DatabaseUser, cfg.DatabasePassword))
+	result := client.Exec(fmt.Sprintf("CREATE USER %s WITH SUPERUSER PASSWORD '%s'", cfg.DatabaseUser, cfg.DatabasePassword))
 	if err != nil {
-		common.Log.Warningf("migrations failed-alteruser: %s with parameters %s %s", err.Error(), cfg.DatabaseName, cfg.DatabaseUser)
+		common.Log.Warningf("migrations failed; failed to create user: %s; %s", err.Error(), cfg.DatabaseUser)
 		return err
 	}
 
