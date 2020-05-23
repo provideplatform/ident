@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"time"
 
+	"github.com/jinzhu/gorm"
 	"github.com/provideapp/ident/common"
 
 	"github.com/golang-migrate/migrate"
@@ -14,6 +16,8 @@ import (
 
 	dbconf "github.com/kthomas/go-db-config"
 )
+
+const initIfNotExistTimeout = time.Second * 30
 
 func main() {
 	cfg := dbconf.GetDBConfig()
@@ -68,7 +72,7 @@ func initIfNotExists(cfg *dbconf.DBConfig, superuser, password string) error {
 	}
 
 	superuserCfg := &dbconf.DBConfig{
-		DatabaseName:     cfg.DatabaseName,
+		DatabaseName:     superuser,
 		DatabaseHost:     cfg.DatabaseHost,
 		DatabasePort:     cfg.DatabasePort,
 		DatabaseUser:     superuser,
@@ -76,8 +80,27 @@ func initIfNotExists(cfg *dbconf.DBConfig, superuser, password string) error {
 		DatabaseSSLMode:  "require",
 	}
 
-	//should retry here, sleeping each time until we can connect
-	client, err := dbconf.DatabaseConnectionFactory(superuserCfg)
+	var client *gorm.DB
+	var err error
+
+	ticker := time.NewTicker(initIfNotExistTimeout)
+	startedAt := time.Now()
+	for {
+		select {
+		case <-ticker.C:
+			client, err = dbconf.DatabaseConnectionFactory(superuserCfg)
+			if err == nil {
+				ticker.Stop()
+				break
+			}
+
+			if time.Now().Sub(startedAt) >= initIfNotExistTimeout {
+				common.Log.Warningf("migrations failed 4.5: %s :debug: host name %s, port name %d", err.Error(), superuserCfg.DatabaseHost, superuserCfg.DatabasePort)
+				ticker.Stop()
+				break
+			}
+		}
+	}
 
 	if err != nil {
 		common.Log.Warningf("migrations failed 5: %s :debug: host name %s, port name %d", err.Error(), superuserCfg.DatabaseHost, superuserCfg.DatabasePort)
