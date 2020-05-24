@@ -77,6 +77,7 @@ func initIfNotExists(cfg *dbconf.DBConfig, superuser, password string) error {
 		DatabasePort:     cfg.DatabasePort,
 		DatabaseUser:     superuser,
 		DatabasePassword: password,
+		DatabaseSSLMode:  cfg.DatabaseSSLMode,
 	}
 
 	var client *gorm.DB
