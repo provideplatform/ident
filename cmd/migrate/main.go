@@ -91,6 +91,8 @@ func initIfNotExists(cfg *dbconf.DBConfig, superuser, password string) error {
 			if err == nil {
 				ticker.Stop()
 				break
+			} else {
+				common.Log.Debugf("migrations db connection not established; %s", err.Error())
 			}
 
 			if time.Now().Sub(startedAt) >= initIfNotExistsTimeout {
