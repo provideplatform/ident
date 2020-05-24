@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -28,7 +29,7 @@ func main() {
 		os.Getenv("DATABASE_SUPERUSER"),
 		os.Getenv("DATABASE_SUPERUSER_PASSWORD"),
 	)
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "exists") { // HACK -- could be replaced with query
 		common.Log.Warningf("migrations failed; %s", err.Error())
 		panic(err)
 	}
