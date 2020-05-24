@@ -218,6 +218,9 @@ func RequireJWT() {
 // token authorization middleware provided in this package
 func RequireJWTVerifiers() {
 	Log.Debug("attempting to read required public key from environment for verifying signed JWT")
+	if jwtKeypairs == nil {
+		jwtKeypairs = map[string]*jwtKeypair{}
+	}
 
 	jwtPublicKeyPEM := strings.Replace(os.Getenv("JWT_SIGNER_PUBLIC_KEY"), `\n`, "\n", -1)
 	publicKey, err := pgputil.DecodeRSAPublicKeyFromPEM([]byte(jwtPublicKeyPEM))
