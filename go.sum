@@ -236,12 +236,12 @@ github.com/kthomas/go-logger v0.0.0-20200602041232-5c46e0cab608 h1:izlCyvp4a5zcO
 github.com/kthomas/go-logger v0.0.0-20200602041232-5c46e0cab608/go.mod h1:sXRQB767yNz+melLbxSNF+yu0H7kxguvoJHqa47Mxh4=
 github.com/kthomas/go-logger v0.0.0-20200602072946-d7d72dfc2531 h1:8SnbaD9jO9OWBECn2X6IcCLz8RASFgB0bLbVNtt7yGE=
 github.com/kthomas/go-logger v0.0.0-20200602072946-d7d72dfc2531/go.mod h1:sXRQB767yNz+melLbxSNF+yu0H7kxguvoJHqa47Mxh4=
-github.com/kthomas/go-natsutil v0.0.0-20200602041834-a3b53c6d4ae4 h1:KqoTzFS4Yviuop4H2g29gbVClaE6ZAIBFztU2ehGS6k=
-github.com/kthomas/go-natsutil v0.0.0-20200602041834-a3b53c6d4ae4/go.mod h1:lujYuEXiH6nAjvM67aUJgWFZhhED1/2CqefMfzDsdfA=
+github.com/kthomas/go-natsutil v0.0.0-20200602073459-388e1f070b05 h1:Sx6QjNcTqprrN0k/EjM8GaAM9Lfgb0BSSbzt3nRWH5U=
+github.com/kthomas/go-natsutil v0.0.0-20200602073459-388e1f070b05/go.mod h1:N0lpxSQ7hGx0pR4CK79koHPC2duLwvUORDHQ1hEERqU=
 github.com/kthomas/go-pgputil v0.0.0-20200602041635-b047a3b754f5 h1:t0qQse+beY76hzGH1H5UNBtjuGT43gCRcfr1zw3NAAQ=
 github.com/kthomas/go-pgputil v0.0.0-20200602041635-b047a3b754f5/go.mod h1:F0rurLk38MeSbWPymfm6+UM4sLlZOYDqF8tJ1WpBvO0=
-github.com/kthomas/go-redisutil v0.0.0-20200602041955-88812a3b302d h1:9zqiI1peqTflEDWwP/UVLftHnNWyZj42Jk38eBSsj7k=
-github.com/kthomas/go-redisutil v0.0.0-20200602041955-88812a3b302d/go.mod h1:WS6eqRsYpqIx+10kpZynC1AgoL6J5VBA5UmlcsY3+oA=
+github.com/kthomas/go-redisutil v0.0.0-20200602073431-aa49de17e9ff h1:8tlYBAzX9jkEwGpIXLOwOMO57S5XmLLAcRDbuEtNJv8=
+github.com/kthomas/go-redisutil v0.0.0-20200602073431-aa49de17e9ff/go.mod h1:0+47rWkkS02fe7KtcNn5bDCwE4eZ9UeZ5SChy+AkjLk=
 github.com/kthomas/go-self-signed-cert v0.0.0-20200602041729-f9878375d46e h1:G//bQmubE/JtHY10bbiPnulIuDi1zHkjuP9QpcB4+8I=
 github.com/kthomas/go-self-signed-cert v0.0.0-20200602041729-f9878375d46e/go.mod h1:2U4e9gFnjUVWhKO7bMhpRh5k3SoQIZAsahqb+gQhaFI=
 github.com/kthomas/go.uuid v1.2.1-0.20190324131420-28d1fa77e9a4 h1:xWgita+beQTA+NaWz1dSFnWMZFLFPpRNZ0NdG1VOfOQ=
