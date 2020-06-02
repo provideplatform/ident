@@ -119,8 +119,7 @@ var (
 )
 
 func init() {
-	RequireLogger()
-
+	requireLogger()
 	requireEmailVerification()
 	requireGin()
 	requireIPLists()
@@ -354,8 +353,7 @@ func requireGin() {
 	requireTLSConfiguration()
 }
 
-// RequireLogger require the logger
-func RequireLogger() {
+func requireLogger() {
 	lvl := os.Getenv("LOG_LEVEL")
 	if lvl == "" {
 		lvl = "INFO"
