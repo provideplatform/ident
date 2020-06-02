@@ -16,7 +16,7 @@ require (
 	github.com/jinzhu/gorm v1.9.12
 	github.com/kthomas/go-auth0 v0.0.0-20200602063018-d45ad85a2325
 	github.com/kthomas/go-db-config v0.0.0-20190930131840-6f8768ecee4c
-	github.com/kthomas/go-logger v0.0.0-20200602041232-5c46e0cab608
+	github.com/kthomas/go-logger v0.0.0-20200602072946-d7d72dfc2531
 	github.com/kthomas/go-natsutil v0.0.0-20200602041834-a3b53c6d4ae4
 	github.com/kthomas/go-pgputil v0.0.0-20200602041635-b047a3b754f5
 	github.com/kthomas/go-redisutil v0.0.0-20200602041955-88812a3b302d
