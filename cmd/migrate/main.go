@@ -22,6 +22,7 @@ const initIfNotExistsRetryInterval = time.Second * 5
 const initIfNotExistsTimeout = time.Second * 30
 
 func main() {
+	common.RequireLogger()
 	cfg := dbconf.GetDBConfig()
 
 	err := initIfNotExists(
