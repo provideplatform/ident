@@ -65,7 +65,7 @@ func authorize(c *gin.Context) *Token {
 		common.Log.Warningf("bearer token authorization failed; %s", err.Error())
 		return nil
 	}
-	if token.UserID == nil && token.ApplicationID == nil {
+	if token.UserID == nil && token.ApplicationID == nil && token.OrganizationID == nil {
 		subject := "< not provided >"
 		if token.Subject != nil {
 			subject = fmt.Sprintf("%s", *token.Subject)
