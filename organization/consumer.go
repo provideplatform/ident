@@ -441,26 +441,32 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 	}
 
 	var orgAddress *string
-	var orgMessagingKey *string
+	var orgMessagingEndpoint *string
+	var orgWhisperKey *string
 	var orgZeroKnowledgePublicKey *string
 
 	organization.Enrich(db, nil)
 	for _, key := range organization.Keys {
 		if key.Spec != nil && *key.Spec == "secp256k1" && key.Address != nil {
 			orgAddress = common.StringOrNil(*key.Address)
-			orgMessagingKey = common.StringOrNil(fmt.Sprintf("0x%s", common.SHA256(*orgAddress))) // FIXME-- this derivation can be removed as we don't need to store it in the blockchain
+			orgWhisperKey = common.StringOrNil("0x")
 		}
 
 		if key.Spec != nil && *key.Spec == "babyJubJub" {
 			orgZeroKnowledgePublicKey = common.StringOrNil(*key.PublicKey)
 		}
 
-		if orgAddress != nil && orgMessagingKey != nil && orgZeroKnowledgePublicKey != nil {
+		if orgAddress != nil && orgWhisperKey != nil && orgZeroKnowledgePublicKey != nil {
 			break
 		}
 	}
 
-	if orgAddress == nil || orgMessagingKey == nil {
+	metadata := organization.ParseMetadata()
+	if messagingEndpoint, messagingEndpointOk := metadata["messaging_endpoint"].(string); messagingEndpointOk {
+		orgMessagingEndpoint = common.StringOrNil(messagingEndpoint)
+	}
+
+	if orgAddress == nil || orgMessagingEndpoint == nil || orgWhisperKey == nil {
 		common.Log.Warningf("failed to resolve organization public address for storage in the public org registry; organization id: %s", organizationID)
 		natsutil.AttemptNack(msg, organizationRegistrationTimeout)
 		return
@@ -534,7 +540,6 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 					}
 				}
 			}
-
 		}
 
 		// org api token & hd wallet
@@ -661,8 +666,8 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 			"params": []interface{}{
 				orgAddress,
 				*organization.Name,
-				0,
-				*orgMessagingKey,
+				*orgMessagingEndpoint,
+				*orgWhisperKey,
 				*orgZeroKnowledgePublicKey,
 			},
 			"value": 0,

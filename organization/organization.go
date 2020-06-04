@@ -26,6 +26,7 @@ type Organization struct {
 	UserID      *uuid.UUID        `json:"user_id,omitempty"`
 	Description *string           `json:"description"`
 	Permissions common.Permission `sql:"not null" json:"permissions,omitempty"`
+	Metadata    *json.RawMessage  `sql:"type:json" json:"metadata"`
 
 	Keys  []*vault.Key `sql:"-" json:"keys,omitempty"`
 	Users []*user.User `gorm:"many2many:organizations_users" json:"-"`
@@ -304,4 +305,23 @@ func (o *Organization) Delete() bool {
 	}
 	tx.Commit()
 	return success
+}
+
+// ParseMetadata - parse the Organization JSON metadata
+func (o *Organization) ParseMetadata() map[string]interface{} {
+	metadata := map[string]interface{}{}
+	if o.Metadata != nil {
+		err := json.Unmarshal(*o.Metadata, &metadata)
+		if err != nil {
+			common.Log.Warningf("Failed to unmarshal organization metadata; %s", err.Error())
+			return nil
+		}
+	}
+	return metadata
+}
+
+func (o *Organization) setMetadata(metadata map[string]interface{}) {
+	metadataJSON, _ := json.Marshal(metadata)
+	_metadataJSON := json.RawMessage(metadataJSON)
+	o.Metadata = &_metadataJSON
 }
