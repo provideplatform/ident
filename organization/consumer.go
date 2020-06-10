@@ -669,6 +669,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 				*orgMessagingEndpoint,
 				*orgWhisperKey,
 				*orgZeroKnowledgePublicKey,
+				"{}",
 			},
 			"value": 0,
 		})
