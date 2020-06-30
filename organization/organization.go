@@ -2,7 +2,6 @@ package organization
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/jinzhu/gorm"
@@ -12,7 +11,6 @@ import (
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/user"
-	"github.com/provideapp/ident/vault"
 	provide "github.com/provideservices/provide-go"
 )
 
@@ -28,7 +26,6 @@ type Organization struct {
 	Permissions common.Permission `sql:"not null" json:"permissions,omitempty"`
 	Metadata    *json.RawMessage  `sql:"type:json" json:"metadata"`
 
-	Keys  []*vault.Key `sql:"-" json:"keys,omitempty"`
 	Users []*user.User `gorm:"many2many:organizations_users" json:"-"`
 }
 
@@ -193,33 +190,6 @@ func (o *Organization) Create(tx *gorm.DB) bool {
 	return false
 }
 
-// createVault creates a key management "vault" for the organization
-func (o *Organization) createVault(tx *gorm.DB) (*vault.Vault, error) {
-	var db *gorm.DB
-	if tx != nil {
-		db = tx
-	} else {
-		db = dbconf.DatabaseConnection()
-		db = db.Begin()
-		defer db.RollbackUnlessCommitted()
-	}
-
-	vlt := &vault.Vault{
-		OrganizationID: &o.ID,
-		Name:           o.Name,
-		Description:    common.StringOrNil("Organizational keystore"),
-	}
-
-	if !vlt.Create(db) {
-		errmsg := fmt.Sprintf("Failed to create vault for organization: %s; %s", *o.Name, *vlt.Errors[0].Message)
-		common.Log.Warning(errmsg)
-		return nil, errors.New(errmsg)
-	}
-
-	common.Log.Debugf("Created vault for organization: %s", *o.Name)
-	return vlt, nil
-}
-
 // pendingInvitations returns the pending invitations for the organization; these are ephemeral, in-memory only
 func (o *Organization) pendingInvitations() []*user.Invite {
 	var invitations []*user.Invite
@@ -265,19 +235,7 @@ func (o *Organization) Update() bool {
 
 // Enrich an organization
 func (o *Organization) Enrich(db *gorm.DB, keyType *string) {
-	organizationKeysQuery(db, o.ID, keyType).Find(&o.Keys)
-	for _, key := range o.Keys {
-		key.Enrich()
-	}
-}
 
-func organizationKeysQuery(db *gorm.DB, orgID uuid.UUID, keyType *string) *gorm.DB {
-	query := db.Select("keys.id, keys.created_at, keys.name, keys.description, keys.type, keys.usage, keys.spec, keys.public_key, keys.vault_id")
-	query = query.Joins("JOIN vaults as v ON keys.vault_id = v.id").Where("v.organization_id = ?", orgID)
-	if keyType != nil {
-		query = query.Where("keys.type = ?", *keyType)
-	}
-	return query
 }
 
 // validate an organization for persistence
