@@ -16,8 +16,6 @@ import (
 
 	"github.com/provideapp/ident/application"
 	"github.com/provideapp/ident/common"
-	"github.com/provideapp/ident/consumer"
-	"github.com/provideapp/ident/kyc"
 	"github.com/provideapp/ident/organization"
 	"github.com/provideapp/ident/token"
 	"github.com/provideapp/ident/user"
@@ -51,7 +49,7 @@ func init() {
 	pgputil.RequirePGP()
 	redisutil.RequireRedis()
 	// common.RequireAPIAccounting()
-	consumer.RunAPIUsageDaemon()
+	// consumer.RunAPIUsageDaemon()
 }
 
 func main() {
@@ -106,7 +104,6 @@ func runAPI() {
 	user.InstallPublicUserAPI(r)
 
 	r.Use(token.AuthMiddleware())
-	// r.Use(common.AccountingMiddleware())
 	r.Use(common.RateLimitingMiddleware())
 	r.Use(provide.TrackAPICalls())
 
@@ -118,7 +115,6 @@ func runAPI() {
 	organization.InstallOrganizationVaultsAPI(r)
 	token.InstallTokenAPI(r)
 	user.InstallUserAPI(r)
-	kyc.InstallKYCAPI(r)
 
 	srv = &http.Server{
 		Addr:    common.ListenAddr,

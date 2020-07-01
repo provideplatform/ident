@@ -20,7 +20,7 @@ func AccountingMiddleware() gin.HandlerFunc {
 					if err != nil {
 						Log.Warningf("failed to write %d-byte packet to api accounting endpoint; %s", len, err.Error())
 					} else {
-						Log.Debugf("%d-byte api call accounting packet written to accounting endpoint", len)
+						Log.Tracef("%d-byte api call accounting packet written to accounting endpoint", len)
 					}
 				}
 			}
