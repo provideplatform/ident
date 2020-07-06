@@ -185,6 +185,8 @@ func consumeCreatedOrganizationMsg(msg *stan.Msg) {
 	}
 
 	status, _, err := provide.CreateVault(*orgToken.Token, map[string]interface{}{
+		"name":            fmt.Sprintf("%s vault", *organization.Name),
+		"description":     "default organizational keystore",
 		"organization_id": organizationID,
 	})
 	if err == nil && status == 201 {
