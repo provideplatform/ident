@@ -275,7 +275,7 @@ func (u *User) Create(tx *gorm.DB, createAuth0User bool) bool {
 					db.Commit()
 				}
 
-				if success && (u.ApplicationID == nil || *u.ApplicationID == uuid.Nil) {
+				if success && (u.ApplicationID == nil || *u.ApplicationID == uuid.Nil) && common.DispatchSiaNotifications {
 					payload, _ := json.Marshal(u.AsResponse())
 					natsutil.NatsStreamingPublish(natsSiaUserNotificationSubject, payload)
 				}
@@ -530,10 +530,12 @@ func (u *User) Delete() bool {
 			}
 		}
 
-		payload, _ := json.Marshal(map[string]interface{}{
-			"user_id": u.ID.String(),
-		})
-		natsutil.NatsStreamingPublish(natsSiaUserDeleteNotificationSubject, payload)
+		if common.DispatchSiaNotifications {
+			payload, _ := json.Marshal(map[string]interface{}{
+				"user_id": u.ID.String(),
+			})
+			natsutil.NatsStreamingPublish(natsSiaUserDeleteNotificationSubject, payload)
+		}
 	}
 	tx.Commit()
 	return success
