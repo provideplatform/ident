@@ -18,7 +18,7 @@ require (
 	github.com/kthomas/go.uuid v1.2.1-0.20190324131420-28d1fa77e9a4
 	github.com/kthomas/trumail v0.0.0-20190925185815-ab3de2e834a3
 	github.com/nats-io/stan.go v0.7.0
-	github.com/provideservices/provide-go v0.0.0-20200630033145-a5709cb75a1f
+	github.com/provideservices/provide-go v0.0.0-20200707104606-353123840c98
 	github.com/t-tiger/gorm-bulk-insert v1.3.0
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 )
