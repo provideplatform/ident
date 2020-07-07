@@ -106,7 +106,7 @@ func runAPI() {
 	user.InstallPublicUserAPI(r)
 
 	r.Use(token.AuthMiddleware())
-	// r.Use(common.AccountingMiddleware())
+	r.Use(common.AccountingMiddleware())
 	r.Use(common.RateLimitingMiddleware())
 	r.Use(provide.TrackAPICalls())
 
