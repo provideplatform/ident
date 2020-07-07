@@ -375,8 +375,10 @@ func (app *Application) Create(tx *gorm.DB) (*CreateResponse, error) {
 					db.Commit()
 				}
 
-				payload, _ := json.Marshal(app)
-				natsutil.NatsStreamingPublish(natsSiaApplicationNotificationSubject, payload)
+				if common.DispatchSiaNotifications {
+					payload, _ := json.Marshal(app)
+					natsutil.NatsStreamingPublish(natsSiaApplicationNotificationSubject, payload)
+				}
 
 				return &CreateResponse{
 					Application: app,

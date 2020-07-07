@@ -60,6 +60,9 @@ var (
 	// ConsumeNATSStreamingSubscriptions is a flag the indicates if the ident instance is running in API or consumer mode
 	ConsumeNATSStreamingSubscriptions bool
 
+	// DispatchSiaNotifications is a flag that indicates if certain events should result in the publishing of a message for Sia
+	DispatchSiaNotifications bool
+
 	// EmailVerificationAttempts is the number of retries to attempt per address validation (i.e., for deliverability)
 	EmailVerificationAttempts int
 
@@ -127,6 +130,8 @@ func init() {
 	Auth0IntegrationEnabled = strings.ToLower(os.Getenv("AUTH0_INTEGRATION_ENABLED")) == "true"
 
 	ConsumeNATSStreamingSubscriptions = strings.ToLower(os.Getenv("CONSUME_NATS_STREAMING_SUBSCRIPTIONS")) == "true"
+
+	DispatchSiaNotifications = strings.ToLower(os.Getenv("DISPATCH_SIA_NOTIFICATIONS")) == "true"
 }
 
 // RequireAPIAccounting allows a package to conditionally require the presence of

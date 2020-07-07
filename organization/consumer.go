@@ -66,8 +66,6 @@ const contractTypeERC1820Registry = "erc1820-registry"
 const contractTypeShield = "shield"
 const contractTypeVerifier = "verifier"
 
-const natsSiaOrganizationNotificationSubject = "sia.organization.notification"
-
 func init() {
 	if !common.ConsumeNATSStreamingSubscriptions {
 		common.Log.Debug("organization package consumer configured to skip NATS streaming subscription setup")
