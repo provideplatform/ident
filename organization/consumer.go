@@ -621,13 +621,9 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 
 		var erc1820RegistryContractID *string
 		var orgRegistryContractID *string
-		// var shieldContractID *string
-		// var verifierContractID *string
 
 		var erc1820RegistryContractAddress *string
 		var orgRegistryContractAddress *string
-		// var shieldContractAddress *string
-		// var verifierContractAddress *string
 
 		var walletID *string
 		var hdDerivationPath *string
@@ -736,12 +732,6 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 							case contractTypeOrgRegistry:
 								orgRegistryContractID = common.StringOrNil(cntrctID)
 								orgRegistryContractAddress = common.StringOrNil(contractAddress)
-								// case contractTypeShield:
-								// 	shieldContractID = common.StringOrNil(cntrctID)
-								// 	shieldContractAddress = common.StringOrNil(contractAddress)
-								// case contractTypeVerifier:
-								// 	verifierContractID = common.StringOrNil(cntrctID)
-								// 	verifierContractAddress = common.StringOrNil(contractAddress)
 							}
 						}
 					}
@@ -761,18 +751,6 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 			return
 		}
 
-		// if verifierContractID == nil || verifierContractAddress == nil {
-		// 	common.Log.Warningf("failed to resolve default verifier contract; application id: %s", applicationID)
-		// 	natsutil.AttemptNack(msg, organizationRegistrationTimeout)
-		// 	return
-		// }
-
-		// if shieldContractID == nil || shieldContractAddress == nil {
-		// 	common.Log.Warningf("failed to resolve default shield contract; application id: %s", applicationID)
-		// 	natsutil.AttemptNack(msg, organizationRegistrationTimeout)
-		// 	return
-		// }
-
 		if walletID == nil || hdDerivationPath == nil {
 			common.Log.Warningf("failed to resolve HD wallet for signing organization registry transaction; organization id: %s", organizationID)
 			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
@@ -787,6 +765,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 
 		// registerOrg
 
+		common.Log.Debugf("attempting to register organization within registry contract: %s", *orgRegistryContractAddress)
 		registerOrgStatus, _, err := provide.ExecuteContract(*jwtToken, *orgRegistryContractID, map[string]interface{}{
 			"wallet_id":          walletID,
 			"hd_derivation_path": hdDerivationPath,
