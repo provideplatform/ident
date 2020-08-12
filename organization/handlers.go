@@ -525,7 +525,7 @@ func organizationVaultKeySignHandler(c *gin.Context) {
 		return
 	}
 
-	status, resp, err := provide.SignMessage(*bearer.Token, c.Param("vaultId"), c.Param("keyId"), params["message"].(string))
+	status, resp, err := provide.SignMessage(*bearer.Token, c.Param("vaultId"), c.Param("keyId"), params["message"].(string), map[string]interface{}{})
 	if err != nil {
 		provide.RenderError(err.Error(), status, c)
 		return
@@ -559,7 +559,7 @@ func organizationVaultKeyVerifyHandler(c *gin.Context) {
 	msg := params["message"].(string)
 	sig := params["signature"].(string)
 
-	status, resp, err := provide.VerifySignature(*bearer.Token, c.Param("vaultId"), c.Param("keyId"), msg, sig)
+	status, resp, err := provide.VerifySignature(*bearer.Token, c.Param("vaultId"), c.Param("keyId"), msg, sig, map[string]interface{}{})
 	if err != nil {
 		provide.RenderError(err.Error(), status, c)
 		return

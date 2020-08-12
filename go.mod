@@ -3,8 +3,13 @@ module github.com/provideapp/ident
 go 1.13
 
 require (
+	github.com/Microsoft/go-winio v0.4.14 // indirect
 	github.com/badoux/checkmail v0.0.0-20200623144435-f9f80cb795fa
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/docker/distribution v2.7.1+incompatible // indirect
+	github.com/docker/docker v1.13.1 // indirect
+	github.com/docker/go-connections v0.4.0 // indirect
+	github.com/docker/go-units v0.4.0 // indirect
 	github.com/gin-gonic/gin v1.6.3
 	github.com/golang-migrate/migrate v3.5.4+incompatible
 	github.com/jinzhu/gorm v1.9.14
@@ -20,7 +25,9 @@ require (
 	github.com/nats-io/stan.go v0.7.0
 	github.com/onsi/ginkgo v1.10.3
 	github.com/onsi/gomega v1.7.1
-	github.com/provideservices/provide-go v0.0.0-20200707104606-353123840c98
+	github.com/opencontainers/go-digest v1.0.0 // indirect
+	github.com/provideservices/provide-go v0.0.0-20200812062148-336011bcc329
 	github.com/t-tiger/gorm-bulk-insert v1.3.0
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+	google.golang.org/protobuf v1.25.0 // indirect
 )
