@@ -737,7 +737,6 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 			for _, c := range cntrcts {
 				if cntrct, contractOk := c.(map[string]interface{}); contractOk {
 					if cntrctID, contractIDOk := cntrct["id"].(string); contractIDOk {
-						common.Log.Debugf("attempting to fetch contract: %s", cntrctID)
 						status, resp, err = provide.GetContractDetails(*jwtToken, cntrctID, map[string]interface{}{})
 						if err != nil || status != 200 {
 							common.Log.Warningf("failed to resolve organization registry contract to which the organization registration tx should be sent; organization id: %s", organizationID)
