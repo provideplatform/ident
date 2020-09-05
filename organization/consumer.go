@@ -170,11 +170,12 @@ func consumeCreatedOrganizationMsg(msg *stan.Msg) {
 		"description":     "default organizational keystore",
 		"organization_id": organizationID,
 	})
+
 	if err == nil {
 		common.Log.Debugf("created default vault for organization: %s; vault id: %s", *organization.Name, vlt.ID.String())
 		msg.Ack()
 	} else {
-		common.Log.Warningf("Failed to create default vault for organization: %s", *organization.Name)
+		common.Log.Warningf("failed to create default vault for organization: %s; %s", *organization.Name, err.Error())
 		natsutil.AttemptNack(msg, createOrganizationTimeout)
 	}
 }
