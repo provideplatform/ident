@@ -11,7 +11,7 @@ import (
 	"github.com/provideapp/ident/organization"
 	"github.com/provideapp/ident/token"
 	"github.com/provideapp/ident/user"
-	provide "github.com/provideservices/provide-go"
+	provide "github.com/provideservices/provide-go/common"
 )
 
 // InstallApplicationAPI installs the handlers using the given gin Engine

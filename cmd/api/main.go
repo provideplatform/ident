@@ -20,7 +20,7 @@ import (
 	"github.com/provideapp/ident/token"
 	"github.com/provideapp/ident/user"
 
-	provide "github.com/provideservices/provide-go"
+	provide "github.com/provideservices/provide-go/common"
 )
 
 const privacyPolicyUpdatedAt = "2018-10-19T00:00:00.000000"

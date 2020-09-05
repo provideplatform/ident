@@ -13,7 +13,8 @@ import (
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/token"
-	provide "github.com/provideservices/provide-go"
+	api "github.com/provideservices/provide-go/api"
+	provide "github.com/provideservices/provide-go/common"
 )
 
 // InstallPublicUserAPI installs unauthenticated API handlers using the given gin Engine
@@ -264,7 +265,7 @@ func createUserHandler(c *gin.Context) {
 		err = processUserInvite(tx, *user, *invite)
 		if err != nil {
 			success = false
-			user.Errors = append(user.Errors, &provide.Error{
+			user.Errors = append(user.Errors, &api.Error{
 				Message: common.StringOrNil(err.Error()),
 			})
 		}

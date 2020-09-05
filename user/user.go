@@ -16,7 +16,7 @@ import (
 	trumail "github.com/kthomas/trumail/verifier"
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/token"
-	provide "github.com/provideservices/provide-go"
+	provide "github.com/provideservices/provide-go/api"
 	"golang.org/x/crypto/bcrypt"
 )
 

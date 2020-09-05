@@ -11,7 +11,7 @@ import (
 
 	// "github.com/provideapp/ident/application"
 	"github.com/provideapp/ident/common"
-	provide "github.com/provideservices/provide-go"
+	provide "github.com/provideservices/provide-go/common"
 )
 
 // InstallTokenAPI installs the handlers using the given gin Engine
