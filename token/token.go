@@ -313,11 +313,15 @@ func (t *Token) CalculateHash() {
 
 // FindLegacyToken - lookup a legacy token
 func FindLegacyToken(token string) *Token {
+	db := dbconf.DatabaseConnection()
 	tkn := &Token{}
-	dbconf.DatabaseConnection().Where("hash = ?", common.SHA256(token)).Find(&tkn)
-	if tkn != nil && tkn.ID != uuid.Nil {
-		return tkn
+	if db.HasTable(&tkn) {
+		db.Where("hash = ?", common.SHA256(token)).Find(&tkn)
+		if tkn != nil && tkn.ID != uuid.Nil {
+			return tkn
+		}
 	}
+
 	return nil
 }
 
