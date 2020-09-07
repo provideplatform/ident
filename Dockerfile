@@ -1,4 +1,4 @@
-FROM golang:1.13 AS builder
+FROM golang:1.15 AS builder
 
 RUN mkdir -p /go/src/github.com/provideapp
 ADD . /go/src/github.com/provideapp/ident
@@ -6,7 +6,7 @@ WORKDIR /go/src/github.com/provideapp/ident
 
 RUN make build
 
-FROM golang:1.13
+FROM golang:1.15
 
 RUN mkdir -p /ident
 WORKDIR /ident
