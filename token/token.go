@@ -44,7 +44,7 @@ type Token struct {
 	// Token represents a legacy token authorization which never expires, but is hashed and
 	// persisted in the db so therefore it can be revoked; requests which contain authorization
 	// headers containing these legacy tokens also present claims, so no db lookup is required
-	Token *string `sql:"type:bytea" json:"token"`
+	Token *string `sql:"type:bytea" json:"token,omitempty"`
 	Hash  *string `json:"-"`
 
 	// Associations
@@ -385,14 +385,23 @@ func (t *Token) AsResponse() *Response {
 
 	permissions := uint32(t.Permissions)
 	resp := &Response{
-		ID:           &t.ID,
-		Token:        t.Token, // deprecated
-		AccessToken:  t.AccessToken,
-		RefreshToken: t.RefreshToken,
-		TokenType:    t.TokenType,
-		ExpiresIn:    expiresIn,
-		Scope:        t.Scope,
-		Permissions:  &permissions,
+		ID:          &t.ID,
+		TokenType:   t.TokenType,
+		ExpiresIn:   expiresIn,
+		Scope:       t.Scope,
+		Permissions: &permissions,
+	}
+
+	if t.AccessToken == nil && t.Token != nil {
+		resp.Token = t.Token // deprecated
+	}
+
+	if t.AccessToken != nil {
+		resp.AccessToken = t.AccessToken
+	}
+
+	if t.RefreshToken != nil {
+		resp.RefreshToken = t.RefreshToken
 	}
 
 	return resp
