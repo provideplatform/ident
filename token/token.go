@@ -25,7 +25,7 @@ const authorizationSubjectOrganization = "organization"
 const authorizationSubjectToken = "token"
 const authorizationSubjectUser = "user"
 
-const defaultRefreshTokenTTL = time.Hour * 24
+const defaultRefreshTokenTTL = time.Hour * 24 * 30
 const defaultAccessTokenTTL = time.Minute * 60
 const defaultTokenType = "bearer"
 
@@ -392,16 +392,14 @@ func (t *Token) AsResponse() *Response {
 		Permissions: &permissions,
 	}
 
-	if t.AccessToken == nil && t.Token != nil {
-		resp.Token = t.Token // deprecated
-	}
-
-	if t.AccessToken != nil {
-		resp.AccessToken = t.AccessToken
-	}
-
 	if t.RefreshToken != nil {
 		resp.RefreshToken = t.RefreshToken
+	}
+
+	if resp.RefreshToken == nil && t.Token != nil {
+		resp.Token = t.Token // deprecated
+	} else if t.AccessToken != nil {
+		resp.AccessToken = t.AccessToken
 	}
 
 	return resp
@@ -487,7 +485,7 @@ func (t *Token) vendRefreshToken() bool {
 		return false
 	}
 
-	ttl := int(defaultAccessTokenTTL.Seconds())
+	ttl := int(defaultRefreshTokenTTL.Seconds())
 	refreshToken := &Token{
 		TokenType:           common.StringOrNil(defaultTokenType),
 		UserID:              t.UserID,
