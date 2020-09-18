@@ -16,6 +16,8 @@ import (
 
 	logger "github.com/kthomas/go-logger"
 	selfsignedcert "github.com/kthomas/go-self-signed-cert"
+
+	vault "github.com/provideservices/provide-go/api/vault"
 )
 
 const apiAccountingAddressEnvVar = "API_ACCOUNTING_ADDRESS"
@@ -126,6 +128,8 @@ func init() {
 	requireEmailVerification()
 	requireGin()
 	requireIPLists()
+
+	unsealVault()
 
 	Auth0IntegrationEnabled = strings.ToLower(os.Getenv("AUTH0_INTEGRATION_ENABLED")) == "true"
 
@@ -446,4 +450,17 @@ func requireIPLists() {
 
 	// FIXME-- remove these hardcoded values and make an API/CLI integration to manage them
 	BannedIPs = []string{}
+}
+
+func unsealVault() {
+	vaultSealUnsealKey := os.Getenv("VAULT_SEAL_UNSEAL_KEY")
+	_, err := vault.UnsealVault("", map[string]interface{}{
+		"key": vaultSealUnsealKey,
+	})
+
+	if err != nil {
+		Log.Panicf("failed to unseal vault; %s", err.Error())
+	}
+
+	Log.Debug("unsealed vault")
 }
