@@ -240,7 +240,7 @@ func consumeOrganizationImplicitKeyExchangeInitMsg(msg *stan.Msg) {
 
 	if len(vaults) == 1 {
 		orgVault := vaults[0]
-		keys, err := vault.ListVaultKeys(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{})
+		keys, err := vault.ListKeys(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{})
 		if err != nil {
 			common.Log.Warningf("failed to fetch keys from vault during implicit key exchange message handler; organization id: %s", organizationID)
 			natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
@@ -256,7 +256,7 @@ func consumeOrganizationImplicitKeyExchangeInitMsg(msg *stan.Msg) {
 		}
 
 		if signingKey != nil {
-			c25519Key, err := vault.CreateVaultKey(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{
+			c25519Key, err := vault.CreateKey(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{
 				"type":        "asymmetric",
 				"usage":       "sign/verify",
 				"spec":        "C25519",
@@ -286,13 +286,13 @@ func consumeOrganizationImplicitKeyExchangeInitMsg(msg *stan.Msg) {
 			}
 
 			c25519PublicKeySigned := signingResponse.Signature //.(map[string]interface{})["signature"].(string)
-			common.Log.Debugf("generated %d-byte signature using Ed25519 signing key", len(c25519PublicKeySigned))
+			common.Log.Debugf("generated %d-byte signature using Ed25519 signing key", len(*c25519PublicKeySigned))
 
 			payload, _ := json.Marshal(map[string]interface{}{
 				"organization_id":      organizationID,
 				"peer_organization_id": peerOrganizationID,
 				"public_key":           *c25519Key.PublicKey,
-				"signature":            hex.EncodeToString([]byte(c25519PublicKeySigned)),
+				"signature":            hex.EncodeToString([]byte(*c25519PublicKeySigned)),
 				"signing_key":          *signingKey.PublicKey,
 				"signing_spec":         *signingKey.Spec,
 			})
@@ -399,7 +399,7 @@ func consumeOrganizationImplicitKeyExchangeCompleteMsg(msg *stan.Msg) {
 	if len(vaults) == 1 {
 		orgVault := vaults[0]
 
-		keys, err := vault.ListVaultKeys(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{})
+		keys, err := vault.ListKeys(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{})
 		if err != nil {
 			common.Log.Warningf("failed to fetch keys from vault during implicit key exchange message handler; organization id: %s", organizationID)
 			natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
@@ -534,7 +534,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 
 	if len(vaults) == 1 {
 		orgVault := vaults[0]
-		keys, err = vault.ListVaultKeys(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{})
+		keys, err = vault.ListKeys(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{})
 		if err != nil {
 			common.Log.Warningf("failed to fetch keys from vault during implicit key exchange message handler; organization id: %s; %s", organizationID, err.Error())
 			natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)

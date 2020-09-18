@@ -478,7 +478,7 @@ func organizationVaultKeysListHandler(c *gin.Context) {
 		return
 	}
 
-	keys, err := vault.ListVaultKeys(*bearer.Token, c.Param("vaultId"), map[string]interface{}{})
+	keys, err := vault.ListKeys(*bearer.Token, c.Param("vaultId"), map[string]interface{}{})
 	if err != nil {
 		provide.RenderError(err.Error(), 500, c) // FIXME -- should this be passed via err or remain 500?
 		return
@@ -496,7 +496,7 @@ func createOrganizationVaultKeyHandler(c *gin.Context) {
 		return
 	}
 
-	key, err := vault.CreateVaultKey(*bearer.Token, c.Param("vaultId"), map[string]interface{}{})
+	key, err := vault.CreateKey(*bearer.Token, c.Param("vaultId"), map[string]interface{}{})
 	if err != nil {
 		provide.RenderError(err.Error(), 500, c) // FIXME -- should this be passed via err or remain 500?
 		return
@@ -579,7 +579,7 @@ func organizationVaultSecretsListHandler(c *gin.Context) {
 		return
 	}
 
-	secrets, err := vault.ListVaultSecrets(*bearer.Token, c.Param("vaultId"), map[string]interface{}{})
+	secrets, err := vault.ListSecrets(*bearer.Token, c.Param("vaultId"), map[string]interface{}{})
 	if err != nil {
 		provide.RenderError(err.Error(), 500, c) // FIXME -- should this be passed via err or remain 500?
 		return
