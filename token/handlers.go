@@ -102,7 +102,7 @@ func createTokenHandler(c *gin.Context) {
 
 	var audience *string
 	if aud, audOk := params["aud"].(string); audOk {
-		altAudience, altAudienceOk := common.JWTAlternativeAuthorizationAudiences[aud].(string)
+		altAudience, altAudienceOk := provide.JWTAlternativeAuthorizationAudiences[aud].(string)
 		if !altAudienceOk {
 			provide.RenderError(fmt.Sprintf("invalid aud: %s", aud), 400, c)
 			return

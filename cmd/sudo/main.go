@@ -15,6 +15,8 @@ import (
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/token"
 	"github.com/provideapp/ident/user"
+
+	provide "github.com/provideservices/provide-go/common"
 )
 
 const defaultLegacyAuthTokenLength = 64
@@ -31,12 +33,12 @@ const vendApplicationTokenCmd = "vendapptoken"
 
 func init() {
 	auth0.RequireAuth0()
-	common.RequireJWT()
+	provide.RequireJWT()
 }
 
 func exit(message string, code int) {
 	common.Log.Warning(message)
-	os.Exit(1)
+	os.Exit(code)
 }
 
 func main() {

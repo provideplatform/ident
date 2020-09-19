@@ -45,9 +45,11 @@ func init() {
 	}
 
 	auth0.RequireAuth0()
-	common.RequireJWT()
+	provide.RequireJWT()
+	provide.RequireGin()
 	pgputil.RequirePGP()
 	redisutil.RequireRedis()
+	common.UnsealVault()
 	// common.RequireAPIAccounting()
 	// consumer.RunAPIUsageDaemon()
 }
@@ -118,17 +120,17 @@ func runAPI() {
 	user.InstallUserAPI(r)
 
 	srv = &http.Server{
-		Addr:    common.ListenAddr,
+		Addr:    provide.ListenAddr,
 		Handler: r,
 	}
 
-	if common.ServeTLS {
-		go srv.ListenAndServeTLS(common.CertificatePath, common.PrivateKeyPath)
+	if provide.ServeTLS {
+		go srv.ListenAndServeTLS(provide.CertificatePath, provide.PrivateKeyPath)
 	} else {
 		go srv.ListenAndServe()
 	}
 
-	common.Log.Debugf("Listening on %s", common.ListenAddr)
+	common.Log.Debugf("Listening on %s", provide.ListenAddr)
 }
 
 func statusHandler(c *gin.Context) {
