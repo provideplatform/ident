@@ -21,6 +21,7 @@ import (
 	"github.com/provideapp/ident/user"
 
 	provide "github.com/provideservices/provide-go/common"
+	util "github.com/provideservices/provide-go/common/util"
 )
 
 const privacyPolicyUpdatedAt = "2018-10-19T00:00:00.000000"
@@ -45,11 +46,11 @@ func init() {
 	}
 
 	auth0.RequireAuth0()
-	provide.RequireJWT()
-	provide.RequireGin()
+	util.RequireJWT()
+	util.RequireGin()
 	pgputil.RequirePGP()
 	redisutil.RequireRedis()
-	common.UnsealVault()
+	util.RequireVault()
 	// common.RequireAPIAccounting()
 	// consumer.RunAPIUsageDaemon()
 }
@@ -108,7 +109,7 @@ func runAPI() {
 	r.Use(token.AuthMiddleware())
 	r.Use(common.AccountingMiddleware())
 	r.Use(common.RateLimitingMiddleware())
-	r.Use(provide.TrackAPICalls())
+	r.Use(util.TrackAPICalls())
 
 	application.InstallApplicationAPI(r)
 	application.InstallApplicationOrganizationsAPI(r)
@@ -120,17 +121,17 @@ func runAPI() {
 	user.InstallUserAPI(r)
 
 	srv = &http.Server{
-		Addr:    provide.ListenAddr,
+		Addr:    util.ListenAddr,
 		Handler: r,
 	}
 
-	if provide.ServeTLS {
-		go srv.ListenAndServeTLS(provide.CertificatePath, provide.PrivateKeyPath)
+	if util.ServeTLS {
+		go srv.ListenAndServeTLS(util.CertificatePath, util.PrivateKeyPath)
 	} else {
 		go srv.ListenAndServe()
 	}
 
-	common.Log.Debugf("Listening on %s", provide.ListenAddr)
+	common.Log.Debugf("listening on %s", util.ListenAddr)
 }
 
 func statusHandler(c *gin.Context) {

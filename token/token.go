@@ -14,7 +14,7 @@ import (
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/ident/common"
 	provide "github.com/provideservices/provide-go/api"
-	prvdcommon "github.com/provideservices/provide-go/common"
+	util "github.com/provideservices/provide-go/common/util"
 )
 
 const authorizationGrantRefreshToken = "refresh_token"
@@ -129,7 +129,7 @@ func Parse(token string) (*Token, error) {
 			kid = &kidhdr
 		}
 
-		publicKey, _, _ := prvdcommon.ResolveJWTKeypair(kid)
+		publicKey, _, _ := util.ResolveJWTKeypair(kid)
 		if publicKey == nil {
 			msg := "failed to resolve a valid JWT verification key"
 			if kid != nil {
@@ -159,7 +159,7 @@ func Parse(token string) (*Token, error) {
 		return nil, errors.New("failed to parse claims in given bearer token")
 	}
 
-	appclaims, appclaimsOk := claims[prvdcommon.JWTApplicationClaimsKey].(map[string]interface{})
+	appclaims, appclaimsOk := claims[util.JWTApplicationClaimsKey].(map[string]interface{})
 
 	var appID *uuid.UUID
 	var orgID *uuid.UUID
@@ -613,7 +613,7 @@ func (t *Token) validate() bool {
 		if t.TTL != nil {
 			exp = t.IssuedAt.Add(time.Second * time.Duration(*t.TTL))
 		} else {
-			exp = t.IssuedAt.Add(prvdcommon.JWTAuthorizationTTL)
+			exp = t.IssuedAt.Add(util.JWTAuthorizationTTL)
 		}
 		t.ExpiresAt = &exp
 
@@ -624,7 +624,7 @@ func (t *Token) validate() bool {
 		}
 
 		if t.Kid == nil {
-			_, privateKey, fingerprint := prvdcommon.ResolveJWTKeypair(nil) // FIXME-- resolve subject-specific kid when applicable
+			_, privateKey, fingerprint := util.ResolveJWTKeypair(nil) // FIXME-- resolve subject-specific kid when applicable
 			if privateKey != nil {
 				t.Kid = fingerprint
 			} else {
@@ -633,11 +633,11 @@ func (t *Token) validate() bool {
 		}
 
 		if t.Audience == nil {
-			t.Audience = common.StringOrNil(prvdcommon.JWTAuthorizationAudience)
+			t.Audience = common.StringOrNil(util.JWTAuthorizationAudience)
 		}
 
 		if t.Issuer == nil {
-			t.Issuer = common.StringOrNil(prvdcommon.JWTAuthorizationIssuer)
+			t.Issuer = common.StringOrNil(util.JWTAuthorizationIssuer)
 		}
 
 		if t.Subject == nil {
@@ -760,7 +760,7 @@ func (t *Token) encodeJWT() error {
 		delete(claims, "exp")
 	}
 
-	appClaimsKey := prvdcommon.JWTApplicationClaimsKey
+	appClaimsKey := util.JWTApplicationClaimsKey
 	if t.ApplicationClaimsKey != nil {
 		appClaimsKey = *t.ApplicationClaimsKey
 	}
@@ -772,13 +772,13 @@ func (t *Token) encodeJWT() error {
 		return nil
 	}
 	if natsClaims != nil {
-		claims[prvdcommon.JWTNatsClaimsKey] = natsClaims
+		claims[util.JWTNatsClaimsKey] = natsClaims
 	}
 
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims(claims))
 	jwtToken.Header["kid"] = t.Kid
 
-	_, privateKey, _ := prvdcommon.ResolveJWTKeypair(t.Kid)
+	_, privateKey, _ := util.ResolveJWTKeypair(t.Kid)
 	token, err := jwtToken.SignedString(privateKey)
 	if err != nil {
 		common.Log.Warningf("failed to sign JWT; %s", err.Error())

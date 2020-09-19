@@ -15,6 +15,7 @@ import (
 	"github.com/provideapp/ident/token"
 	api "github.com/provideservices/provide-go/api"
 	provide "github.com/provideservices/provide-go/common"
+	util "github.com/provideservices/provide-go/common/util"
 )
 
 // InstallPublicUserAPI installs unauthenticated API handlers using the given gin Engine
@@ -178,7 +179,7 @@ func createUserHandler(c *gin.Context) {
 	} else if bearer != nil {
 		bearerApplicationID = bearer.ApplicationID
 	} else {
-		bearerApplicationID = provide.AuthorizedSubjectID(c, "application")
+		bearerApplicationID = util.AuthorizedSubjectID(c, "application")
 	}
 
 	buf, err := c.GetRawData()

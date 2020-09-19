@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	prvdcommon "github.com/provideservices/provide-go/common"
+	util "github.com/provideservices/provide-go/common/util"
 )
 
 // VendNatsBearerAuthorization vends a signed NATS authorization on behalf of the caller
@@ -17,7 +18,7 @@ func VendNatsBearerAuthorization(
 	responsesTTL *int,
 ) (*Token, error) {
 	token := &Token{
-		Audience: &prvdcommon.JWTNatsAuthorizationAudience,
+		Audience: &util.JWTNatsAuthorizationAudience,
 		Subject:  &subject,
 		NatsClaims: map[string]interface{}{
 			"permissions": map[string]interface{}{

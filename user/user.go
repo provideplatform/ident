@@ -17,7 +17,7 @@ import (
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/token"
 	provide "github.com/provideservices/provide-go/api"
-	prvdcommon "github.com/provideservices/provide-go/common"
+	util "github.com/provideservices/provide-go/common/util"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -575,11 +575,11 @@ func (u *User) CreateResetPasswordToken(db *gorm.DB) bool {
 		appClaims["application_id"] = u.ApplicationID
 	}
 	claims := map[string]interface{}{
-		"jti":                              tokenID,
-		"exp":                              issuedAt.Add(defaultResetPasswordTokenTimeout).Unix(),
-		"iat":                              issuedAt.Unix(),
-		"sub":                              fmt.Sprintf("user:%s", u.ID.String()),
-		prvdcommon.JWTApplicationClaimsKey: appClaims,
+		"jti":                        tokenID,
+		"exp":                        issuedAt.Add(defaultResetPasswordTokenTimeout).Unix(),
+		"iat":                        issuedAt.Unix(),
+		"sub":                        fmt.Sprintf("user:%s", u.ID.String()),
+		util.JWTApplicationClaimsKey: appClaims,
 	}
 
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims(claims))

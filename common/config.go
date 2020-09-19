@@ -10,8 +10,6 @@ import (
 	"time"
 
 	logger "github.com/kthomas/go-logger"
-
-	vault "github.com/provideservices/provide-go/api/vault"
 )
 
 const apiAccountingAddressEnvVar = "API_ACCOUNTING_ADDRESS"
@@ -206,19 +204,4 @@ func requireIPLists() {
 
 	// FIXME-- remove these hardcoded values and make an API/CLI integration to manage them
 	BannedIPs = []string{}
-}
-
-// UnsealVault unseals the configured vault
-func UnsealVault() error {
-	vaultSealUnsealKey := os.Getenv("VAULT_SEAL_UNSEAL_KEY")
-	_, err := vault.UnsealVault("", map[string]interface{}{
-		"key": vaultSealUnsealKey,
-	})
-
-	if err != nil {
-		Log.Warningf("failed to unseal vault; %s", err.Error())
-		return err
-	}
-
-	return nil
 }

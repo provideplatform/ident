@@ -12,6 +12,7 @@ import (
 	// "github.com/provideapp/ident/application"
 	"github.com/provideapp/ident/common"
 	provide "github.com/provideservices/provide-go/common"
+	util "github.com/provideservices/provide-go/common/util"
 )
 
 // InstallTokenAPI installs the handlers using the given gin Engine
@@ -102,7 +103,7 @@ func createTokenHandler(c *gin.Context) {
 
 	var audience *string
 	if aud, audOk := params["aud"].(string); audOk {
-		altAudience, altAudienceOk := provide.JWTAlternativeAuthorizationAudiences[aud].(string)
+		altAudience, altAudienceOk := util.JWTAlternativeAuthorizationAudiences[aud].(string)
 		if !altAudienceOk {
 			provide.RenderError(fmt.Sprintf("invalid aud: %s", aud), 400, c)
 			return
