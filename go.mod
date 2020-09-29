@@ -25,7 +25,7 @@ require (
 	github.com/onsi/ginkgo v1.10.3
 	github.com/onsi/gomega v1.7.1
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/provideservices/provide-go v0.0.0-20200919204026-5ea0202f538c
+	github.com/provideservices/provide-go v0.0.0-20200929104918-06f25393db44
 	github.com/t-tiger/gorm-bulk-insert v1.3.0
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	google.golang.org/protobuf v1.25.0 // indirect

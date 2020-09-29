@@ -50,7 +50,7 @@ func init() {
 	util.RequireGin()
 	pgputil.RequirePGP()
 	redisutil.RequireRedis()
-	util.RequireVault()
+	// util.RequireVault()
 	// common.RequireAPIAccounting()
 	// consumer.RunAPIUsageDaemon()
 }
