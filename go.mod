@@ -22,10 +22,10 @@ require (
 	github.com/kthomas/go.uuid v1.2.1-0.20190324131420-28d1fa77e9a4
 	github.com/kthomas/trumail v0.0.0-20190925185815-ab3de2e834a3
 	github.com/nats-io/stan.go v0.7.0
-	github.com/onsi/ginkgo v1.10.3
-	github.com/onsi/gomega v1.7.1
+	github.com/onsi/ginkgo v1.14.0
+	github.com/onsi/gomega v1.10.1
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/provideservices/provide-go v0.0.0-20200929104918-06f25393db44
+	github.com/provideservices/provide-go v0.0.0-20200929133201-28e5458b69e8
 	github.com/t-tiger/gorm-bulk-insert v1.3.0
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	google.golang.org/protobuf v1.25.0 // indirect
