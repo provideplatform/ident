@@ -10,7 +10,9 @@ import (
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/token"
 	"github.com/provideapp/ident/user"
-	provide "github.com/provideservices/provide-go"
+
+	vault "github.com/provideservices/provide-go/api/vault"
+	provide "github.com/provideservices/provide-go/common"
 )
 
 // InstallOrganizationAPI installs handlers using the given gin Engine
@@ -458,12 +460,12 @@ func organizationVaultsListHandler(c *gin.Context) {
 		return
 	}
 
-	status, vaults, err := provide.ListVaults(*bearer.Token, map[string]interface{}{})
+	vaults, err := vault.ListVaults(*bearer.Token, map[string]interface{}{})
 	if err != nil {
-		provide.RenderError(err.Error(), status, c)
+		provide.RenderError(err.Error(), 500, c) // FIXME -- should this be passed via err or remain 500?
 		return
 	}
-	provide.Render(vaults, status, c)
+	provide.Render(vaults, 200, c)
 }
 
 func organizationVaultKeysListHandler(c *gin.Context) {
@@ -476,12 +478,12 @@ func organizationVaultKeysListHandler(c *gin.Context) {
 		return
 	}
 
-	status, keys, err := provide.ListVaultKeys(*bearer.Token, c.Param("vaultId"), map[string]interface{}{})
+	keys, err := vault.ListKeys(*bearer.Token, c.Param("vaultId"), map[string]interface{}{})
 	if err != nil {
-		provide.RenderError(err.Error(), status, c)
+		provide.RenderError(err.Error(), 500, c) // FIXME -- should this be passed via err or remain 500?
 		return
 	}
-	provide.Render(keys, status, c)
+	provide.Render(keys, 200, c)
 }
 
 func createOrganizationVaultKeyHandler(c *gin.Context) {
@@ -494,12 +496,12 @@ func createOrganizationVaultKeyHandler(c *gin.Context) {
 		return
 	}
 
-	status, key, err := provide.CreateVaultKey(*bearer.Token, c.Param("vaultId"), map[string]interface{}{})
+	key, err := vault.CreateKey(*bearer.Token, c.Param("vaultId"), map[string]interface{}{})
 	if err != nil {
-		provide.RenderError(err.Error(), status, c)
+		provide.RenderError(err.Error(), 500, c) // FIXME -- should this be passed via err or remain 500?
 		return
 	}
-	provide.Render(key, status, c)
+	provide.Render(key, 201, c)
 }
 
 func organizationVaultKeySignHandler(c *gin.Context) {
@@ -525,12 +527,12 @@ func organizationVaultKeySignHandler(c *gin.Context) {
 		return
 	}
 
-	status, resp, err := provide.SignMessage(*bearer.Token, c.Param("vaultId"), c.Param("keyId"), params["message"].(string), map[string]interface{}{})
+	resp, err := vault.SignMessage(*bearer.Token, c.Param("vaultId"), c.Param("keyId"), params["message"].(string), map[string]interface{}{})
 	if err != nil {
-		provide.RenderError(err.Error(), status, c)
+		provide.RenderError(err.Error(), 500, c) // FIXME -- should this be passed via err or remain 500?
 		return
 	}
-	provide.Render(resp, status, c)
+	provide.Render(resp, 200, c)
 }
 
 func organizationVaultKeyVerifyHandler(c *gin.Context) {
@@ -559,12 +561,12 @@ func organizationVaultKeyVerifyHandler(c *gin.Context) {
 	msg := params["message"].(string)
 	sig := params["signature"].(string)
 
-	status, resp, err := provide.VerifySignature(*bearer.Token, c.Param("vaultId"), c.Param("keyId"), msg, sig, map[string]interface{}{})
+	resp, err := vault.VerifySignature(*bearer.Token, c.Param("vaultId"), c.Param("keyId"), msg, sig, map[string]interface{}{})
 	if err != nil {
-		provide.RenderError(err.Error(), status, c)
+		provide.RenderError(err.Error(), 500, c) // FIXME -- should this be passed via err or remain 500?
 		return
 	}
-	provide.Render(resp, status, c)
+	provide.Render(resp, 200, c)
 }
 
 func organizationVaultSecretsListHandler(c *gin.Context) {
@@ -577,10 +579,10 @@ func organizationVaultSecretsListHandler(c *gin.Context) {
 		return
 	}
 
-	status, secrets, err := provide.ListVaultSecrets(*bearer.Token, c.Param("vaultId"), map[string]interface{}{})
+	secrets, err := vault.ListSecrets(*bearer.Token, c.Param("vaultId"), map[string]interface{}{})
 	if err != nil {
-		provide.RenderError(err.Error(), status, c)
+		provide.RenderError(err.Error(), 500, c) // FIXME -- should this be passed via err or remain 500?
 		return
 	}
-	provide.Render(secrets, status, c)
+	provide.Render(secrets, 200, c)
 }

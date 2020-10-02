@@ -13,7 +13,8 @@ import (
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/ident/common"
-	provide "github.com/provideservices/provide-go"
+	provide "github.com/provideservices/provide-go/api"
+	util "github.com/provideservices/provide-go/common/util"
 )
 
 const authorizationGrantRefreshToken = "refresh_token"
@@ -25,7 +26,7 @@ const authorizationSubjectOrganization = "organization"
 const authorizationSubjectToken = "token"
 const authorizationSubjectUser = "user"
 
-const defaultRefreshTokenTTL = time.Hour * 24
+const defaultRefreshTokenTTL = time.Hour * 24 * 30
 const defaultAccessTokenTTL = time.Minute * 60
 const defaultTokenType = "bearer"
 
@@ -44,7 +45,7 @@ type Token struct {
 	// Token represents a legacy token authorization which never expires, but is hashed and
 	// persisted in the db so therefore it can be revoked; requests which contain authorization
 	// headers containing these legacy tokens also present claims, so no db lookup is required
-	Token *string `sql:"type:bytea" json:"token"`
+	Token *string `sql:"type:bytea" json:"token,omitempty"`
 	Hash  *string `json:"-"`
 
 	// Associations
@@ -128,7 +129,7 @@ func Parse(token string) (*Token, error) {
 			kid = &kidhdr
 		}
 
-		publicKey, _, _ := common.ResolveJWTKeypair(kid)
+		publicKey, _, _ := util.ResolveJWTKeypair(kid)
 		if publicKey == nil {
 			msg := "failed to resolve a valid JWT verification key"
 			if kid != nil {
@@ -158,7 +159,7 @@ func Parse(token string) (*Token, error) {
 		return nil, errors.New("failed to parse claims in given bearer token")
 	}
 
-	appclaims, appclaimsOk := claims[common.JWTApplicationClaimsKey].(map[string]interface{})
+	appclaims, appclaimsOk := claims[util.JWTApplicationClaimsKey].(map[string]interface{})
 
 	var appID *uuid.UUID
 	var orgID *uuid.UUID
@@ -313,11 +314,15 @@ func (t *Token) CalculateHash() {
 
 // FindLegacyToken - lookup a legacy token
 func FindLegacyToken(token string) *Token {
+	db := dbconf.DatabaseConnection()
 	tkn := &Token{}
-	dbconf.DatabaseConnection().Where("hash = ?", common.SHA256(token)).Find(&tkn)
-	if tkn != nil && tkn.ID != uuid.Nil {
-		return tkn
+	if db.HasTable(&tkn) {
+		db.Where("hash = ?", common.SHA256(token)).Find(&tkn)
+		if tkn != nil && tkn.ID != uuid.Nil {
+			return tkn
+		}
 	}
+
 	return nil
 }
 
@@ -381,14 +386,21 @@ func (t *Token) AsResponse() *Response {
 
 	permissions := uint32(t.Permissions)
 	resp := &Response{
-		ID:           &t.ID,
-		Token:        t.Token, // deprecated
-		AccessToken:  t.AccessToken,
-		RefreshToken: t.RefreshToken,
-		TokenType:    t.TokenType,
-		ExpiresIn:    expiresIn,
-		Scope:        t.Scope,
-		Permissions:  &permissions,
+		ID:          &t.ID,
+		TokenType:   t.TokenType,
+		ExpiresIn:   expiresIn,
+		Scope:       t.Scope,
+		Permissions: &permissions,
+	}
+
+	if t.RefreshToken != nil {
+		resp.RefreshToken = t.RefreshToken
+	}
+
+	if resp.RefreshToken == nil && t.Token != nil {
+		resp.Token = t.Token // deprecated
+	} else if t.AccessToken != nil {
+		resp.AccessToken = t.AccessToken
 	}
 
 	return resp
@@ -474,7 +486,7 @@ func (t *Token) vendRefreshToken() bool {
 		return false
 	}
 
-	ttl := int(defaultAccessTokenTTL.Seconds())
+	ttl := int(defaultRefreshTokenTTL.Seconds())
 	refreshToken := &Token{
 		TokenType:           common.StringOrNil(defaultTokenType),
 		UserID:              t.UserID,
@@ -601,7 +613,7 @@ func (t *Token) validate() bool {
 		if t.TTL != nil {
 			exp = t.IssuedAt.Add(time.Second * time.Duration(*t.TTL))
 		} else {
-			exp = t.IssuedAt.Add(common.JWTAuthorizationTTL)
+			exp = t.IssuedAt.Add(util.JWTAuthorizationTTL)
 		}
 		t.ExpiresAt = &exp
 
@@ -612,7 +624,7 @@ func (t *Token) validate() bool {
 		}
 
 		if t.Kid == nil {
-			_, privateKey, fingerprint := common.ResolveJWTKeypair(nil) // FIXME-- resolve subject-specific kid when applicable
+			_, privateKey, fingerprint := util.ResolveJWTKeypair(nil) // FIXME-- resolve subject-specific kid when applicable
 			if privateKey != nil {
 				t.Kid = fingerprint
 			} else {
@@ -621,11 +633,11 @@ func (t *Token) validate() bool {
 		}
 
 		if t.Audience == nil {
-			t.Audience = common.StringOrNil(common.JWTAuthorizationAudience)
+			t.Audience = common.StringOrNil(util.JWTAuthorizationAudience)
 		}
 
 		if t.Issuer == nil {
-			t.Issuer = common.StringOrNil(common.JWTAuthorizationIssuer)
+			t.Issuer = common.StringOrNil(util.JWTAuthorizationIssuer)
 		}
 
 		if t.Subject == nil {
@@ -748,7 +760,7 @@ func (t *Token) encodeJWT() error {
 		delete(claims, "exp")
 	}
 
-	appClaimsKey := common.JWTApplicationClaimsKey
+	appClaimsKey := util.JWTApplicationClaimsKey
 	if t.ApplicationClaimsKey != nil {
 		appClaimsKey = *t.ApplicationClaimsKey
 	}
@@ -760,13 +772,13 @@ func (t *Token) encodeJWT() error {
 		return nil
 	}
 	if natsClaims != nil {
-		claims[common.JWTNatsClaimsKey] = natsClaims
+		claims[util.JWTNatsClaimsKey] = natsClaims
 	}
 
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims(claims))
 	jwtToken.Header["kid"] = t.Kid
 
-	_, privateKey, _ := common.ResolveJWTKeypair(t.Kid)
+	_, privateKey, _ := util.ResolveJWTKeypair(t.Kid)
 	token, err := jwtToken.SignedString(privateKey)
 	if err != nil {
 		common.Log.Warningf("failed to sign JWT; %s", err.Error())

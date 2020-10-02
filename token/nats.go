@@ -3,7 +3,8 @@ package token
 import (
 	"fmt"
 
-	"github.com/provideapp/ident/common"
+	prvdcommon "github.com/provideservices/provide-go/common"
+	util "github.com/provideservices/provide-go/common/util"
 )
 
 // VendNatsBearerAuthorization vends a signed NATS authorization on behalf of the caller
@@ -17,7 +18,7 @@ func VendNatsBearerAuthorization(
 	responsesTTL *int,
 ) (*Token, error) {
 	token := &Token{
-		Audience: &common.JWTNatsAuthorizationAudience,
+		Audience: &util.JWTNatsAuthorizationAudience,
 		Subject:  &subject,
 		NatsClaims: map[string]interface{}{
 			"permissions": map[string]interface{}{
@@ -40,7 +41,7 @@ func VendNatsBearerAuthorization(
 		var err error
 		if len(token.Errors) > 0 {
 			err = fmt.Errorf("failed to vend NATS bearer JWT token; %s", *token.Errors[0].Message)
-			common.Log.Warningf(err.Error())
+			prvdcommon.Log.Warningf(err.Error())
 		}
 		return nil, err
 	}

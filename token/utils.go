@@ -8,7 +8,7 @@ import (
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/provideapp/ident/common"
-	provide "github.com/provideservices/provide-go"
+	provide "github.com/provideservices/provide-go/common"
 )
 
 // InContext returns the previously authorized token instance in
@@ -50,6 +50,7 @@ func refreshAccessToken(c *gin.Context) {
 		accessToken := &Token{
 			ApplicationID:       refreshToken.ApplicationID,
 			UserID:              refreshToken.UserID,
+			OrganizationID:      refreshToken.OrganizationID,
 			Scope:               refreshToken.Scope,
 			Permissions:         refreshToken.Permissions,
 			ExtendedPermissions: refreshToken.ExtendedPermissions,
@@ -57,6 +58,7 @@ func refreshAccessToken(c *gin.Context) {
 		}
 
 		if accessToken.Vend() {
+			accessToken.Token = nil
 			provide.Render(accessToken.AsResponse(), 201, c)
 			return
 		}

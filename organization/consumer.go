@@ -9,7 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/provideservices/provide-go"
+	nchain "github.com/provideservices/provide-go/api/nchain"
+	vault "github.com/provideservices/provide-go/api/vault"
+	// providecrypto "github.com/provideservices/provide-go/crypto"
 
 	dbconf "github.com/kthomas/go-db-config"
 	natsutil "github.com/kthomas/go-natsutil"
@@ -18,25 +20,6 @@ import (
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/token"
 )
-
-type vault struct {
-	ID          *uuid.UUID `json:"id"`
-	Name        *string    `json:"name"`
-	Description *string    `json:"description"`
-}
-
-type vaultKey struct {
-	ID          *uuid.UUID `json:"id"`
-	VaultID     *uuid.UUID `json:"vault_id"`
-	Type        *string    `json:"type"`  // symmetric or asymmetric
-	Usage       *string    `json:"usage"` // encrypt/decrypt or sign/verify (sign/verify only valid for asymmetric keys)
-	Spec        *string    `json:"spec"`
-	Name        *string    `json:"name"`
-	Description *string    `json:"description"`
-	PublicKey   *string    `json:"public_key"`
-
-	Address *string `sql:"-" json:"address,omitempty"`
-}
 
 const natsCreatedOrganizationCreatedSubject = "ident.organization.created"
 const natsCreatedOrganizationCreatedMaxInFlight = 2048
@@ -182,16 +165,17 @@ func consumeCreatedOrganizationMsg(msg *stan.Msg) {
 		return
 	}
 
-	status, _, err := provide.CreateVault(*orgToken.Token, map[string]interface{}{
+	vlt, err := vault.CreateVault(*orgToken.Token, map[string]interface{}{
 		"name":            fmt.Sprintf("%s vault", *organization.Name),
 		"description":     "default organizational keystore",
 		"organization_id": organizationID,
 	})
-	if err == nil && status == 201 {
-		common.Log.Debugf("Created default vault for organization: %s", *organization.Name)
+
+	if err == nil {
+		common.Log.Debugf("created default vault for organization: %s; vault id: %s", *organization.Name, vlt.ID.String())
 		msg.Ack()
 	} else {
-		common.Log.Warningf("Failed to create default vault for organization: %s", *organization.Name)
+		common.Log.Warningf("failed to create default vault for organization: %s; %s", *organization.Name, err.Error())
 		natsutil.AttemptNack(msg, createOrganizationTimeout)
 	}
 }
@@ -247,38 +231,24 @@ func consumeOrganizationImplicitKeyExchangeInitMsg(msg *stan.Msg) {
 		return
 	}
 
-	status, vaultsResponse, err := provide.ListVaults(*orgToken.Token, map[string]interface{}{})
-	if err != nil || status != 200 {
+	vaults, err := vault.ListVaults(*orgToken.Token, map[string]interface{}{})
+	if err != nil {
 		common.Log.Warningf("failed to fetch vaults during implicit key exchange message handler; organization id: %s", organizationID)
 		natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
 		return
 	}
-	vaults := make([]*vault, 0)
-	for _, vlt := range vaultsResponse.([]interface{}) {
-		v := &vault{}
-		vltraw, _ := json.Marshal(vlt)
-		json.Unmarshal(vltraw, &v)
-		vaults = append(vaults, v)
-	}
 
 	if len(vaults) == 1 {
 		orgVault := vaults[0]
-		var signingKeys []*vaultKey
-		var signingKey *vaultKey
-
-		status, keys, err := provide.ListVaultKeys(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{})
-		if err != nil || status != 200 {
+		keys, err := vault.ListKeys(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{})
+		if err != nil {
 			common.Log.Warningf("failed to fetch keys from vault during implicit key exchange message handler; organization id: %s", organizationID)
 			natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
 			return
 		}
-		for _, key := range keys.([]interface{}) {
-			k := &vaultKey{}
-			keyraw, _ := json.Marshal(key)
-			json.Unmarshal(keyraw, &k)
-			signingKeys = append(signingKeys, k)
-		}
-		for _, key := range signingKeys {
+
+		var signingKey *vault.Key
+		for _, key := range keys {
 			if key.Name != nil && strings.ToLower(*key.Name) == "ekho signing" { // FIXME
 				signingKey = key
 				break
@@ -286,7 +256,7 @@ func consumeOrganizationImplicitKeyExchangeInitMsg(msg *stan.Msg) {
 		}
 
 		if signingKey != nil {
-			status, keyResponse, err := provide.CreateVaultKey(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{
+			c25519Key, err := vault.CreateKey(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{
 				"type":        "asymmetric",
 				"usage":       "sign/verify",
 				"spec":        "C25519",
@@ -294,27 +264,35 @@ func consumeOrganizationImplicitKeyExchangeInitMsg(msg *stan.Msg) {
 				"description": fmt.Sprintf("ekho - single-use c25519 key exchange with peer organization: %s", peerOrganizationID),
 				"ephemeral":   "true",
 			})
-			if err != nil || status != 201 {
+			if err != nil {
 				common.Log.Warningf("failed to generate single-use c25519 public key for implicit key exchange; organization id: %s", organizationID)
 				natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
+				return
 			}
 
-			c25519Key := keyResponse.(*vaultKey)
 			c25519PublicKeyRaw, err := hex.DecodeString(*c25519Key.PublicKey)
-			status, signingResponse, err := provide.SignMessage(*orgToken.Token, orgVault.ID.String(), c25519Key.ID.String(), string(c25519PublicKeyRaw), map[string]interface{}{})
-			if err != nil || status != 200 {
+			signingResponse, err := vault.SignMessage(
+				*orgToken.Token,
+				orgVault.ID.String(),
+				c25519Key.ID.String(),
+				string(c25519PublicKeyRaw),
+				map[string]interface{}{},
+			)
+
+			if err != nil {
 				common.Log.Warningf("failed to sign single-use c25519 public key for implicit key exchange; organization id: %s; %s", organizationID, err.Error())
 				natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
 				return
 			}
-			c25519PublicKeySigned := signingResponse.(map[string]interface{})["signature"].(string)
-			common.Log.Debugf("generated %d-byte signature using Ed25519 signing key", len(c25519PublicKeySigned))
+
+			c25519PublicKeySigned := signingResponse.Signature //.(map[string]interface{})["signature"].(string)
+			common.Log.Debugf("generated %d-byte signature using Ed25519 signing key", len(*c25519PublicKeySigned))
 
 			payload, _ := json.Marshal(map[string]interface{}{
 				"organization_id":      organizationID,
 				"peer_organization_id": peerOrganizationID,
 				"public_key":           *c25519Key.PublicKey,
-				"signature":            hex.EncodeToString([]byte(c25519PublicKeySigned)),
+				"signature":            hex.EncodeToString([]byte(*c25519PublicKeySigned)),
 				"signing_key":          *signingKey.PublicKey,
 				"signing_spec":         *signingKey.Spec,
 			})
@@ -411,39 +389,25 @@ func consumeOrganizationImplicitKeyExchangeCompleteMsg(msg *stan.Msg) {
 		return
 	}
 
-	status, vaultsResponse, err := provide.ListVaults(*orgToken.Token, map[string]interface{}{})
-	if err != nil || status != 200 {
+	vaults, err := vault.ListVaults(*orgToken.Token, map[string]interface{}{})
+	if err != nil {
 		common.Log.Warningf("failed to fetch vaults during implicit key exchange message handler; organization id: %s", organizationID)
 		natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
 		return
 	}
-	vaults := make([]*vault, 0)
-	for _, vlt := range vaultsResponse.([]interface{}) {
-		v := &vault{}
-		vltraw, _ := json.Marshal(vlt)
-		json.Unmarshal(vltraw, &v)
-		vaults = append(vaults, v)
-	}
 
 	if len(vaults) == 1 {
 		orgVault := vaults[0]
-		signingKeys := make([]*vaultKey, 0)
-		var signingKey *vaultKey
 
-		status, keys, err := provide.ListVaultKeys(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{})
-		if err != nil || status != 200 {
+		keys, err := vault.ListKeys(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{})
+		if err != nil {
 			common.Log.Warningf("failed to fetch keys from vault during implicit key exchange message handler; organization id: %s", organizationID)
 			natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
 			return
 		}
-		for _, key := range keys.([]interface{}) {
-			k := &vaultKey{}
-			keyraw, _ := json.Marshal(key)
-			json.Unmarshal(keyraw, &k)
-			signingKeys = append(signingKeys, k)
-		}
 
-		for _, key := range signingKeys {
+		var signingKey *vault.Key
+		for _, key := range keys {
 			if key.Name != nil && strings.ToLower(*key.Name) == "ekho signing" { // FIXME
 				signingKey = key
 				break
@@ -559,36 +523,22 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 		return
 	}
 
-	vaults := make([]*vault, 0)
-	status, vaultsResponse, err := provide.ListVaults(*orgToken.Token, map[string]interface{}{})
-	if err != nil || status != 200 {
+	vaults, err := vault.ListVaults(*orgToken.Token, map[string]interface{}{})
+	if err != nil {
 		common.Log.Warningf("failed to fetch vaults during implicit key exchange message handler; organization id: %s", organizationID)
 		natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
 		return
 	}
-	for _, vlt := range vaultsResponse.([]interface{}) {
-		v := &vault{}
-		vltraw, _ := json.Marshal(vlt)
-		json.Unmarshal(vltraw, &v)
-		vaults = append(vaults, v)
-	}
 
-	keys := make([]*vaultKey, 0)
+	var keys []*vault.Key
 
 	if len(vaults) == 1 {
 		orgVault := vaults[0]
-
-		status, keysResponse, err := provide.ListVaultKeys(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{})
-		if err != nil || status != 200 {
+		keys, err = vault.ListKeys(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{})
+		if err != nil {
 			common.Log.Warningf("failed to fetch keys from vault during implicit key exchange message handler; organization id: %s; %s", organizationID, err.Error())
 			natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
 			return
-		}
-		for _, key := range keysResponse.([]interface{}) {
-			k := &vaultKey{}
-			keyraw, _ := json.Marshal(key)
-			json.Unmarshal(keyraw, &k)
-			keys = append(keys, k)
 		}
 	}
 
@@ -636,7 +586,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 	if len(tokens) > 0 {
 		jwtToken := tokens[0].Token
 
-		status, resp, err := provide.ListContracts(*jwtToken, map[string]interface{}{})
+		status, resp, err := nchain.ListContracts(*jwtToken, map[string]interface{}{})
 		if err != nil || status != 200 {
 			common.Log.Warningf("failed to resolve organization registry contract to which the organization registration tx should be sent; organization id: %s", organizationID)
 			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
@@ -657,7 +607,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 
 		// app hd wallet
 
-		status, walletResp, err := provide.ListWallets(*jwtToken, map[string]interface{}{})
+		status, walletResp, err := nchain.ListWallets(*jwtToken, map[string]interface{}{})
 		if err != nil || status != 200 {
 			common.Log.Warningf("failed to fetch HD wallet for organization registration tx signing; organization id: %s", organizationID)
 			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
@@ -671,7 +621,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 						walletID = common.StringOrNil(appWlltID)
 						common.Log.Debugf("resolved HD wallet %s for organiation registration tx signing %s", *walletID, organization.ID)
 
-						status, accountsResp, err := provide.ListWalletAccounts(*jwtToken, *walletID, map[string]interface{}{})
+						status, accountsResp, err := nchain.ListWalletAccounts(*jwtToken, *walletID, map[string]interface{}{})
 						if err != nil || status != 200 {
 							common.Log.Warningf("failed to derive HD wallet accounts for organization registration tx; organization id: %s", organizationID)
 							natsutil.AttemptNack(msg, organizationRegistrationTimeout)
@@ -702,7 +652,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 			return
 		}
 
-		status, orgWalletResp, err := provide.CreateWallet(*orgToken.Token, map[string]interface{}{
+		status, orgWalletResp, err := nchain.CreateWallet(*orgToken.Token, map[string]interface{}{
 			"purpose": 44,
 		})
 		if err != nil || status != 201 {
@@ -716,7 +666,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 				orgWalletID = common.StringOrNil(orgWlltID)
 				common.Log.Debugf("created HD wallet %s for organization %s", *orgWalletID, organization.ID)
 
-				status, accountsResp, err := provide.ListWalletAccounts(*orgToken.Token, *orgWalletID, map[string]interface{}{})
+				status, accountsResp, err := nchain.ListWalletAccounts(*orgToken.Token, *orgWalletID, map[string]interface{}{})
 				if err != nil || status != 200 {
 					common.Log.Warningf("failed to derive organization HD wallet accounts for organization registration tx should be sent; organization id: %s", organizationID)
 					natsutil.AttemptNack(msg, organizationRegistrationTimeout)
@@ -737,8 +687,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 			for _, c := range cntrcts {
 				if cntrct, contractOk := c.(map[string]interface{}); contractOk {
 					if cntrctID, contractIDOk := cntrct["id"].(string); contractIDOk {
-						common.Log.Debugf("attempting to fetch contract: %s", cntrctID)
-						status, resp, err = provide.GetContractDetails(*jwtToken, cntrctID, map[string]interface{}{})
+						status, resp, err = nchain.GetContractDetails(*jwtToken, cntrctID, map[string]interface{}{})
 						if err != nil || status != 200 {
 							common.Log.Warningf("failed to resolve organization registry contract to which the organization registration tx should be sent; organization id: %s", organizationID)
 							natsutil.AttemptNack(msg, organizationRegistrationTimeout)
@@ -791,7 +740,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 		// registerOrg
 
 		common.Log.Debugf("attempting to register organization with on-chain registry contract: %s", *orgRegistryContractAddress)
-		registerOrgStatus, _, err := provide.ExecuteContract(*jwtToken, *orgRegistryContractID, map[string]interface{}{
+		registerOrgStatus, _, err := nchain.ExecuteContract(*jwtToken, *orgRegistryContractID, map[string]interface{}{
 			"wallet_id":          walletID,
 			"hd_derivation_path": hdDerivationPath,
 			"method":             organizationRegistrationMethod,
@@ -813,13 +762,13 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 
 		// setInterfaceImplementer -- IOrgRegistry
 
-		// setOrgRegistryInterfaceImplStatus, _, err := provide.ExecuteContract(*orgToken.Token, *erc1820RegistryContractID, map[string]interface{}{
+		// setOrgRegistryInterfaceImplStatus, _, err := nchain.ExecuteContract(*orgToken.Token, *erc1820RegistryContractID, map[string]interface{}{
 		// 	"wallet_id":          orgWalletID,
 		// 	"hd_derivation_path": orgHDDerivationPath,
 		// 	"method":             organizationSetInterfaceImplementerMethod,
 		// 	"params": []interface{}{
 		// 		orgAddress,
-		// 		string(provide.Keccak256("IOrgRegistry")),
+		// 		string(providecrypto.Keccak256("IOrgRegistry")),
 		// 		*orgRegistryContractAddress,
 		// 	},
 		// 	"value": 0,

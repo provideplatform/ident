@@ -16,7 +16,7 @@ import (
 	"github.com/provideapp/ident/organization"
 	"github.com/provideapp/ident/token"
 	"github.com/provideapp/ident/user"
-	provide "github.com/provideservices/provide-go"
+	provide "github.com/provideservices/provide-go/api"
 )
 
 const applicationResourceKey = "application"

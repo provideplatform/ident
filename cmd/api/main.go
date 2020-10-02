@@ -16,13 +16,12 @@ import (
 
 	"github.com/provideapp/ident/application"
 	"github.com/provideapp/ident/common"
-	"github.com/provideapp/ident/consumer"
-	"github.com/provideapp/ident/kyc"
 	"github.com/provideapp/ident/organization"
 	"github.com/provideapp/ident/token"
 	"github.com/provideapp/ident/user"
 
-	provide "github.com/provideservices/provide-go"
+	provide "github.com/provideservices/provide-go/common"
+	util "github.com/provideservices/provide-go/common/util"
 )
 
 const privacyPolicyUpdatedAt = "2018-10-19T00:00:00.000000"
@@ -47,11 +46,13 @@ func init() {
 	}
 
 	auth0.RequireAuth0()
-	common.RequireJWT()
+	util.RequireJWT()
+	util.RequireGin()
 	pgputil.RequirePGP()
 	redisutil.RequireRedis()
+	// util.RequireVault()
 	// common.RequireAPIAccounting()
-	consumer.RunAPIUsageDaemon()
+	// consumer.RunAPIUsageDaemon()
 }
 
 func main() {
@@ -108,7 +109,7 @@ func runAPI() {
 	r.Use(token.AuthMiddleware())
 	r.Use(common.AccountingMiddleware())
 	r.Use(common.RateLimitingMiddleware())
-	r.Use(provide.TrackAPICalls())
+	r.Use(util.TrackAPICalls())
 
 	application.InstallApplicationAPI(r)
 	application.InstallApplicationOrganizationsAPI(r)
@@ -118,20 +119,19 @@ func runAPI() {
 	organization.InstallOrganizationVaultsAPI(r)
 	token.InstallTokenAPI(r)
 	user.InstallUserAPI(r)
-	kyc.InstallKYCAPI(r)
 
 	srv = &http.Server{
-		Addr:    common.ListenAddr,
+		Addr:    util.ListenAddr,
 		Handler: r,
 	}
 
-	if common.ServeTLS {
-		go srv.ListenAndServeTLS(common.CertificatePath, common.PrivateKeyPath)
+	if util.ServeTLS {
+		go srv.ListenAndServeTLS(util.CertificatePath, util.PrivateKeyPath)
 	} else {
 		go srv.ListenAndServe()
 	}
 
-	common.Log.Debugf("Listening on %s", common.ListenAddr)
+	common.Log.Debugf("listening on %s", util.ListenAddr)
 }
 
 func statusHandler(c *gin.Context) {

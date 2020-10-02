@@ -3,9 +3,7 @@ package common
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"io/ioutil"
 	"math/rand"
-	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -59,22 +57,6 @@ func RandomString(length int) string {
 		b[i] = charset[seededRand.Intn(len(charset))]
 	}
 	return string(b)
-}
-
-// ResolvePublicIP resolves the public IP of the caller
-func ResolvePublicIP() (*string, error) {
-	url := "https://api.ipify.org?format=text" // FIXME
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	ip, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	ipstr := string(ip)
-	return &ipstr, nil
 }
 
 // SHA256 is a convenience method to return the sha256 hash of the given input

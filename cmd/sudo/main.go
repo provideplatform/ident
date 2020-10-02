@@ -31,12 +31,11 @@ const vendApplicationTokenCmd = "vendapptoken"
 
 func init() {
 	auth0.RequireAuth0()
-	common.RequireJWT()
 }
 
 func exit(message string, code int) {
 	common.Log.Warning(message)
-	os.Exit(1)
+	os.Exit(code)
 }
 
 func main() {

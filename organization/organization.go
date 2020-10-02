@@ -11,7 +11,7 @@ import (
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/user"
-	provide "github.com/provideservices/provide-go"
+	provide "github.com/provideservices/provide-go/api"
 )
 
 const natsApplicationImplicitKeyExchangeInitSubject = "ident.application.keys.exchange.init"

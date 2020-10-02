@@ -12,7 +12,6 @@ import (
 	"github.com/kthomas/go-redisutil"
 	_ "github.com/provideapp/ident/application" // Application package
 	"github.com/provideapp/ident/common"
-	_ "github.com/provideapp/ident/kyc"          // KYC package
 	_ "github.com/provideapp/ident/organization" // Organization package
 	_ "github.com/provideapp/ident/user"         // User package
 )
@@ -33,7 +32,6 @@ func init() {
 	}
 
 	pgputil.RequirePGP()
-	common.RequireJWT()
 	redisutil.RequireRedis()
 }
 
