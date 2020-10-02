@@ -12,15 +12,23 @@ if [[ -z "${NATS_STREAMING_SERVER_PORT}" ]]; then
 fi
 
 if [[ -z "${DATABASE_NAME}" ]]; then
-  DATABASE_NAME=ident_test
+  DATABASE_NAME=ident_dev
 fi
 
 if [[ -z "${DATABASE_USER}" ]]; then
-  DATABASE_USER=identtest
+  DATABASE_USER=ident
 fi
 
 if [[ -z "${DATABASE_PASSWORD}" ]]; then
-  DATABASE_PASSWORD=
+  DATABASE_PASSWORD=ident
+fi
+
+if [[ -z "${DATABASE_SUPERUSER}" ]]; then
+  DATABASE_SUPERUSER=prvd
+fi
+
+if [[ -z "${DATABASE_SUPERUSER_PASSWORD}" ]]; then
+  DATABASE_SUPERUSER_PASSWORD=prvdp455
 fi
 
 if [[ -z "${TAGS}" ]]; then
@@ -31,8 +39,8 @@ if [[ -z "${RACE}" ]]; then
   RACE=true
 fi
 
-dropdb $DATABASE_NAME || true >/dev/null
-dropuser $DATABASE_USER || true >/dev/null
+PGPASSWORD=$DATABASE_SUPERUSER_PASSWORD dropdb -U $DATABASE_SUPERUSER -h 0.0.0.0 -p $DATABASE_PORT $DATABASE_NAME || true >/dev/null
+PGPASSWORD=$DATABASE_SUPERUSER_PASSWORD dropuser -U $DATABASE_SUPERUSER -h 0.0.0.0 -p $DATABASE_PORT $DATABASE_USER || true >/dev/null
 
 DATABASE_USER=$DATABASE_USER DATABASE_PASSWORD=$DATABASE_PASSWORD DATABASE_NAME=$DATABASE_NAME make migrate
 

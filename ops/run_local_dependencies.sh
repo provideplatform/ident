@@ -29,10 +29,14 @@ if [[ -z "${NATS_SERVER_PORT}" ]]; then
   NATS_SERVER_PORT=4221
 fi
 
+if [[ -z "${DATABASE_PORT}" ]]; then
+  DATABASE_PORT=5432
+fi
+
 if [[ -z "${NATS_STREAMING_SERVER_PORT}" ]]; then
   NATS_STREAMING_SERVER_PORT=4222
 fi
 
 gnatsd -auth testtoken -p ${NATS_SERVER_PORT} > /dev/null 2>&1 &
 nats-streaming-server -cid provide -auth testtoken -p ${NATS_STREAMING_SERVER_PORT} > /dev/null 2>&1 &
-pg_ctl -D /usr/local/var/postgres start > /dev/null 2>&1 &
+pg_ctl -D /usr/local/var/postgres -p ${DATABASE_PORT} start > /dev/null 2>&1 &
