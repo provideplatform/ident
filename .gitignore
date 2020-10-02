@@ -43,3 +43,8 @@ sia_consumer.*
 reports
 src/
 vendor/
+
+# test files
+coverage.txt
+profile.out
+
