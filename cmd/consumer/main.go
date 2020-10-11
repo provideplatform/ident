@@ -14,6 +14,7 @@ import (
 	"github.com/provideapp/ident/common"
 	_ "github.com/provideapp/ident/organization" // Organization package
 	_ "github.com/provideapp/ident/user"         // User package
+	util "github.com/provideservices/provide-go/common/util"
 )
 
 const natsStreamingSubscriptionStatusTickerInterval = 5 * time.Second
@@ -31,6 +32,7 @@ func init() {
 		return
 	}
 
+	util.RequireJWT()
 	pgputil.RequirePGP()
 	redisutil.RequireRedis()
 }
