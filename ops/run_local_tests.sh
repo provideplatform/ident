@@ -274,7 +274,7 @@ mOK0zVVwSsBZysngslc2X2lPYROs4hHygQiCtuFrt4BZb7OnLL4Xz9xUsJSmeYbZ
 RB2pCO6C2xWltowiV5YCTSlg+RYUGN8fKoyYkZPdwEGRJqbXmROYAQHFKN4C
 -----END RSA PRIVATE KEY-----'
 
-pkgs=(application consumer kyc organization token user)
+pkgs=(test)
 for d in "${pkgs[@]}" ; do
   pkg=$(echo $d | sed 's/\/*$//g')
   
@@ -298,14 +298,15 @@ for d in "${pkgs[@]}" ; do
     LOG_LEVEL=DEBUG \
     IDENTITYMIND_API_USER=provide \
     IDENTITYMIND_API_TOKEN=fc45e5e06411423ed8e0bc80849e40b52a538d03 \
+    IDENT_API_HOST=localhost:8081 \
+    IDENT_API_PATH=api/v1 \
+    IDENT_API_SCHEME=http \
     go test "./${pkg}" -v \
                        -race \
                        -timeout 1800s \
                        -cover \
                        -coverpkg="./${pkg}" \
                        -coverprofile=profile.out \
-                       -ginkgo.progress \
-                       -ginkgo.trace \
                        -tags="$TAGS"
   else
     PGP_PUBLIC_KEY=$PGP_PUBLIC_KEY \
@@ -327,13 +328,14 @@ for d in "${pkgs[@]}" ; do
     LOG_LEVEL=DEBUG \
     IDENTITYMIND_API_USER=provide \
     IDENTITYMIND_API_TOKEN=fc45e5e06411423ed8e0bc80849e40b52a538d03 \
+    IDENT_API_HOST=localhost:8081 \
+    IDENT_API_PATH=api/v1 \
+    IDENT_API_SCHEME=http \
     go test "./${pkg}" -v \
                        -timeout 1800s \
                        -cover \
                        -coverpkg="./${pkg}" \
                        -coverprofile=profile.out \
-                       -ginkgo.progress \
-                       -ginkgo.trace \
                        -tags="$TAGS"
   fi
 done
