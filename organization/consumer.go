@@ -599,28 +599,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 		var erc1820RegistryContractAddress *string
 		var orgRegistryContractAddress *string
 
-		var walletID *string
 		var orgWalletID *string
-
-		// app hd wallet
-
-		status, walletResp, err := nchain.ListWallets(*jwtToken, map[string]interface{}{})
-		if err != nil || status != 200 {
-			common.Log.Warningf("failed to fetch HD wallet for organization registration tx signing; organization id: %s", organizationID)
-			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
-			return
-		}
-
-		if appWallets, appWalletsOk := walletResp.([]interface{}); appWalletsOk {
-			if len(appWallets) > 0 {
-				if appWllt, appWlltOk := appWallets[0].(map[string]interface{}); appWlltOk {
-					if appWlltID, appWlltIDOk := appWllt["id"].(string); appWlltIDOk {
-						walletID = common.StringOrNil(appWlltID)
-						common.Log.Debugf("resolved HD wallet %s for organiation registration tx signing %s", *walletID, organization.ID)
-					}
-				}
-			}
-		}
 
 		// org api token & hd wallet
 
@@ -688,12 +667,6 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 
 		if orgRegistryContractID == nil || orgRegistryContractAddress == nil {
 			common.Log.Warningf("failed to resolve organization registry contract; application id: %s", applicationID)
-			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
-			return
-		}
-
-		if walletID == nil {
-			common.Log.Warningf("failed to resolve HD wallet for signing organization registry transaction; organization id: %s", organizationID)
 			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
 			return
 		}
