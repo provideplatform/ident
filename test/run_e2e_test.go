@@ -5,6 +5,7 @@ package test
 import (
 	"testing"
 
+	uuid "github.com/kthomas/go.uuid"
 	provide "github.com/provideservices/provide-go/api/ident"
 )
 
@@ -107,6 +108,123 @@ func TestCreateOrganization(t *testing.T) {
 			"description": userOrg.description,
 			"user_id":     user.ID,
 		})
-		t.Logf("org: %+v", org)
+		if err != nil {
+			t.Errorf("error creating organisation for user id %s", user.ID)
+		}
+
+		t.Logf("org created %+v", org)
 	}
+}
+
+func TestCreateApplication(t *testing.T) {
+
+	testId, err := uuid.NewV4()
+	if err != nil {
+		t.Logf("error creating new UUID")
+	}
+
+	type organization struct {
+		name        string
+		description string
+	}
+	userOrg := organization{
+		"Org " + testId.String(),
+		"Org " + testId.String() + " Decription",
+	}
+
+	type application struct {
+		name        string
+		description string
+	}
+	userApp := application{
+		"App " + testId.String(),
+		"App " + testId.String() + " Decription",
+	}
+
+	tt := []struct {
+		firstName string
+		lastName  string
+		email     string
+		password  string
+	}{
+		{"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password"},
+		{"joey", "joe joe", "j.j" + testId.String() + "@email.com", "joeyjoejoe"},
+	}
+
+	// create the users and add them to the organization
+	for _, tc := range tt {
+		user, err := userFactory(tc.firstName, tc.lastName, tc.email, tc.password)
+		if err != nil {
+			t.Errorf("user creation failed. Error: %s", err.Error())
+			return
+		}
+
+		// get the auth token
+		auth, err := provide.Authenticate(tc.email, tc.password)
+		if err != nil {
+			t.Errorf("user authentication failed for user %s. error: %s", tc.email, err.Error())
+		}
+
+		// create the org with that user
+		org, err := provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
+			"name":        userOrg.name,
+			"description": userOrg.description,
+			"user_id":     user.ID,
+		})
+		if err != nil {
+			t.Errorf("error creating organisation for user id %s", user.ID)
+		}
+
+		t.Logf("org created %+v", org)
+
+		// Create an Application for that org
+		app, err := provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+			"name":        userApp.name,
+			"description": userApp.description,
+			"user_id":     user.ID,
+		})
+		if err != nil {
+			t.Errorf("error creation application for user id %s", user.ID)
+		}
+		t.Logf("app created %+v", app)
+	}
+}
+
+func TestListUsers(t *testing.T) {
+	testId, err := uuid.NewV4()
+	if err != nil {
+		t.Logf("error creating new UUID")
+	}
+
+	tt := []struct {
+		firstName string
+		lastName  string
+		email     string
+		password  string
+	}{
+		{"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password"},
+		{"joey", "joe joe", "j.j" + testId.String() + "@email.com", "joeyjoejoe"},
+	}
+	for _, tc := range tt {
+		_, err = userFactory(tc.firstName, tc.lastName, tc.email, tc.password)
+		if err != nil {
+			t.Errorf("user creation failed. Error: %s", err.Error())
+			return
+		}
+
+		// get the auth token
+		auth, err := provide.Authenticate(tc.email, tc.password)
+		if err != nil {
+			t.Errorf("user authentication failed for user %s. error: %s", tc.email, err.Error())
+		}
+
+		users, err := provide.ListUsers(string(*auth.Token.Token), map[string]interface{}{})
+		if err != nil {
+			t.Errorf("error getting users list %s", err.Error())
+		}
+		if len(users) != len(tt) {
+			t.Errorf("incorrect number of users returned, expected %d, got %d", len(tt), len(users))
+		}
+	}
+
 }
