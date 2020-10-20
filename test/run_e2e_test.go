@@ -240,6 +240,10 @@ func TestListUsers(t *testing.T) {
 		{"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password"},
 		{"joey", "joe joe", "j.j" + testId.String() + "@email.com", "joeyjoejoe"},
 	}
+
+	appToken := &provide.Token{}
+	userApplication := &provide.Application{}
+
 	for _, tc := range tt {
 		user, err := userFactory(tc.firstName, tc.lastName, tc.email, tc.password)
 		if err != nil {
@@ -271,33 +275,59 @@ func TestListUsers(t *testing.T) {
 			t.Errorf("user authentication failed for user %s. error: %s", tc.email, err.Error())
 		}
 
+		t.Logf("** user application name %+v", userApplication)
 		// Create an Application
-		app, err := provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
-			"name":        userApp.name,
-			"description": userApp.description,
-			"user_id":     user.ID,
-		})
-		if err != nil {
-			t.Errorf("error creation application for user id %s", user.ID)
-		}
+		if userApplication.Name == nil {
+			t.Logf("*******no user application created, creating...")
 
-		t.Logf("app returned %+v", *app)
-		// get an auth token which will include the app
-		token, err := tokenFactory(*auth.Token.Token, app.ID)
-		if err != nil {
-			t.Errorf("token creation failed for application id %s. error: %s", app.ID, err.Error())
-		}
-		if token != nil {
-			t.Logf("token, possibly with application id %+v", *token)
-			users, err := provide.ListUsers(string(*token.Token), map[string]interface{}{})
+			userApplication, err = provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+				"name":        userApp.name,
+				"description": userApp.description,
+				"user_id":     user.ID,
+			})
 			if err != nil {
-				t.Errorf("error getting users list %s", err.Error())
+				t.Errorf("error creation application for user id %s", user.ID)
 			}
-			if len(users) != len(tt) {
-				t.Errorf("incorrect number of users returned, expected %d, got %d", len(tt), len(users))
+
+			t.Logf("app returned %+v", *userApplication)
+
+		} else {
+			t.Logf("********updating user app with user details")
+
+			// get an auth token which will include the app
+			appToken, err = tokenFactory(*auth.Token.Token, userApplication.ID)
+			if err != nil {
+				t.Errorf("token creation failed for application id %s. error: %s", userApplication.ID, err.Error())
 			}
+
+			err = provide.UpdateApplication(*appToken.Token, userApplication.ID.String(), map[string]interface{}{
+				"name":        userApp.name,
+				"description": userApp.description,
+				"user_id":     user.ID,
+			})
+			if err != nil {
+				t.Errorf("error creation application for user id %s", user.ID)
+			}
+
+			t.Logf("app returned %+v", *userApplication)
 		}
 
+		// get an auth token which will include the app
+		appToken, err = tokenFactory(*auth.Token.Token, userApplication.ID)
+		if err != nil {
+			t.Errorf("token creation failed for application id %s. error: %s", userApplication.ID, err.Error())
+		}
+	}
+
+	if appToken != nil {
+		//t.Logf("token, possibly with application id %+v", *appToken.Token)
+		users, err := provide.ListUsers(string(*appToken.Token), map[string]interface{}{})
+		if err != nil {
+			t.Errorf("error getting users list %s", err.Error())
+		}
+		if len(users) != len(tt) {
+			t.Errorf("incorrect number of users returned, expected %d, got %d", len(tt), len(users))
+		}
 	}
 
 }
