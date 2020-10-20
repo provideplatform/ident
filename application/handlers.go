@@ -156,7 +156,7 @@ func createApplicationHandler(c *gin.Context) {
 		_mergedConfigJSON := json.RawMessage(mergedConfigJSON)
 		resp.Application.Config = &_mergedConfigJSON
 
-		provide.Render(resp, 201, c)
+		provide.Render(resp.Application, 201, c)
 	} else {
 		obj := map[string]interface{}{}
 		obj["errors"] = app.Errors
