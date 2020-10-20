@@ -599,46 +599,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 		var erc1820RegistryContractAddress *string
 		var orgRegistryContractAddress *string
 
-		var walletID *string
-		var hdDerivationPath *string
-
 		var orgWalletID *string
-		var orgHDDerivationPath *string
-
-		// app hd wallet
-
-		status, walletResp, err := nchain.ListWallets(*jwtToken, map[string]interface{}{})
-		if err != nil || status != 200 {
-			common.Log.Warningf("failed to fetch HD wallet for organization registration tx signing; organization id: %s", organizationID)
-			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
-			return
-		}
-
-		if appWallets, appWalletsOk := walletResp.([]interface{}); appWalletsOk {
-			if len(appWallets) > 0 {
-				if appWllt, appWlltOk := appWallets[0].(map[string]interface{}); appWlltOk {
-					if appWlltID, appWlltIDOk := appWllt["id"].(string); appWlltIDOk {
-						walletID = common.StringOrNil(appWlltID)
-						common.Log.Debugf("resolved HD wallet %s for organiation registration tx signing %s", *walletID, organization.ID)
-
-						status, accountsResp, err := nchain.ListWalletAccounts(*jwtToken, *walletID, map[string]interface{}{})
-						if err != nil || status != 200 {
-							common.Log.Warningf("failed to derive HD wallet accounts for organization registration tx; organization id: %s", organizationID)
-							natsutil.AttemptNack(msg, organizationRegistrationTimeout)
-							return
-						}
-
-						if accts, acctsOk := accountsResp.([]interface{}); acctsOk {
-							if len(accts) > 0 {
-								if acct, acctOk := accts[0].(map[string]interface{}); acctOk {
-									hdDerivationPath = common.StringOrNil(acct["hd_derivation_path"].(string))
-								}
-							}
-						}
-					}
-				}
-			}
-		}
 
 		// org api token & hd wallet
 
@@ -665,21 +626,6 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 			if orgWlltID, orgWlltIDOk := orgWallet["id"].(string); orgWlltIDOk {
 				orgWalletID = common.StringOrNil(orgWlltID)
 				common.Log.Debugf("created HD wallet %s for organization %s", *orgWalletID, organization.ID)
-
-				status, accountsResp, err := nchain.ListWalletAccounts(*orgToken.Token, *orgWalletID, map[string]interface{}{})
-				if err != nil || status != 200 {
-					common.Log.Warningf("failed to derive organization HD wallet accounts for organization registration tx should be sent; organization id: %s", organizationID)
-					natsutil.AttemptNack(msg, organizationRegistrationTimeout)
-					return
-				}
-
-				if accts, acctsOk := accountsResp.([]interface{}); acctsOk {
-					if len(accts) > 0 {
-						if acct, acctOk := accts[0].(map[string]interface{}); acctOk {
-							orgHDDerivationPath = common.StringOrNil(acct["hd_derivation_path"].(string))
-						}
-					}
-				}
 			}
 		}
 
@@ -725,13 +671,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 			return
 		}
 
-		if walletID == nil || hdDerivationPath == nil {
-			common.Log.Warningf("failed to resolve HD wallet for signing organization registry transaction; organization id: %s", organizationID)
-			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
-			return
-		}
-
-		if orgWalletID == nil || orgHDDerivationPath == nil {
+		if orgWalletID == nil {
 			common.Log.Warningf("failed to resolve organization HD wallet for signing organization impl transaction transaction; organization id: %s", organizationID)
 			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
 			return
@@ -741,9 +681,8 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 
 		common.Log.Debugf("attempting to register organization with on-chain registry contract: %s", *orgRegistryContractAddress)
 		registerOrgStatus, _, err := nchain.ExecuteContract(*jwtToken, *orgRegistryContractID, map[string]interface{}{
-			"wallet_id":          walletID,
-			"hd_derivation_path": hdDerivationPath,
-			"method":             organizationRegistrationMethod,
+			"wallet_id": orgWalletID,
+			"method":    organizationRegistrationMethod,
 			"params": []interface{}{
 				orgAddress,
 				*organization.Name,
