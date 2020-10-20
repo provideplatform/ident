@@ -134,6 +134,10 @@ func usersListHandler(c *gin.Context) {
 		query = query.Where("email = ?", strings.ToLower(c.Query("email")))
 	}
 
+	if bearer.ApplicationID != nil {
+		query = query.Where("application_id = ?", bearer.ApplicationID.String())
+	}
+
 	query.Find(&users)
 
 	if c.Query("enrich") == "true" {
