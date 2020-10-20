@@ -149,14 +149,13 @@ func createApplicationHandler(c *gin.Context) {
 		}
 	}
 
-	resp, err := app.Create(nil)
-	if err == nil {
-		mergedConfig := resp.Application.mergedConfig()
+	if app.Create(nil) {
+		mergedConfig := app.mergedConfig()
 		mergedConfigJSON, _ := json.Marshal(mergedConfig)
 		_mergedConfigJSON := json.RawMessage(mergedConfigJSON)
-		resp.Application.Config = &_mergedConfigJSON
+		app.Config = &_mergedConfigJSON
 
-		provide.Render(resp, 201, c)
+		provide.Render(app, 201, c)
 	} else {
 		obj := map[string]interface{}{}
 		obj["errors"] = app.Errors

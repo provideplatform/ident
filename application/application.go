@@ -2,7 +2,6 @@ package application
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -14,7 +13,6 @@ import (
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/organization"
-	"github.com/provideapp/ident/token"
 	"github.com/provideapp/ident/user"
 	provide "github.com/provideservices/provide-go/api"
 )
@@ -39,12 +37,6 @@ type Application struct {
 
 	Organizations []*organization.Organization `gorm:"many2many:applications_organizations" json:"-"`
 	Users         []*user.User                 `gorm:"many2many:applications_users" json:"-"` // not to be confused with `User.ApplicationID`
-}
-
-// CreateResponse model
-type CreateResponse struct {
-	Application *Application `json:"application"`
-	Token       *token.Token `json:"token"`
 }
 
 // ApplicationsByUserID returns a list of applications which have been created
@@ -334,7 +326,7 @@ func (app *Application) updateUser(tx *gorm.DB, usr user.User, permissions commo
 }
 
 // Create and persist an application
-func (app *Application) Create(tx *gorm.DB) (*CreateResponse, error) {
+func (app *Application) Create(tx *gorm.DB) bool {
 	var db *gorm.DB
 	if tx != nil {
 		db = tx
@@ -345,7 +337,7 @@ func (app *Application) Create(tx *gorm.DB) (*CreateResponse, error) {
 	}
 
 	if !app.validate() {
-		return nil, errors.New(*app.Errors[0].Message)
+		return false
 	}
 
 	app.sanitizeConfig()
@@ -365,11 +357,6 @@ func (app *Application) Create(tx *gorm.DB) (*CreateResponse, error) {
 		if !db.NewRecord(app) {
 			success := rowsAffected > 0
 			if success {
-				tkn, err := token.VendApplicationToken(db, &app.ID, nil, nil, nil, nil)
-				if err != nil {
-					return nil, err
-				}
-
 				usr := user.Find(&app.UserID)
 				if usr != nil && app.addUser(db, *usr, common.DefaultApplicationResourcePermission) {
 					db.Commit()
@@ -379,16 +366,11 @@ func (app *Application) Create(tx *gorm.DB) (*CreateResponse, error) {
 					payload, _ := json.Marshal(app)
 					natsutil.NatsStreamingPublish(natsSiaApplicationNotificationSubject, payload)
 				}
-
-				return &CreateResponse{
-					Application: app,
-					Token:       tkn,
-				}, nil
 			}
 		}
 	}
 
-	return nil, errors.New("failed to create application")
+	return len(app.Errors) == 0
 }
 
 // Validate an application for persistence
