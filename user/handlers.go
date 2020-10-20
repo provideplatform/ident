@@ -135,7 +135,8 @@ func usersListHandler(c *gin.Context) {
 	}
 
 	if bearer.ApplicationID != nil {
-		query = query.Where("application_id = ?", bearer.ApplicationID.String())
+		query = query.Joins("JOIN applications_users as au ON au.user_id = users.id")
+		query = query.Where("au.application_id = ?", bearer.ApplicationID.String())
 	}
 
 	query.Find(&users)
