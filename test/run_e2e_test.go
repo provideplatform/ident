@@ -340,26 +340,17 @@ func TestUserAccessRefreshToken(t *testing.T) {
 	}
 
 	email := fmt.Sprintf("%s@prvd.local", testId.String())
-	user, err := userFactory("joe", "user", email, "passw0rd")
+	passwd := "passw0rd"
+
+	user, err := userFactory("joe", "user", email, passwd)
 	if err != nil {
 		t.Errorf("user creation failed. Error: %s", err.Error())
 		return
 	}
 
-	// get the auth token
-	status, resp, err := InitIdentService(nil).Post("authenticate", map[string]interface{}{
-		"email":    email,
-		"password": passwd,
-		"scope":    "offline_access",
-	})
+	auth, err := provide.Authenticate(email, passwd)
 	if err != nil {
-		return nil, err
-	}
-	auth := &provide.AuthenticationResponse{}
-	raw, _ := json.Marshal(resp)
-	err = json.Unmarshal(raw, &auth)
-	if err != nil {
-		return nil, fmt.Errorf("failed to authenticate user; status: %v; %s", status, err.Error())
+		t.Errorf("error authenticating with ident. error %s", err.Error())
 	}
 
 	accessRefreshToken := auth.Token
