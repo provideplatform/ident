@@ -3,6 +3,7 @@
 package test
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -347,19 +348,21 @@ func TestUserAccessRefreshToken(t *testing.T) {
 	}
 
 	// get the auth token
-	status, resp, err := InitIdentService(nil).Post("authenticate", map[string]interface{}{
+	status, resp, err := provide.InitIdentService(nil).Post("authenticate", map[string]interface{}{
 		"email":    email,
-		"password": passwd,
+		"password": "passw0rd",
 		"scope":    "offline_access",
 	})
 	if err != nil {
-		return nil, err
+		t.Errorf("failed to authenticate user; status: %v; %s", status, err.Error())
+		return
 	}
 	auth := &provide.AuthenticationResponse{}
 	raw, _ := json.Marshal(resp)
 	err = json.Unmarshal(raw, &auth)
 	if err != nil {
-		return nil, fmt.Errorf("failed to authenticate user; status: %v; %s", status, err.Error())
+		t.Errorf("failed to authenticate user; status: %v; %s", status, err.Error())
+		return
 	}
 
 	accessRefreshToken := auth.Token
