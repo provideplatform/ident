@@ -3,6 +3,7 @@
 package test
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -348,9 +349,26 @@ func TestUserAccessRefreshToken(t *testing.T) {
 		return
 	}
 
-	auth, err := provide.Authenticate(email, passwd)
+	// auth, err := provide.Authenticate(email, passwd)
+	// if err != nil {
+	// 	t.Errorf("error authenticating with ident. error %s", err.Error())
+	// }
+
+	// get the auth token
+	status, resp, err := provide.InitIdentService(nil).Post("authenticate", map[string]interface{}{
+		"email":    email,
+		"password": passwd,
+		"scope":    "offline_access",
+	})
 	if err != nil {
-		t.Errorf("error authenticating with ident. error %s", err.Error())
+		t.Errorf("failed to authenticate user; status: %v; %s", status, err.Error())
+		return
+	}
+	auth := &provide.AuthenticationResponse{}
+	raw, _ := json.Marshal(resp)
+	err = json.Unmarshal(raw, &auth)
+	if err != nil {
+		t.Errorf("failed to authenticate user; status: %v; %s", status, err.Error())
 	}
 
 	accessRefreshToken := auth.Token
@@ -361,7 +379,7 @@ func TestUserAccessRefreshToken(t *testing.T) {
 
 	// this authenticate response returns an access token
 	if accessRefreshToken.Token != nil {
-		t.Error("token returned for offline_access token scope; should only contain access_token and refresh_token")
+		t.Errorf("token returned for offline_access token scope; should only contain access_token and refresh_token. token present: %+v", accessRefreshToken)
 		return
 	}
 
