@@ -5,7 +5,7 @@ if [[ -z "${LOG_LEVEL}" ]]; then
 fi
 
 if [[ -z "${DATABASE_HOST}" ]]; then
-  DATABASE_HOST=localhost
+  DATABASE_HOST=0.0.0.0
 fi
 
 if [[ -z "${DATABASE_NAME}" ]]; then
@@ -21,7 +21,7 @@ if [[ -z "${DATABASE_USER}" ]]; then
 fi
 
 if [[ -z "${DATABASE_PASSWORD}" ]]; then
-  DATABASE_PASSWORD=
+  DATABASE_PASSWORD=ident
 fi
 
 if [[ -z "${DATABASE_SUPERUSER}" ]]; then

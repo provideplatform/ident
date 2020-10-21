@@ -62,9 +62,14 @@ func createTokenHandler(c *gin.Context) {
 		return
 	}
 
-	var grantType *string
-	if reqGrantType, reqGrantTypeOk := params["grant_type"].(string); reqGrantTypeOk {
-		grantType = &reqGrantType
+	if grantType, grantTypeOk := params["grant_type"].(string); grantTypeOk {
+		if grantType == authorizationGrantRefreshToken {
+			refreshAccessToken(c)
+			return
+		}
+
+		provide.RenderError(fmt.Sprintf("invalid grant_type: %s", grantType), 422, c)
+		return
 	}
 
 	var scope *string
@@ -135,9 +140,6 @@ func createTokenHandler(c *gin.Context) {
 		}
 
 		provide.Render(tkn.AsResponse(), 201, c)
-		return
-	} else if grantType != nil && *grantType == authorizationGrantRefreshToken {
-		refreshAccessToken(c)
 		return
 	}
 

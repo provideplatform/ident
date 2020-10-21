@@ -74,6 +74,7 @@ type Token struct {
 	ExtendedPermissions  *json.RawMessage  `sql:"-" json:"-"`
 	TTL                  *int              `sql:"-" json:"-"` // number of seconds this token will be valid; used internally
 	Data                 *json.RawMessage  `sql:"-" json:"data,omitempty"`
+	IsRefreshToken       bool              `sql:"-" json:"-"`
 
 	NatsClaims map[string]interface{} `sql:"-" json:"-"` // NATS claims
 }
@@ -144,6 +145,7 @@ func Parse(token string) (*Token, error) {
 	})
 
 	var tkn *Token
+	isRefreshToken := false
 
 	if err != nil {
 		tkn = FindLegacyToken(token)
@@ -197,7 +199,9 @@ func Parse(token string) (*Token, error) {
 	case authorizationSubjectOrganization:
 		orgID = &subUUID
 	case authorizationSubjectToken:
-		// this is a refresh token and can only authorize new access tokens on behalf of a user_id specified in the application claims
+		isRefreshToken = true
+
+		// this is a refresh token and can only authorize new access tokens on behalf of an app, org or user specified in the application claims
 		if appclaimsOk {
 			if claimedUserID, claimedUserIDOk := appclaims["user_id"].(string); claimedUserIDOk {
 				subUUID, err := uuid.FromString(claimedUserID)
@@ -207,6 +211,22 @@ func Parse(token string) (*Token, error) {
 
 				userID = &subUUID
 				common.Log.Debugf("authorized refresh token for creation of new access token on behalf of user: %s", userID)
+			} else if claimedAppID, claimedAppIDOk := appclaims["application_id"].(string); claimedAppIDOk {
+				subUUID, err := uuid.FromString(claimedAppID)
+				if err != nil {
+					return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
+				}
+
+				appID = &subUUID
+				common.Log.Debugf("authorized refresh token for creation of new access token on behalf of application: %s", appID)
+			} else if claimedOrgID, claimedOrgIDOk := appclaims["organization_id"].(string); claimedOrgIDOk {
+				subUUID, err := uuid.FromString(claimedOrgID)
+				if err != nil {
+					return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
+				}
+
+				orgID = &subUUID
+				common.Log.Debugf("authorized refresh token for creation of new access token on behalf of organization: %s", orgID)
 			}
 		}
 	case authorizationSubjectUser:
@@ -232,6 +252,7 @@ func Parse(token string) (*Token, error) {
 		Token:          &jwtToken.Raw,
 		IssuedAt:       iat,
 		ExpiresAt:      exp,
+		IsRefreshToken: isRefreshToken,
 		NotBefore:      nbf,
 		Subject:        common.StringOrNil(sub),
 		UserID:         userID,
@@ -475,7 +496,7 @@ func (t *Token) Vend() bool {
 			})
 			return false
 		}
-		return t.Token != nil
+		return t.Token != nil || t.AccessToken != nil || t.RefreshToken != nil
 	}
 	return false
 }
@@ -507,6 +528,7 @@ func (t *Token) vendRefreshToken() bool {
 	}
 
 	t.RefreshToken = refreshToken.Token
+	t.IsRefreshToken = true
 	return true
 }
 
@@ -757,6 +779,8 @@ func (t *Token) encodeJWT() error {
 
 	if t.ApplicationID != nil {
 		// drop exp claim from revocable application token
+		// FIXME? we could add an IsRevocable flag to the Token and only do this when true...
+		// this would enable access/refresh pattern and long-lived, revocable machine-to-machine app tokens...
 		delete(claims, "exp")
 	}
 
@@ -784,6 +808,7 @@ func (t *Token) encodeJWT() error {
 		common.Log.Warningf("failed to sign JWT; %s", err.Error())
 		return nil
 	}
+
 	t.Token = common.StringOrNil(token)
 	t.AccessToken = t.Token
 
