@@ -772,11 +772,14 @@ func (t *Token) Revoke(tx *gorm.DB) bool {
 func (t *Token) encodeJWT() error {
 	claims := map[string]interface{}{
 		"aud": t.Audience,
-		"exp": t.ExpiresAt.Unix(),
 		"iat": t.IssuedAt.Unix(),
 		"iss": t.Issuer,
 		"jti": t.ID,
 		"sub": t.Subject,
+	}
+
+	if t.ExpiresAt != nil {
+		claims["exp"] = t.ExpiresAt.Unix()
 	}
 
 	if t.NotBefore != nil {
