@@ -117,17 +117,33 @@ func createTokenHandler(c *gin.Context) {
 	}
 
 	if appID != nil {
+		var resp *Token
+		if scope != nil && *scope == authorizationScopeOfflineAccess {
+			tkn := &Token{
+				ApplicationID: appID,
+				Scope:         scope,
+				Audience:      audience,
+			}
+
+			if !tkn.Vend() {
+				provide.RenderError(*tkn.Errors[0].Message, 401, c)
+				return
+			}
+
+			provide.Render(tkn.AsResponse(), 201, c)
+			return
+		}
+
 		db := dbconf.DatabaseConnection()
-		resp, err := VendApplicationToken(db, appID, orgID, nil, nil, audience) // FIXME-- support users and extended permissions
+		tkn, err := VendApplicationToken(db, appID, orgID, nil, nil, audience) // FIXME-- support users and extended permissions
 		if err != nil {
 			provide.RenderError(err.Error(), 401, c)
 			return
 		}
+		resp = tkn
 		provide.Render(resp.AsResponse(), 201, c)
 		return
 	} else if orgID != nil {
-		// db := dbconf.DatabaseConnection()
-		// resp, err := VendApplicationToken(db, appID, orgID, nil, nil, audience) // FIXME-- extended permissions
 		tkn := &Token{
 			OrganizationID: orgID,
 			Scope:          scope,

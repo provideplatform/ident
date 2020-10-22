@@ -3,7 +3,6 @@
 package integration
 
 import (
-	"fmt"
 	"testing"
 
 	uuid "github.com/kthomas/go.uuid"
@@ -66,6 +65,10 @@ func TestCreateApplication(t *testing.T) {
 	}
 }
 
+// users must have sufficient permission on the application to create and list users...
+// an app token does not current grant access to the list of users-- it is more intended
+// to be a programmatic api token for interacting with application-owned resources *without*
+// undermining the privacy of users who may be part of the application...
 func TestListApplicationUsers(t *testing.T) {
 
 	testId, err := uuid.NewV4()
@@ -73,7 +76,7 @@ func TestListApplicationUsers(t *testing.T) {
 		t.Logf("error creating new UUID")
 	}
 
-	//t.Logf("*** test list users *** using testid %s", testId)
+	// t.Logf("*** test list users *** using testid %s", testId)
 
 	type application struct {
 		name        string
@@ -95,11 +98,10 @@ func TestListApplicationUsers(t *testing.T) {
 		{"joey2", "joe joe2", "j.j2" + testId.String() + "@email.com", "joeyjoejoe2"},
 	}
 
-	appToken := &provide.Token{}
-	userApplication := &provide.Application{}
+	var app *provide.Application
+	var appToken *provide.Token
 
 	for _, tc := range tt {
-
 		// create the user
 		user, err := userFactory(tc.firstName, tc.lastName, tc.email, tc.password)
 		if err != nil {
@@ -115,55 +117,50 @@ func TestListApplicationUsers(t *testing.T) {
 		}
 
 		// Create an Application if it doesn't exist
-		if userApplication.Name == nil {
-			userApplication, err = provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+		if app == nil {
+			app, err = provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
 				"name":        userApp.name,
 				"description": userApp.description,
-				"user_id":     user.ID,
 			})
 			if err != nil {
 				t.Errorf("error creation application for user id %s", user.ID)
 				return
 			}
 
-			// create a token for that application
-			t.Logf("creating token")
-			appToken, err = appTokenFactory(*auth.Token.Token, userApplication.ID)
-			if err != nil {
-				t.Errorf("token creation failed for application id %s. error: %s", userApplication.ID, err.Error())
-				return
+			if appToken == nil {
+				// create a token for the application
+				apptkn, err := appTokenFactory(*auth.Token.Token, app.ID)
+				if err != nil {
+					t.Errorf("token creation failed for application id %s. error: %s", app.ID, err.Error())
+					return
+				}
+				appToken = apptkn
 			}
-
 		} else {
 			// let's add this user to the application as the creating user is automatically added...
-			// access the add user path through the hackyhack
-			// FIXME should be available in provide-go
-			path := fmt.Sprintf("applications/%s/users/", userApplication.ID.String())
-
-			status, resp, err := provide.InitIdentService(appToken.Token).Post(path, map[string]interface{}{
-				"user_id": user.ID,
+			err := provide.CreateApplicationUser(*appToken.Token, app.ID.String(), map[string]interface{}{
+				"user_id": user.ID.String(),
 			})
 			if err != nil {
-				t.Errorf("failed to add user %s to organization %s; status: %v; %s", userApplication.ID.String(), user.ID, status, err.Error())
-				return
-			}
-
-			if status != 204 {
-				t.Errorf("failed to add user to application; status: %v; resp: %v", status, resp)
+				t.Errorf("failed to add user %s to application %s; %s", user.ID, app.ID.String(), err.Error())
 				return
 			}
 		}
 	}
 
-	if appToken != nil {
-		users, err := provide.ListUsers(string(*appToken.Token), map[string]interface{}{})
-		if err != nil {
-			t.Errorf("error getting users list %s", err.Error())
-			return
-		}
-		if len(users) != len(tt) {
-			t.Errorf("incorrect number of users returned, expected %d, got %d", len(tt), len(users))
-			return
-		}
+	users, err := provide.ListApplicationUsers(string(*appToken.Token), app.ID.String(), map[string]interface{}{})
+	if err == nil {
+		t.Error("expected error attepting to fetch app users without an app access token")
+		return
 	}
+
+	users, err = provide.ListApplicationUsers(string(*appToken.Token), app.ID.String(), map[string]interface{}{})
+	if err != nil {
+		t.Errorf("error getting users list %s", err.Error())
+		return
+	}
+	if len(users) != len(tt) {
+		t.Errorf("incorrect number of application users returned, expected %d, got %d", len(tt), len(users))
+	}
+	t.Logf("got correct number of application users back %d", len(users))
 }

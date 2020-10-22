@@ -75,6 +75,7 @@ type Token struct {
 	TTL                  *int              `sql:"-" json:"-"` // number of seconds this token will be valid; used internally
 	Data                 *json.RawMessage  `sql:"-" json:"data,omitempty"`
 	IsRefreshToken       bool              `sql:"-" json:"-"`
+	IsRevocable          bool              `sql:"-" json:"-"`
 
 	NatsClaims map[string]interface{} `sql:"-" json:"-"` // NATS claims
 }
@@ -562,6 +563,7 @@ func VendApplicationToken(
 		Permissions:         common.DefaultApplicationResourcePermission,
 		ExtendedPermissions: &extPermissionsJSON,
 		Audience:            audience,
+		IsRevocable:         true,
 	}
 
 	if !t.validate() {
@@ -777,10 +779,8 @@ func (t *Token) encodeJWT() error {
 		claims["nbf"] = t.NotBefore.Unix()
 	}
 
-	if t.ApplicationID != nil {
+	if t.IsRevocable {
 		// drop exp claim from revocable application token
-		// FIXME? we could add an IsRevocable flag to the Token and only do this when true...
-		// this would enable access/refresh pattern and long-lived, revocable machine-to-machine app tokens...
 		delete(claims, "exp")
 	}
 
