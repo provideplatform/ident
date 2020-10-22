@@ -302,16 +302,16 @@ func createOrganizationUserHandler(c *gin.Context) {
 		return
 	}
 
-	if userID == nil {
-		if userIDStr, userIDStrOk := params["user_id"].(string); userIDStrOk {
-			usrID, err := uuid.FromString(userIDStr)
-			if err != nil {
-				provide.RenderError(err.Error(), 422, c)
-				return
-			}
-			userID = &usrID
+	// if userID == nil {
+	if userIDStr, userIDStrOk := params["user_id"].(string); userIDStrOk {
+		usrID, err := uuid.FromString(userIDStr)
+		if err != nil {
+			provide.RenderError(err.Error(), 422, c)
+			return
 		}
+		userID = &usrID
 	}
+	// }
 
 	var invite *user.Invite
 	var permissions common.Permission

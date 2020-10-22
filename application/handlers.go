@@ -585,13 +585,13 @@ func createApplicationUserHandler(c *gin.Context) {
 	}
 
 	var userID *uuid.UUID
-	if appIDStr, appIDOk := params["user_id"].(string); appIDOk {
-		appID, err := uuid.FromString(appIDStr)
+	if userIDStr, userIDOk := params["user_id"].(string); userIDOk {
+		usrID, err := uuid.FromString(userIDStr)
 		if err != nil {
 			provide.RenderError(err.Error(), 422, c)
 			return
 		}
-		userID = &appID
+		userID = &usrID
 	}
 
 	var permissions common.Permission
