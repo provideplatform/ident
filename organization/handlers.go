@@ -341,7 +341,7 @@ func createOrganizationUserHandler(c *gin.Context) {
 		return
 	} else if permissionsOk {
 		permissions = orgPermissions
-	} else if invite.Permissions != nil {
+	} else if invite != nil && invite.Permissions != nil {
 		permissions = *invite.Permissions
 	} else {
 		permissions = common.DefaultApplicationOrganizationPermission
