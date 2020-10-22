@@ -55,7 +55,11 @@ func resolveOrganization(db *gorm.DB, orgID, appID, userID *uuid.UUID) *gorm.DB 
 		query = db.Joins("JOIN applications_organizations as ao ON ao.organization_id = organizations.id").Where("ao.application_id = ?", appID)
 	}
 	if orgID != nil {
-		query = query.Where("ao.organization_id = ?", orgID)
+		if appID != nil {
+			query = query.Where("ao.organization_id = ?", orgID)
+		} else {
+			query = query.Where("organizations.id = ?", orgID)
+		}
 	}
 	if userID != nil {
 		query = query.Joins("JOIN organizations_users as ou ON ou.organization_id = organizations.id").Where("ou.user_id = ?", userID)
