@@ -30,6 +30,11 @@ jobs:
       - run: echo '::set-env name=DATABASE_LOGGING::false'
       - run: echo '::set-env name=TAGS::integration'
       - run: echo '::set-env name=JWT_SIGNER_PUBLIC_KEY::${{ secrets.DEV_JWT }}'
+      - run: echo '::set-env name=AUTH0_INTEGRATION_ENABLED::false'
+      - run: echo '::set-env name=AUTH0_CLIENT_ID::${{ secrets.AUTH0_CLIENT_ID }}'
+      - run: echo '::set-env name=AUTH0_CLIENT_SECRET::${{ secrets.AUTH0_CLIENT_SECRET }}'
+      - run: echo '::set-env name=AUTH0_DOMAIN::https://prvd-staging.auth0.com'  
+      - run: echo '::set-env name=AUTH0_AUDIENCE::https://prvd-staging.auth0.com/api/v2/'      
       - run: go mod tidy
         working-directory: integration
       - run: go mod vendor
