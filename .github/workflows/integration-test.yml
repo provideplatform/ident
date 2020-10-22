@@ -1,0 +1,45 @@
+name: integration-test
+on:
+  push:
+    branches:
+      - integration
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout ident
+        uses: actions/checkout@v2
+        with:
+          path: 'integration'
+      - name: Setup go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.15.1'
+      - run: docker-compose -f ./ops/docker-compose-db.yml up -d
+        working-directory: integration
+      - run: echo '::set-env name=LOG_LEVEL::info'
+      - run: echo '::set-env name=DATABASE_HOST::localhost'
+      - run: echo '::set-env name=DATABASE_NAME::ident_dev'  
+      - run: echo '::set-env name=DATABSE_PORT::5432'  
+      - run: echo '::set-env name=DATABASE_USER::ident' 
+      - run: echo '::set-env name=DATABASE_PASSWORD::ident' 
+      - run: echo '::set-env name=DATABASE_SUPERUSER::prvd'
+      - run: echo '::set-env name=DATABASE_SUPERUSER_PASSWORD::prvdp455'
+      - run: echo '::set-env name=DATABASE_SSL_MODE::disable'
+      - run: echo '::set-env name=DATABASE_LOGGING::false'
+      - run: echo '::set-env name=TAGS::integration'
+      - run: echo '::set-env name=JWT_SIGNER_PUBLIC_KEY::${{ secrets.DEV_JWT }}'
+      - run: go mod tidy
+        working-directory: integration
+      - run: go mod vendor
+        working-directory: integration      
+      - run: go build -v -o ./.bin/ident_migrate ./cmd/migrate
+        working-directory: integration
+      - run: ./.bin/ident_migrate
+        working-directory: integration 
+      - run:     go test ./... -v -race -timeout 1800s -tags="$TAGS"                                      
+        working-directory: integration       
+      - run: docker-compose -f integration/ops/docker-compose-db.yml down
+      - run: docker volume rm ops_ident-db
+
