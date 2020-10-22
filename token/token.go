@@ -639,7 +639,11 @@ func (t *Token) validate() bool {
 		} else {
 			exp = t.IssuedAt.Add(util.JWTAuthorizationTTL)
 		}
-		t.ExpiresAt = &exp
+
+		if !t.IsRevocable {
+			// FIXME-- revocable strategy should be top stop verifying signatures for a specific `kid`
+			t.ExpiresAt = &exp
+		}
 
 		if t.ExpiresAt != nil && t.ExpiresAt.Before(*t.IssuedAt) {
 			t.Errors = append(t.Errors, &provide.Error{
