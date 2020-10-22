@@ -100,6 +100,7 @@ func TestListApplicationUsers(t *testing.T) {
 
 	var app *provide.Application
 	var appToken *provide.Token
+	var userToken *provide.Token
 
 	for _, tc := range tt {
 		// create the user
@@ -114,6 +115,10 @@ func TestListApplicationUsers(t *testing.T) {
 		if err != nil {
 			t.Errorf("user authentication failed for user %s. error: %s", tc.email, err.Error())
 			return
+		}
+
+		if userToken == nil {
+			userToken = auth.Token
 		}
 
 		// Create an Application if it doesn't exist
@@ -148,7 +153,7 @@ func TestListApplicationUsers(t *testing.T) {
 		}
 	}
 
-	users, err := provide.ListApplicationUsers(string(*appToken.Token), app.ID.String(), map[string]interface{}{})
+	users, err := provide.ListApplicationUsers(string(*userToken.Token), app.ID.String(), map[string]interface{}{})
 	if err == nil {
 		t.Error("expected error attepting to fetch app users without an app access token")
 		return
