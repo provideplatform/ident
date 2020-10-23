@@ -343,7 +343,7 @@ func TestUpdateApplicationDetails(t *testing.T) {
 // CHECKME this test will check if I can view the application details
 // by a user who has nothing to do with the application
 // assumption is that they shouldn't be able to read the application details
-func TestUserAppDetailsAccess(t *testing.T) {
+func TestFetchAppDetailsFailsWithUnauthorizedUser(t *testing.T) {
 
 	testId, err := uuid.NewV4()
 	if err != nil {
