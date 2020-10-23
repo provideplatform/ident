@@ -16,11 +16,7 @@ func TestCreateApplication(t *testing.T) {
 		t.Logf("error creating new UUID")
 	}
 
-	type application struct {
-		name        string
-		description string
-	}
-	userApp := application{
+	userApp := Application{
 		"App " + testId.String(),
 		"App " + testId.String() + " Decription",
 	}
@@ -78,11 +74,7 @@ func TestListApplicationUsers(t *testing.T) {
 
 	// t.Logf("*** test list users *** using testid %s", testId)
 
-	type application struct {
-		name        string
-		description string
-	}
-	userApp := application{
+	userApp := Application{
 		"App " + testId.String(),
 		"App " + testId.String() + " Decription",
 	}
@@ -177,13 +169,6 @@ func TestGetApplicationDetails(t *testing.T) {
 		t.Logf("error creating new UUID")
 	}
 
-	type User struct {
-		firstName string
-		lastName  string
-		email     string
-		password  string
-	}
-
 	authUser := User{
 		"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password",
 	}
@@ -254,13 +239,6 @@ func TestUpdateApplicationDetails(t *testing.T) {
 	testId, err := uuid.NewV4()
 	if err != nil {
 		t.Logf("error creating new UUID")
-	}
-
-	type User struct {
-		firstName string
-		lastName  string
-		email     string
-		password  string
 	}
 
 	authUser := User{
@@ -350,13 +328,6 @@ func TestFetchAppDetailsFailsWithUnauthorizedUser(t *testing.T) {
 		t.Logf("error creating new UUID")
 	}
 
-	type User struct {
-		firstName string
-		lastName  string
-		email     string
-		password  string
-	}
-
 	authUser := User{
 		"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password",
 	}
@@ -432,13 +403,6 @@ func TestUserUpdateAppDetailsAccess(t *testing.T) {
 	testId, err := uuid.NewV4()
 	if err != nil {
 		t.Logf("error creating new UUID")
-	}
-
-	type User struct {
-		firstName string
-		lastName  string
-		email     string
-		password  string
 	}
 
 	authUser := User{
@@ -539,4 +503,65 @@ func TestUserUpdateAppDetailsAccess(t *testing.T) {
 func TestDeleteApplication(t *testing.T) {
 	// FIXME if the magic elves can add a DeleteApplication to provide-go, I will put out a saucer of milk tonight
 	t.Errorf("provide-go method missing")
+}
+
+func testAddAppOrgHandler(t *testing.T) {
+	t.Errorf("missing method in provide-go to add organization to application")
+}
+func TestListApplicationTokens(t *testing.T) {
+	testId, err := uuid.NewV4()
+	if err != nil {
+		t.Logf("error creating new UUID")
+	}
+
+	authUser := User{"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password"}
+
+	testApp := Application{"App1" + testId.String(), "App1 Description" + testId.String()}
+
+	// set up the user that will create the application
+	_, err = userFactory(authUser.firstName, authUser.lastName, authUser.email, authUser.password)
+	if err != nil {
+		t.Errorf("user creation failed. Error: %s", err.Error())
+		return
+	}
+
+	// get the auth token for the auth user
+	auth, err := provide.Authenticate(authUser.email, authUser.password)
+	if err != nil {
+		t.Errorf("user authentication failed for user %s. error: %s", authUser.email, err.Error())
+	}
+
+	app, err := provide.CreateApplication(*auth.Token.Token, map[string]interface{}{
+		"name":        testApp.name,
+		"description": testApp.description,
+	})
+	if err != nil {
+		t.Errorf("error creating application. Error: %s", err.Error())
+		return
+	}
+
+	const tokenCount = 5
+	var createdTokens [tokenCount]provide.Token
+
+	for looper := 0; looper < tokenCount; looper++ {
+		token, err := appTokenFactory(*auth.Token.Token, app.ID)
+		if err != nil {
+			t.Errorf("error creating app token")
+			return
+		}
+		createdTokens[looper] = *token
+	}
+
+	listOfTokens, err := provide.ListApplicationTokens(*auth.Token.Token, app.ID.String(), map[string]interface{}{})
+	if err != nil {
+		t.Errorf("error getting list of application tokens. Error: %s", err.Error())
+		return
+	}
+
+	if len(listOfTokens) != tokenCount {
+		t.Errorf("incorrect number of application tokens returned.  Expected %d, got %d", tokenCount, len(listOfTokens))
+		return
+	}
+	// hard to check these without a bunch of code to iterate through everything. I'm looking at
+	// writing something, but this will do for now.
 }

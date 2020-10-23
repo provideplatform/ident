@@ -7,6 +7,23 @@ import (
 	provide "github.com/provideservices/provide-go/api/ident"
 )
 
+type User struct {
+	firstName string
+	lastName  string
+	email     string
+	password  string
+}
+
+type Application struct {
+	name        string
+	description string
+}
+
+type Organization struct {
+	name        string
+	description string
+}
+
 func userFactory(firstName, lastName, email, password string) (*provide.User, error) {
 	return provide.CreateUser("", map[string]interface{}{
 		"first_name": firstName,
