@@ -153,18 +153,15 @@ func TestListOrganizationUsers(t *testing.T) {
 	t.Logf("got correct number of organization users back %d", len(users))
 }
 
-func TestGetOrganizationDetails(t *testing.T) {
-	t.Errorf("no method in provide-go to get organization details")
-}
-
-func TestUpdateOrganizationDetails(t *testing.T) {
-	t.Errorf("no method in provide-go to update organization details")
-}
-
 func TestListOrganizationTokens(t *testing.T) {
 	t.Errorf("no method in provide-go to list organization tokens")
 }
 
+func TestGetOrganizationDetails(t *testing.T) {
+	t.Logf("get org details not yet implemented")
+}
+
+//CHECKME get org details is 501 not implemented, so no point lighting this test up yet...
 // func TestGetOrganizationDetails(t *testing.T) {
 
 // 	testId, err := uuid.NewV4()
@@ -244,6 +241,11 @@ func TestListOrganizationTokens(t *testing.T) {
 // 	}
 // }
 
+func TestUpdateOrganizationDetails(t *testing.T) {
+	t.Logf("update org details not yet implemented")
+}
+
+//CHECKME get org details is 501 not implemented, so no point lighting this test up yet...
 // func TestUpdateOrganizationDetails(t *testing.T) {
 
 // 	testId, err := uuid.NewV4()
@@ -335,93 +337,98 @@ func TestListOrganizationTokens(t *testing.T) {
 // 	}
 // }
 
-// // CHECKME this test will check if I can view the organization details
-// // by a user who has nothing to do with the organization
-// // assumption is that they shouldn't be able to read the organization details
-// func TestFetchOrgDetailsFailsWithUnauthorizedUser(t *testing.T) {
+// CHECKME this test will check if I can view the organization details
+// by a user who has nothing to do with the organization
+// assumption is that they shouldn't be able to read the organization details
+func TestFetchOrgDetailsFailsWithUnauthorizedUser(t *testing.T) {
 
-// 	testId, err := uuid.NewV4()
-// 	if err != nil {
-// 		t.Logf("error creating new UUID")
-// 	}
+	testId, err := uuid.NewV4()
+	if err != nil {
+		t.Logf("error creating new UUID")
+	}
 
-// 	type User struct {
-// 		firstName string
-// 		lastName  string
-// 		email     string
-// 		password  string
-// 	}
+	type User struct {
+		firstName string
+		lastName  string
+		email     string
+		password  string
+	}
 
-// 	authUser := User{
-// 		"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password",
-// 	}
+	authUser := User{
+		"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password",
+	}
 
-// 	nonAuthUser := User{
-// 		"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password",
-// 	}
+	nonAuthUser := User{
+		"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password",
+	}
 
-// 	tt := []struct {
-// 		name        string
-// 		description string
-// 	}{
-// 		{"Org1" + testId.String(), "Org1 Description" + testId.String()},
-// 		{"Org2" + testId.String(), "Org2 Description" + testId.String()},
-// 	}
+	tt := []struct {
+		name        string
+		description string
+	}{
+		{"Org1" + testId.String(), "Org1 Description" + testId.String()},
+		{"Org2" + testId.String(), "Org2 Description" + testId.String()},
+	}
 
-// 	// set up the user that will create the organization
-// 	user, err := userFactory(authUser.firstName, authUser.lastName, authUser.email, authUser.password)
-// 	if err != nil {
-// 		t.Errorf("user creation failed. Error: %s", err.Error())
-// 		return
-// 	}
+	// set up the user that will create the organization
+	user, err := userFactory(authUser.firstName, authUser.lastName, authUser.email, authUser.password)
+	if err != nil {
+		t.Errorf("user creation failed. Error: %s", err.Error())
+		return
+	}
 
-// 	// set up a user that will have nothing to do with the organization
-// 	_, err = userFactory(nonAuthUser.firstName, nonAuthUser.lastName, nonAuthUser.email, nonAuthUser.password)
-// 	if err != nil {
-// 		t.Errorf("user creation failed. Error: %s", err.Error())
-// 		return
-// 	}
+	// set up a user that will have nothing to do with the organization
+	_, err = userFactory(nonAuthUser.firstName, nonAuthUser.lastName, nonAuthUser.email, nonAuthUser.password)
+	if err != nil {
+		t.Errorf("user creation failed. Error: %s", err.Error())
+		return
+	}
 
-// 	// get the auth token for the auth user
-// 	auth, err := provide.Authenticate(authUser.email, authUser.password)
-// 	if err != nil {
-// 		t.Errorf("user authentication failed for user %s. error: %s", authUser.email, err.Error())
-// 	}
+	// get the auth token for the auth user
+	auth, err := provide.Authenticate(authUser.email, authUser.password)
+	if err != nil {
+		t.Errorf("user authentication failed for user %s. error: %s", authUser.email, err.Error())
+	}
 
-// 	// get the auth token for the non organization user
-// 	nonAuth, err := provide.Authenticate(nonAuthUser.email, nonAuthUser.password)
-// 	if err != nil {
-// 		t.Errorf("user authentication failed for user %s. error: %s", nonAuthUser.email, err.Error())
-// 	}
+	// get the auth token for the non organization user
+	nonAuth, err := provide.Authenticate(nonAuthUser.email, nonAuthUser.password)
+	if err != nil {
+		t.Errorf("user authentication failed for user %s. error: %s", nonAuthUser.email, err.Error())
+	}
 
-// 	for _, tc := range tt {
+	for _, tc := range tt {
 
-// 		// Create an Organization for that org
-// 		org, err := provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
-// 			"name":        tc.name,
-// 			"description": tc.description,
-// 			"user_id":     user.ID,
-// 		})
-// 		if err != nil {
-// 			t.Errorf("error creation organization for user id %s", user.ID)
-// 		}
+		// Create an Organization for that org
+		org, err := provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
+			"name":        tc.name,
+			"description": tc.description,
+			"user_id":     user.ID,
+		})
+		if err != nil {
+			t.Errorf("error creation organization for user id %s", user.ID)
+		}
 
-// 		if org == nil {
-// 			t.Errorf("no organization created")
-// 			return
-// 		}
+		if org == nil {
+			t.Errorf("no organization created")
+			return
+		}
 
-// 		_, err = provide.GetOrganizationDetails(*nonAuth.Token.Token, org.ID.String(), map[string]interface{}{})
-// 		if err == nil {
-// 			t.Errorf("expected error getting organization details by a user not associated with the organization")
-// 			return
-// 		}
-// 	}
-// }
+		_, err = provide.GetOrganizationDetails(*nonAuth.Token.Token, org.ID.String(), map[string]interface{}{})
+		if err == nil {
+			t.Errorf("expected error getting organization details by a user not associated with the organization")
+			return
+		}
+	}
+}
 
-// // CHECKME this test will check if I can update the organization details
-// // by a user who has nothing to do with the organization
-// // assumption is that they shouldn't be able to update the organization details
+func TestUserUpdateOrgDetailsAccess(t *testing.T) {
+	t.Logf("update org details not yet implemented")
+}
+
+// CHECKME this test will check if I can update the organization details
+// by a user who has nothing to do with the organization
+// assumption is that they shouldn't be able to update the organization details
+// UPDATE: also returns 501, so not yet implemented,
 // func TestUserUpdateOrgDetailsAccess(t *testing.T) {
 
 // 	testId, err := uuid.NewV4()
@@ -531,12 +538,12 @@ func TestListOrganizationTokens(t *testing.T) {
 // 	}
 // }
 
-// func TestDeleteOrganization(t *testing.T) {
-// 	// FIXME if the magic elves can add a DeleteOrganization to provide-go, I will put out a saucer of milk tonight
-// 	// note the saucer of milk still applies, even if it's a soft delete behind the scenes in the handlers, although
-// 	// then a recover method might also be needed (unless this is all the same as updating with Hidden set to true/false)
-// 	t.Errorf("provide-go method missing")
-// }
+func TestDeleteOrganization(t *testing.T) {
+	// FIXME if the magic elves can add a DeleteOrganization to provide-go, I will put out a saucer of milk tonight
+	// note the saucer of milk still applies, even if it's a soft delete behind the scenes in the handlers, although
+	// then a recover method might also be needed (unless this is all the same as updating with Hidden set to true/false)
+	t.Errorf("provide-go method missing")
+}
 
 // func TestListOrganizationTokens(t *testing.T) {
 // 	testId, err := uuid.NewV4()
@@ -595,3 +602,19 @@ func TestListOrganizationTokens(t *testing.T) {
 // 	// hard to check these without a bunch of code to iterate through everything. I'm looking at
 // 	// writing something, but this will do for now.
 // }
+
+func TestCreateOrganizationUser(t *testing.T) {
+	//in provide-go
+	t.Errorf("incomplete test")
+}
+
+func TestUpdateOrganizationUser(t *testing.T) {
+	t.Errorf("incomplete test")
+}
+
+func TestDeleteOrganizationUser(t *testing.T) {
+	//in provide-go
+	t.Errorf("incomplete test")
+}
+
+// CHECKME - assume all of the vault handlers are dead code now that vault exists as a separate service...

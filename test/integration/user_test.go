@@ -216,3 +216,19 @@ func TestUserUpdate(t *testing.T) {
 		}
 	}
 }
+
+func TestDeleteUser(t *testing.T) {
+	t.Errorf("incomplete test - might require soft delete code change?")
+}
+
+func TestResetPassword(t *testing.T) {
+	t.Errorf("incomplete test")
+}
+
+func TestVendInvitationToken(t *testing.T) {
+	t.Errorf("incomplete test")
+}
+
+func TestOauthCallback(t *testing.T) {
+	t.Errorf("incomplete test")
+}

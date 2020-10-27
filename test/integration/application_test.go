@@ -3,6 +3,7 @@
 package integration
 
 import (
+	"fmt"
 	"testing"
 
 	uuid "github.com/kthomas/go.uuid"
@@ -321,6 +322,7 @@ func TestUpdateApplicationDetails(t *testing.T) {
 // CHECKME this test will check if I can view the application details
 // by a user who has nothing to do with the application
 // assumption is that they shouldn't be able to read the application details
+// QUESTION: is this the case?
 func TestFetchAppDetailsFailsWithUnauthorizedUser(t *testing.T) {
 
 	testId, err := uuid.NewV4()
@@ -398,6 +400,7 @@ func TestFetchAppDetailsFailsWithUnauthorizedUser(t *testing.T) {
 // CHECKME this test will check if I can update the application details
 // by a user who has nothing to do with the application
 // assumption is that they shouldn't be able to update the application details
+// QUESTION: is this the case?
 func TestUserUpdateAppDetailsAccess(t *testing.T) {
 
 	testId, err := uuid.NewV4()
@@ -564,4 +567,472 @@ func TestListApplicationTokens(t *testing.T) {
 	}
 	// hard to check these without a bunch of code to iterate through everything. I'm looking at
 	// writing something, but this will do for now.
+}
+
+func TestApplicationOrganizationList(t *testing.T) {
+	t.Errorf("incomplete test")
+}
+
+func TestCreateApplicationOrganization(t *testing.T) {
+
+	testId, err := uuid.NewV4()
+	if err != nil {
+		t.Logf("error creating new UUID")
+	}
+
+	// set up the user
+	authUser := User{
+		"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password",
+	}
+
+	user, err := userFactory(authUser.firstName, authUser.lastName, authUser.email, authUser.password)
+	if err != nil {
+		t.Errorf("user creation failed. Error: %s", err.Error())
+		return
+	}
+
+	// get the auth token for the user
+	auth, err := provide.Authenticate(authUser.email, authUser.password)
+	if err != nil {
+		t.Errorf("user authentication failed for user %s. error: %s", authUser.email, err.Error())
+	}
+
+	userApp := Application{
+		"testApp1" + testId.String(), "testApp1Desc" + testId.String(),
+	}
+
+	app, err := provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+		"name":        userApp.name,
+		"description": userApp.description,
+		"user_id":     user.ID,
+	})
+	if err != nil {
+		t.Errorf("error creation application for user id %s", user.ID)
+	}
+
+	if app == nil {
+		t.Errorf("no application created")
+		return
+	}
+
+	tt := []struct {
+		name        string
+		description string
+	}{
+		{"Org1" + testId.String(), "Org1 Description" + testId.String()},
+		{"Org2" + testId.String(), "Org2 Description" + testId.String()},
+	}
+
+	for _, tc := range tt {
+
+		org, err := provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
+			"name":        tc.name,
+			"description": tc.description,
+			"user_id":     user.ID,
+		})
+		if err != nil {
+			t.Errorf("error creating organisation for user id %s", user.ID)
+		}
+
+		if org == nil {
+			t.Errorf("no org created")
+			return
+		}
+
+		appToken, err := appTokenFactory(string(*auth.Token.Token), app.ID)
+		if err != nil {
+			t.Errorf("error getting app token. Error: %s", err.Error())
+		}
+
+		path := fmt.Sprintf("applications/%s/organizations", app.ID)
+		status, _, err := provide.InitIdentService(appToken.Token).Post(path, map[string]interface{}{
+			"organization_id": org.ID,
+		})
+		if err != nil {
+			t.Errorf("failed to create application organization; status: %v; %s", status, err.Error())
+			return
+		}
+		if status != 204 {
+			t.Errorf("invalid status returned from add org to app. expected 204, got %d", status)
+		}
+	}
+}
+
+func UpdateApplicationOrganization(t *testing.T) {
+
+	testId, err := uuid.NewV4()
+	if err != nil {
+		t.Logf("error creating new UUID")
+	}
+
+	// set up the user
+	authUser := User{
+		"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password",
+	}
+
+	user, err := userFactory(authUser.firstName, authUser.lastName, authUser.email, authUser.password)
+	if err != nil {
+		t.Errorf("user creation failed. Error: %s", err.Error())
+		return
+	}
+
+	// get the auth token for the user
+	auth, err := provide.Authenticate(authUser.email, authUser.password)
+	if err != nil {
+		t.Errorf("user authentication failed for user %s. error: %s", authUser.email, err.Error())
+	}
+
+	userApp := Application{
+		"testApp1" + testId.String(), "testApp1Desc" + testId.String(),
+	}
+
+	app, err := provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+		"name":        userApp.name,
+		"description": userApp.description,
+		"user_id":     user.ID,
+	})
+	if err != nil {
+		t.Errorf("error creation application for user id %s", user.ID)
+	}
+
+	if app == nil {
+		t.Errorf("no application created")
+		return
+	}
+
+	tt := []struct {
+		name        string
+		description string
+	}{
+		{"Org1" + testId.String(), "Org1 Description" + testId.String()},
+		{"Org2" + testId.String(), "Org2 Description" + testId.String()},
+	}
+
+	for _, tc := range tt {
+
+		org, err := provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
+			"name":        tc.name,
+			"description": tc.description,
+			"user_id":     user.ID,
+		})
+		if err != nil {
+			t.Errorf("error creating organisation for user id %s", user.ID)
+		}
+
+		if org == nil {
+			t.Errorf("no org created")
+			return
+		}
+
+		appToken, err := appTokenFactory(string(*auth.Token.Token), app.ID)
+		if err != nil {
+			t.Errorf("error getting app token. Error: %s", err.Error())
+		}
+
+		path := fmt.Sprintf("applications/%s/organizations", app.ID)
+		status, _, err := provide.InitIdentService(appToken.Token).Post(path, map[string]interface{}{
+			"organization_id": org.ID,
+		})
+		if err != nil {
+			t.Errorf("failed to create application organization; status: %v; %s", status, err.Error())
+			return
+		}
+		if status != 204 {
+			t.Errorf("invalid status returned from add org to app. expected 204, got %d", status)
+		}
+
+		//update application organization
+		path = fmt.Sprintf("applications/%s/organizations/%s", app.ID, org.ID)
+		status, _, err = provide.InitIdentService(appToken.Token).Put(path, map[string]interface{}{
+			"organization_id": org.ID,
+		})
+		if err != nil {
+			t.Errorf("failed to delete application organization; status: %v; %s", status, err.Error())
+			return
+		}
+		if status != 501 {
+			t.Errorf("invalid status returned from update org from app. expected 501 (not implemented), got %d", status)
+		}
+	}
+}
+
+// CHECKME - this seems to be failing because it's trying to marshall json data that's not required...
+func TestDeleteApplicationOrganization(t *testing.T) {
+
+	testId, err := uuid.NewV4()
+	if err != nil {
+		t.Logf("error creating new UUID")
+	}
+
+	// set up the user
+	authUser := User{
+		"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password",
+	}
+
+	user, err := userFactory(authUser.firstName, authUser.lastName, authUser.email, authUser.password)
+	if err != nil {
+		t.Errorf("user creation failed. Error: %s", err.Error())
+		return
+	}
+
+	// get the auth token for the user
+	auth, err := provide.Authenticate(authUser.email, authUser.password)
+	if err != nil {
+		t.Errorf("user authentication failed for user %s. error: %s", authUser.email, err.Error())
+	}
+
+	userApp := Application{
+		"testApp1" + testId.String(), "testApp1Desc" + testId.String(),
+	}
+
+	app, err := provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+		"name":        userApp.name,
+		"description": userApp.description,
+		"user_id":     user.ID,
+	})
+	if err != nil {
+		t.Errorf("error creation application for user id %s", user.ID)
+	}
+
+	if app == nil {
+		t.Errorf("no application created")
+		return
+	}
+
+	tt := []struct {
+		name        string
+		description string
+	}{
+		{"Org1" + testId.String(), "Org1 Description" + testId.String()},
+		{"Org2" + testId.String(), "Org2 Description" + testId.String()},
+	}
+
+	for _, tc := range tt {
+
+		org, err := provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
+			"name":        tc.name,
+			"description": tc.description,
+			"user_id":     user.ID,
+		})
+		if err != nil {
+			t.Errorf("error creating organisation for user id %s", user.ID)
+		}
+
+		if org == nil {
+			t.Errorf("no org created")
+			return
+		}
+
+		appToken, err := appTokenFactory(string(*auth.Token.Token), app.ID)
+		if err != nil {
+			t.Errorf("error getting app token. Error: %s", err.Error())
+		}
+
+		path := fmt.Sprintf("applications/%s/organizations", app.ID)
+		status, _, err := provide.InitIdentService(appToken.Token).Post(path, map[string]interface{}{
+			"organization_id": org.ID,
+		})
+		if err != nil {
+			t.Errorf("failed to create application organization; status: %v; %s", status, err.Error())
+			return
+		}
+		if status != 204 {
+			t.Errorf("invalid status returned from add org to app. expected 204, got %d", status)
+		}
+
+		//delete application organization
+		path = fmt.Sprintf("applications/%s/organizations/%s", app.ID, org.ID)
+		status, resp, err := provide.InitIdentService(appToken.Token).Delete(path)
+		if err != nil {
+			t.Errorf("failed to delete application organization; status: %v; %s", status, err.Error())
+			return
+		}
+		if status != 204 {
+			t.Errorf("invalid status returned from delete org from app. expected 204, got %d. resp: %s", status, resp)
+		}
+	}
+}
+
+func TestCreateApplicationUser(t *testing.T) {
+
+	testId, err := uuid.NewV4()
+	if err != nil {
+		t.Logf("error creating new UUID")
+	}
+
+	userApp := Application{
+		"App " + testId.String(),
+		"App " + testId.String() + " Decription",
+	}
+
+	tt := []struct {
+		firstName string
+		lastName  string
+		email     string
+		password  string
+	}{
+		{"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password"},
+		{"joey", "joe joe", "j.j" + testId.String() + "@email.com", "joeyjoejoe"},
+		{"joey2", "joe joe2", "j.j2" + testId.String() + "@email.com", "joeyjoejoe2"},
+	}
+
+	var app *provide.Application
+	var appToken *provide.Token
+	var userToken *provide.Token
+
+	for _, tc := range tt {
+		// create the user
+		user, err := userFactory(tc.firstName, tc.lastName, tc.email, tc.password)
+		if err != nil {
+			t.Errorf("user creation failed. Error: %s", err.Error())
+			return
+		}
+
+		// get the auth token
+		auth, err := provide.Authenticate(tc.email, tc.password)
+		if err != nil {
+			t.Errorf("user authentication failed for user %s. error: %s", tc.email, err.Error())
+			return
+		}
+
+		if userToken == nil {
+			userToken = auth.Token
+		}
+
+		// Create an Application if it doesn't exist
+		if app == nil {
+			app, err = provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+				"name":        userApp.name,
+				"description": userApp.description,
+			})
+			if err != nil {
+				t.Errorf("error creation application for user id %s", user.ID)
+				return
+			}
+
+			if appToken == nil {
+				// create a token for the application
+				apptkn, err := appTokenFactory(*auth.Token.Token, app.ID)
+				if err != nil {
+					t.Errorf("token creation failed for application id %s. error: %s", app.ID, err.Error())
+					return
+				}
+				appToken = apptkn
+			}
+		} else {
+			// let's add this user to the application as the creating user is automatically added...
+			err := provide.CreateApplicationUser(*appToken.Token, app.ID.String(), map[string]interface{}{
+				"user_id": user.ID.String(),
+			})
+			if err != nil {
+				t.Errorf("failed to add user %s to application %s; %s", user.ID, app.ID.String(), err.Error())
+				return
+			}
+		}
+	}
+}
+
+func TestUpdateApplicationUser(t *testing.T) {
+	//in provide-go
+	t.Logf("not yet implemented")
+}
+
+func TestDeleteApplicationUser(t *testing.T) {
+
+	testId, err := uuid.NewV4()
+	if err != nil {
+		t.Logf("error creating new UUID")
+	}
+
+	userApp := Application{
+		"App " + testId.String(),
+		"App " + testId.String() + " Decription",
+	}
+
+	tt := []struct {
+		firstName string
+		lastName  string
+		email     string
+		password  string
+	}{
+		{"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password"},
+		{"joey", "joe joe", "j.j" + testId.String() + "@email.com", "joeyjoejoe"},
+		{"joey2", "joe joe2", "j.j2" + testId.String() + "@email.com", "joeyjoejoe2"},
+	}
+
+	var app *provide.Application
+	var appToken *provide.Token
+	var userToken *provide.Token
+
+	for _, tc := range tt {
+		// create the user
+		user, err := userFactory(tc.firstName, tc.lastName, tc.email, tc.password)
+		if err != nil {
+			t.Errorf("user creation failed. Error: %s", err.Error())
+			return
+		}
+
+		// get the auth token
+		auth, err := provide.Authenticate(tc.email, tc.password)
+		if err != nil {
+			t.Errorf("user authentication failed for user %s. error: %s", tc.email, err.Error())
+			return
+		}
+
+		if userToken == nil {
+			userToken = auth.Token
+		}
+
+		// Create an Application if it doesn't exist
+		if app == nil {
+			app, err = provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+				"name":        userApp.name,
+				"description": userApp.description,
+			})
+			if err != nil {
+				t.Errorf("error creation application for user id %s", user.ID)
+				return
+			}
+
+			if appToken == nil {
+				// create a token for the application
+				apptkn, err := appTokenFactory(*auth.Token.Token, app.ID)
+				if err != nil {
+					t.Errorf("token creation failed for application id %s. error: %s", app.ID, err.Error())
+					return
+				}
+				appToken = apptkn
+			}
+		} else {
+			// let's add this user to the application as the creating user is automatically added...
+			err := provide.CreateApplicationUser(*appToken.Token, app.ID.String(), map[string]interface{}{
+				"user_id": user.ID.String(),
+			})
+			if err != nil {
+				t.Errorf("failed to add user %s to application %s; %s", user.ID, app.ID.String(), err.Error())
+				return
+			}
+
+			//now we'll delete the user
+			err = provide.DeleteApplicationUser(*appToken.Token, app.ID.String(), user.ID.String())
+			if err != nil {
+				t.Errorf("failed to delete user %s from application %s; %s", user.ID, app.ID.String(), err.Error())
+				return
+			}
+		}
+	}
+
+	users, err := provide.ListApplicationUsers(string(*appToken.Token), app.ID.String(), map[string]interface{}{})
+	if err != nil {
+		t.Errorf("error getting users list %s", err.Error())
+		return
+	}
+	if len(users) != 0 {
+		t.Errorf("incorrect number of application users returned, expected 0, got %d", len(users))
+	}
+	t.Logf("got correct number of application users back %d", len(users))
+}
+
+func TestListApplicationInvitations(t *testing.T) {
+	t.Errorf("incomplete test")
 }
