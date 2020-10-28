@@ -618,7 +618,7 @@ func TestApplicationOrganizationList(t *testing.T) {
 		{"Org2" + testId.String(), "Org2 Description" + testId.String()},
 	}
 
-	for counter, tc := range tt {
+	for _, tc := range tt {
 
 		org, err := provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
 			"name":        tc.name,

@@ -604,17 +604,274 @@ func TestDeleteOrganization(t *testing.T) {
 // }
 
 func TestCreateOrganizationUser(t *testing.T) {
-	//in provide-go
-	t.Errorf("incomplete test")
+
+	testId, err := uuid.NewV4()
+	if err != nil {
+		t.Logf("error creating new UUID")
+	}
+
+	// t.Logf("*** test list users *** using testid %s", testId)
+
+	type organization struct {
+		name        string
+		description string
+	}
+	userOrg := organization{
+		"Org " + testId.String(),
+		"Org " + testId.String() + " Decription",
+	}
+
+	tt := []struct {
+		firstName string
+		lastName  string
+		email     string
+		password  string
+	}{
+		{"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password"},
+		{"joey", "joe joe", "j.j" + testId.String() + "@email.com", "joeyjoejoe"},
+		{"joey2", "joe joe2", "j.j2" + testId.String() + "@email.com", "joeyjoejoe2"},
+	}
+
+	var org *provide.Organization
+	var organizingUserToken *provide.Token
+
+	for _, tc := range tt {
+		// create the user
+		user, err := userFactory(tc.firstName, tc.lastName, tc.email, tc.password)
+		if err != nil {
+			t.Errorf("user creation failed. Error: %s", err.Error())
+			return
+		}
+
+		// get the auth token
+		auth, err := provide.Authenticate(tc.email, tc.password)
+		if err != nil {
+			t.Errorf("user authentication failed for user %s. error: %s", tc.email, err.Error())
+			return
+		}
+
+		if organizingUserToken == nil {
+			organizingUserToken = auth.Token
+		}
+
+		// Create an Organization if it doesn't exist
+		if org == nil {
+			org, err = provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
+				"name":        userOrg.name,
+				"description": userOrg.description,
+			})
+			if err != nil {
+				t.Errorf("error creation organization for user id %s", user.ID)
+				return
+			}
+		} else {
+			// let's add this user to the organization as the creating user is automatically added...
+			err := provide.CreateOrganizationUser(*organizingUserToken.Token, org.ID.String(), map[string]interface{}{
+				"user_id": user.ID.String(),
+			})
+			if err != nil {
+				t.Errorf("failed to add user %s to organization %s; %s", user.ID, org.ID.String(), err.Error())
+				return
+			}
+
+			listOrgUsers, err := provide.ListOrganizationUsers(string(*organizingUserToken.Token), org.ID.String(), map[string]interface{}{})
+			if err != nil {
+				t.Errorf("error getting organization users list %s", err.Error())
+			}
+
+			userFound := false
+			for _, orguser := range listOrgUsers {
+				if orguser.Name == user.Name {
+					userFound = true
+				}
+			}
+			if userFound == false {
+				t.Errorf("organization user not found in list")
+				return
+			}
+		}
+	}
 }
 
 func TestUpdateOrganizationUser(t *testing.T) {
-	t.Errorf("incomplete test")
+
+	testId, err := uuid.NewV4()
+	if err != nil {
+		t.Logf("error creating new UUID")
+	}
+
+	// t.Logf("*** test list users *** using testid %s", testId)
+
+	type organization struct {
+		name        string
+		description string
+	}
+	userOrg := organization{
+		"Org " + testId.String(),
+		"Org " + testId.String() + " Decription",
+	}
+
+	tt := []struct {
+		firstName string
+		lastName  string
+		email     string
+		password  string
+	}{
+		{"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password"},
+		{"joey", "joe joe", "j.j" + testId.String() + "@email.com", "joeyjoejoe"},
+		{"joey2", "joe joe2", "j.j2" + testId.String() + "@email.com", "joeyjoejoe2"},
+	}
+
+	var org *provide.Organization
+	var organizingUserToken *provide.Token
+
+	for _, tc := range tt {
+		// create the user
+		user, err := userFactory(tc.firstName, tc.lastName, tc.email, tc.password)
+		if err != nil {
+			t.Errorf("user creation failed. Error: %s", err.Error())
+			return
+		}
+
+		// get the auth token
+		auth, err := provide.Authenticate(tc.email, tc.password)
+		if err != nil {
+			t.Errorf("user authentication failed for user %s. error: %s", tc.email, err.Error())
+			return
+		}
+
+		if organizingUserToken == nil {
+			organizingUserToken = auth.Token
+		}
+
+		// Create an Organization if it doesn't exist
+		if org == nil {
+			org, err = provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
+				"name":        userOrg.name,
+				"description": userOrg.description,
+			})
+			if err != nil {
+				t.Errorf("error creation organization for user id %s", user.ID)
+				return
+			}
+		} else {
+			// let's add this user to the organization as the creating user is automatically added...
+			err := provide.CreateOrganizationUser(*organizingUserToken.Token, org.ID.String(), map[string]interface{}{
+				"user_id": user.ID.String(),
+			})
+			if err != nil {
+				t.Errorf("failed to add user %s to organization %s; %s", user.ID, org.ID.String(), err.Error())
+				return
+			}
+
+			err = provide.UpdateOrganizationUser(*organizingUserToken.Token, org.ID.String(), map[string]interface{}{
+				"user_id": user.ID.String(),
+			})
+			if err != nil {
+				t.Errorf("error updating org user. Error: %s", err.Error())
+			}
+		}
+	}
 }
 
 func TestDeleteOrganizationUser(t *testing.T) {
-	//in provide-go
-	t.Errorf("incomplete test")
+
+	testId, err := uuid.NewV4()
+	if err != nil {
+		t.Logf("error creating new UUID")
+	}
+
+	// t.Logf("*** test list users *** using testid %s", testId)
+
+	type organization struct {
+		name        string
+		description string
+	}
+	userOrg := organization{
+		"Org " + testId.String(),
+		"Org " + testId.String() + " Decription",
+	}
+
+	tt := []struct {
+		firstName string
+		lastName  string
+		email     string
+		password  string
+	}{
+		{"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password"},
+		{"joey", "joe joe", "j.j" + testId.String() + "@email.com", "joeyjoejoe"},
+		{"joey2", "joe joe2", "j.j2" + testId.String() + "@email.com", "joeyjoejoe2"},
+	}
+
+	var org *provide.Organization
+	var organizingUserToken *provide.Token
+
+	for _, tc := range tt {
+		// create the user
+		user, err := userFactory(tc.firstName, tc.lastName, tc.email, tc.password)
+		if err != nil {
+			t.Errorf("user creation failed. Error: %s", err.Error())
+			return
+		}
+
+		// get the auth token
+		auth, err := provide.Authenticate(tc.email, tc.password)
+		if err != nil {
+			t.Errorf("user authentication failed for user %s. error: %s", tc.email, err.Error())
+			return
+		}
+
+		if organizingUserToken == nil {
+			organizingUserToken = auth.Token
+		}
+
+		// Create an Organization if it doesn't exist
+		if org == nil {
+			org, err = provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
+				"name":        userOrg.name,
+				"description": userOrg.description,
+			})
+			if err != nil {
+				t.Errorf("error creation organization for user id %s", user.ID)
+				return
+			}
+		} else {
+			// let's add this user to the organization as the creating user is automatically added...
+			err := provide.CreateOrganizationUser(*organizingUserToken.Token, org.ID.String(), map[string]interface{}{
+				"user_id": user.ID.String(),
+			})
+			if err != nil {
+				t.Errorf("failed to add user %s to organization %s; %s", user.ID, org.ID.String(), err.Error())
+				return
+			}
+
+			err = provide.DeleteOrganizationUser(*organizingUserToken.Token, org.ID.String(), user.ID.String())
+			if err != nil {
+				t.Errorf("error deleting organization user. Error: %s", err.Error())
+			}
+
+			// CHECKME - I think I introduced this error, but I don't understand it?
+			// interface conversion: interface {} is nil, not []interface {} [recovered]
+			listOrgUsers, err := provide.ListOrganizationUsers(string(*organizingUserToken.Token), org.ID.String(), map[string]interface{}{})
+			if err != nil {
+				t.Errorf("error getting organization users list %s", err.Error())
+			}
+
+			userFound := false
+			for _, orguser := range listOrgUsers {
+				if orguser.Name == user.Name {
+					userFound = true
+				}
+			}
+			if userFound == true {
+				t.Errorf("removed organization user found in list")
+				return
+			}
+
+		}
+	}
 }
 
-// CHECKME - assume all of the vault handlers are dead code now that vault exists as a separate service...
+func TestListApplicationOrganizationUsers(t *testing.T) {
+	t.Errorf("test not implemented yet")
+}

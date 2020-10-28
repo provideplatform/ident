@@ -244,8 +244,9 @@ func organizationUsersListHandler(c *gin.Context) {
 	userID := bearer.UserID
 	applicationID := bearer.ApplicationID
 
-	if (userID == nil || *userID == uuid.Nil) && (applicationID == nil || *applicationID == uuid.Nil) {
-		provide.RenderError("unauthorized", 401, c)
+	// CHECKME - removing appid check temporarily for orgs that aren't part of an app
+	if userID == nil || *userID == uuid.Nil {
+		provide.RenderError("unauthorized", 4010, c)
 		return
 	}
 
@@ -260,7 +261,7 @@ func organizationUsersListHandler(c *gin.Context) {
 	resolveOrganization(query, &organizationID, applicationID, userID).Find(&org)
 
 	if org == nil || org.ID == uuid.Nil {
-		provide.RenderError("unauthorized", 401, c)
+		provide.RenderError("unauthorized", 4011, c)
 		return
 	}
 
@@ -400,33 +401,20 @@ func deleteOrganizationUserHandler(c *gin.Context) {
 		return
 	}
 
-	buf, err := c.GetRawData()
-	if err != nil {
-		provide.RenderError(err.Error(), 400, c)
-		return
-	}
-	params := map[string]interface{}{}
-	err = json.Unmarshal(buf, &params)
-	if err != nil {
-		provide.RenderError(err.Error(), 400, c)
-		return
-	}
-
 	organizationID, err := uuid.FromString(c.Param("id"))
 	if err != nil {
 		provide.RenderError(err.Error(), 422, c)
 		return
 	}
 
+	//CHECKME - pulling user id from url params rather than json
 	if userID == nil {
-		if userIDStr, userIDStrOk := params["user_id"].(string); userIDStrOk {
-			usrID, err := uuid.FromString(userIDStr)
-			if err != nil {
-				provide.RenderError(err.Error(), 422, c)
-				return
-			}
-			userID = &usrID
+		usrID, err := uuid.FromString(c.Param("userId"))
+		if err != nil {
+			provide.RenderError(err.Error(), 422, c)
+			return
 		}
+		userID = &usrID
 	}
 
 	db := dbconf.DatabaseConnection()
