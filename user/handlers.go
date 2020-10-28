@@ -41,6 +41,14 @@ func InstallUserAPI(r *gin.Engine) {
 func authenticationHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
+	var bearerApplicationID *uuid.UUID
+	if bearer != nil && bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
+		bearerApplicationID = bearer.ApplicationID
+	} else {
+		// HACK!!!
+		bearerApplicationID = util.AuthorizedSubjectID(c, "application")
+	}
+
 	buf, err := c.GetRawData()
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -64,7 +72,7 @@ func authenticationHandler(c *gin.Context) {
 			if pw, pwok := params["password"].(string); pwok {
 				var appID *uuid.UUID
 				if bearer != nil && bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
-					appID = bearer.ApplicationID
+					appID = bearerApplicationID
 				} else if applicationID, applicationIDOk := params["application_id"].(string); applicationIDOk {
 					appUUID, err := uuid.FromString(applicationID)
 					if err != nil {
@@ -101,8 +109,8 @@ func authenticationHandler(c *gin.Context) {
 
 				provide.Render(resp, 201, c)
 				return
-			} else if bearer.ApplicationID != nil {
-				resp, err := AuthenticateApplicationUser(email, *bearer.ApplicationID, scope)
+			} else if bearerApplicationID != nil {
+				resp, err := AuthenticateApplicationUser(email, *bearerApplicationID, scope)
 				if err != nil {
 					provide.RenderError(err.Error(), 401, c)
 					return
@@ -187,6 +195,10 @@ func createUserHandler(c *gin.Context) {
 		bearerApplicationID = util.AuthorizedSubjectID(c, "application")
 	}
 
+	if bearerApplicationID == nil { // HACK!!
+		bearerApplicationID = util.AuthorizedSubjectID(c, "application")
+	}
+
 	buf, err := c.GetRawData()
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -234,7 +246,7 @@ func createUserHandler(c *gin.Context) {
 		return
 	}
 
-	if bearer != nil {
+	if bearerApplicationID != nil {
 		user.ApplicationID = bearerApplicationID
 	} else if appID, appIDOk := params["application_id"].(string); appIDOk {
 		appUUID, err := uuid.FromString(appID)
