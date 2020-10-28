@@ -234,7 +234,7 @@ func createUserHandler(c *gin.Context) {
 		return
 	}
 
-	if bearer != nil {
+	if bearerApplicationID != nil {
 		user.ApplicationID = bearerApplicationID
 	} else if appID, appIDOk := params["application_id"].(string); appIDOk {
 		appUUID, err := uuid.FromString(appID)
