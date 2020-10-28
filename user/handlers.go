@@ -44,6 +44,9 @@ func authenticationHandler(c *gin.Context) {
 	var bearerApplicationID *uuid.UUID
 	if bearer != nil && bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
 		bearerApplicationID = bearer.ApplicationID
+	} else {
+		// HACK!!!
+		bearerApplicationID := util.AuthorizedSubjectID(c, "application")
 	}
 
 	buf, err := c.GetRawData()
