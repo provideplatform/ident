@@ -107,7 +107,7 @@ func authenticationHandler(c *gin.Context) {
 				provide.Render(resp, 201, c)
 				return
 			} else if bearerApplicationID != nil {
-				resp, err := AuthenticateApplicationUser(email, bearerApplicationID, scope)
+				resp, err := AuthenticateApplicationUser(email, *bearerApplicationID, scope)
 				if err != nil {
 					provide.RenderError(err.Error(), 401, c)
 					return
