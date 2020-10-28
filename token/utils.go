@@ -15,7 +15,7 @@ import (
 // the given gin context, if one exists; this me`thod does not
 // attempt to re-authorize the context
 func InContext(c *gin.Context) *Token {
-	if tok, exists := c.Get("token"); exists {
+	if tok, exists := c.Get(contextTokenKey); exists {
 		if token, tokenOk := tok.(*Token); tokenOk {
 			return token
 		}

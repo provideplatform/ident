@@ -192,6 +192,10 @@ func createUserHandler(c *gin.Context) {
 		bearerApplicationID = util.AuthorizedSubjectID(c, "application")
 	}
 
+	if bearerApplicationID == nil { // HACK!!
+		bearerApplicationID = util.AuthorizedSubjectID(c, "application")
+	}
+
 	buf, err := c.GetRawData()
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
