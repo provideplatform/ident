@@ -570,7 +570,103 @@ func TestListApplicationTokens(t *testing.T) {
 }
 
 func TestApplicationOrganizationList(t *testing.T) {
-	t.Errorf("incomplete test")
+	testId, err := uuid.NewV4()
+	if err != nil {
+		t.Logf("error creating new UUID")
+	}
+
+	// set up the user
+	authUser := User{
+		"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password",
+	}
+
+	user, err := userFactory(authUser.firstName, authUser.lastName, authUser.email, authUser.password)
+	if err != nil {
+		t.Errorf("user creation failed. Error: %s", err.Error())
+		return
+	}
+
+	// get the auth token for the user
+	auth, err := provide.Authenticate(authUser.email, authUser.password)
+	if err != nil {
+		t.Errorf("user authentication failed for user %s. error: %s", authUser.email, err.Error())
+	}
+
+	userApp := Application{
+		"testApp1" + testId.String(), "testApp1Desc" + testId.String(),
+	}
+
+	app, err := provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+		"name":        userApp.name,
+		"description": userApp.description,
+		"user_id":     user.ID,
+	})
+	if err != nil {
+		t.Errorf("error creation application for user id %s", user.ID)
+	}
+
+	if app == nil {
+		t.Errorf("no application created")
+		return
+	}
+
+	tt := []struct {
+		name        string
+		description string
+	}{
+		{"Org1" + testId.String(), "Org1 Description" + testId.String()},
+		{"Org2" + testId.String(), "Org2 Description" + testId.String()},
+	}
+
+	for counter, tc := range tt {
+
+		org, err := provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
+			"name":        tc.name,
+			"description": tc.description,
+			"user_id":     user.ID,
+		})
+		if err != nil {
+			t.Errorf("error creating organisation for user id %s", user.ID)
+		}
+
+		if org == nil {
+			t.Errorf("no org created")
+			return
+		}
+
+		appToken, err := appTokenFactory(string(*auth.Token.Token), app.ID)
+		if err != nil {
+			t.Errorf("error getting app token. Error: %s", err.Error())
+		}
+
+		path := fmt.Sprintf("applications/%s/organizations", app.ID)
+		status, _, err := provide.InitIdentService(appToken.Token).Post(path, map[string]interface{}{
+			"organization_id": org.ID,
+		})
+		if err != nil {
+			t.Errorf("failed to create application organization; status: %v; %s", status, err.Error())
+			return
+		}
+		if status != 204 {
+			t.Errorf("invalid status returned from add org to app. expected 204, got %d", status)
+		}
+
+		listAppOrgs, err := provide.ListApplicationOrganizations(*appToken.Token, app.ID.String(), map[string]interface{}{})
+		if err != nil {
+			t.Errorf("error getting application organizations. Error: %s", err.Error())
+		}
+
+		orgFound := false
+		for _, apporg := range listAppOrgs {
+			if apporg.Name == *org.Name {
+				orgFound = true
+			}
+		}
+		if orgFound == false {
+			t.Errorf("application organization not found in list")
+			return
+		}
+	}
 }
 
 func TestCreateApplicationOrganization(t *testing.T) {
