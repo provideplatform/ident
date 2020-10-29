@@ -13,6 +13,7 @@ require (
 	github.com/gin-gonic/gin v1.6.3
 	github.com/golang-migrate/migrate v3.5.4+incompatible
 	github.com/jinzhu/gorm v1.9.16
+	github.com/joho/godotenv v1.3.0
 	github.com/kthomas/go-auth0 v0.0.0-20200602063018-d45ad85a2325
 	github.com/kthomas/go-db-config v0.0.0-20200612131637-ec0436a9685e
 	github.com/kthomas/go-logger v0.0.0-20200602072946-d7d72dfc2531

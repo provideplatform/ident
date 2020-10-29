@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/joho/godotenv"
 	logger "github.com/kthomas/go-logger"
 )
 
@@ -64,6 +65,8 @@ var (
 )
 
 func init() {
+	godotenv.Load()
+
 	requireLogger()
 	requireEmailVerification()
 	requireIPLists()

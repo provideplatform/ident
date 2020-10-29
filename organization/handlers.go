@@ -255,7 +255,10 @@ func organizationUsersListHandler(c *gin.Context) {
 		provide.RenderError(err.Error(), 422, c)
 		return
 	}
-
+	//HACK for DEBUGGING - so I can check the db without reading binary
+	orgIDString := organizationID.String()
+	userIDString := userID.String()
+	common.Log.Debugf("getting org %s list of users by userid %s", orgIDString, userIDString)
 	org := &Organization{}
 	query := dbconf.DatabaseConnection()
 	resolveOrganization(query, &organizationID, applicationID, userID).Find(&org)

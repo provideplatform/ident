@@ -21,7 +21,7 @@ jobs:
       - run: echo '::set-env name=LOG_LEVEL::info'
       - run: echo '::set-env name=DATABASE_HOST::localhost'
       - run: echo '::set-env name=DATABASE_NAME::ident_dev'  
-      - run: echo '::set-env name=DATABSE_PORT::5432'  
+      - run: echo '::set-env name=DATABASE_PORT::5432'  
       - run: echo '::set-env name=DATABASE_USER::ident' 
       - run: echo '::set-env name=DATABASE_PASSWORD::ident' 
       - run: echo '::set-env name=DATABASE_SUPERUSER::prvd'
