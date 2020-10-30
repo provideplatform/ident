@@ -246,7 +246,7 @@ func organizationUsersListHandler(c *gin.Context) {
 
 	// CHECKME - removing appid check temporarily for orgs that aren't part of an app
 	if userID == nil || *userID == uuid.Nil {
-		provide.RenderError("unauthorized", 4010, c)
+		provide.RenderError("unauthorized", 401, c)
 		return
 	}
 
@@ -264,7 +264,7 @@ func organizationUsersListHandler(c *gin.Context) {
 	resolveOrganization(query, &organizationID, applicationID, userID).Find(&org)
 
 	if org == nil || org.ID == uuid.Nil {
-		provide.RenderError("unauthorized", 4011, c)
+		provide.RenderError("unauthorized", 401, c)
 		return
 	}
 
