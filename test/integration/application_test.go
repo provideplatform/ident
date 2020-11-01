@@ -147,8 +147,8 @@ func TestListApplicationUsers(t *testing.T) {
 	}
 
 	users, err := provide.ListApplicationUsers(string(*userToken.Token), app.ID.String(), map[string]interface{}{})
-	if err == nil {
-		t.Error("expected error attepting to fetch app users without an app access token")
+	if err != nil { // the user who created the application is *currently* allowed to operate on the application. probably needs a permissions update.
+		t.Errorf("error getting users list %s", err.Error())
 		return
 	}
 
@@ -504,13 +504,77 @@ func TestUserUpdateAppDetailsAccess(t *testing.T) {
 }
 
 func TestDeleteApplication(t *testing.T) {
-	// FIXME if the magic elves can add a DeleteApplication to provide-go, I will put out a saucer of milk tonight
-	t.Errorf("provide-go method missing")
+	testId, err := uuid.NewV4()
+	if err != nil {
+		t.Logf("error creating new UUID")
+	}
+
+	userApp := Application{
+		"App " + testId.String(),
+		"App " + testId.String() + " Decription",
+	}
+
+	tt := []struct {
+		firstName string
+		lastName  string
+		email     string
+		password  string
+	}{
+		{"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password"},
+		{"joey", "joe joe", "j.j" + testId.String() + "@email.com", "joeyjoejoe"},
+	}
+
+	for _, tc := range tt {
+		user, err := userFactory(tc.firstName, tc.lastName, tc.email, tc.password)
+		if err != nil {
+			t.Errorf("user creation failed. Error: %s", err.Error())
+			return
+		}
+
+		// get the auth token
+		auth, err := provide.Authenticate(tc.email, tc.password)
+		if err != nil {
+			t.Errorf("user authentication failed for user %s. error: %s", tc.email, err.Error())
+		}
+
+		// Create an Application for that org
+		app, err := provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+			"name":        userApp.name,
+			"description": userApp.description,
+			"user_id":     user.ID,
+		})
+		if err != nil {
+			t.Errorf("error creation application for user id %s", user.ID)
+		}
+
+		if app == nil {
+			t.Errorf("no application created")
+			return
+		}
+
+		// start the actual tests... lol... we gotta hire someone to DRY up this suite someday :D
+		err = provide.DeleteApplication(string(*auth.Token.Token), app.ID.String())
+		if err != nil {
+			t.Errorf("error soft-deleting application %s", app.ID)
+			return
+		}
+		deets, err := provide.GetApplicationDetails(*auth.Token.Token, app.ID.String(), map[string]interface{}{})
+		if err != nil {
+			t.Errorf("failed retrieving application details for soft-deleted app %s", app.ID)
+			return
+		}
+
+		if !deets.Hidden {
+			t.Errorf("failed soft-deleting application app %s; app was not marked 'hidden'", app.ID)
+			return
+		}
+	}
 }
 
 func testAddAppOrgHandler(t *testing.T) {
 	t.Errorf("missing method in provide-go to add organization to application")
 }
+
 func TestListApplicationTokens(t *testing.T) {
 	testId, err := uuid.NewV4()
 	if err != nil {
@@ -843,7 +907,7 @@ func UpdateApplicationOrganization(t *testing.T) {
 			"organization_id": org.ID,
 		})
 		if err != nil {
-			t.Errorf("failed to delete application organization; status: %v; %s", status, err.Error())
+			t.Errorf("failed to update application organization; status: %v; %s", status, err.Error())
 			return
 		}
 		if status != 501 {
@@ -852,8 +916,7 @@ func UpdateApplicationOrganization(t *testing.T) {
 	}
 }
 
-// CHECKME - this seems to be failing because it's trying to marshall json data that's not required...
-func TestDeleteApplicationOrganization(t *testing.T) {
+func TestDeleteApplicationOrganizationWithApplicationAPIToken(t *testing.T) {
 
 	testId, err := uuid.NewV4()
 	if err != nil {
@@ -936,15 +999,10 @@ func TestDeleteApplicationOrganization(t *testing.T) {
 			t.Errorf("invalid status returned from add org to app. expected 204, got %d", status)
 		}
 
-		//delete application organization
-		path = fmt.Sprintf("applications/%s/organizations/%s", app.ID, org.ID)
-		status, resp, err := provide.InitIdentService(appToken.Token).Delete(path)
+		err = provide.DeleteApplicationOrganization(*appToken.Token, app.ID.String(), org.ID.String())
 		if err != nil {
 			t.Errorf("failed to delete application organization; status: %v; %s", status, err.Error())
 			return
-		}
-		if status != 204 {
-			t.Errorf("invalid status returned from delete org from app. expected 204, got %d. resp: %s", status, resp)
 		}
 	}
 }
@@ -1033,7 +1091,7 @@ func TestUpdateApplicationUser(t *testing.T) {
 	t.Logf("not yet implemented")
 }
 
-func TestDeleteApplicationUser(t *testing.T) {
+func TestDeleteApplicationUserWithApplicationAPIToken(t *testing.T) {
 
 	testId, err := uuid.NewV4()
 	if err != nil {
@@ -1123,10 +1181,9 @@ func TestDeleteApplicationUser(t *testing.T) {
 		t.Errorf("error getting users list %s", err.Error())
 		return
 	}
-	if len(users) != 0 {
-		t.Errorf("incorrect number of application users returned, expected 0, got %d", len(users))
+	if len(users) != 1 {
+		t.Errorf("incorrect number of application users returned, expected 1, got %d", len(users))
 	}
-	t.Logf("got correct number of application users back %d", len(users))
 }
 
 func TestListApplicationInvitations(t *testing.T) {

@@ -413,8 +413,9 @@ func updateApplicationOrganizationHandler(c *gin.Context) {
 func deleteApplicationOrganizationHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 	appID := bearer.ApplicationID
+	orgID := bearer.OrganizationID
 
-	if appID == nil || *appID == uuid.Nil {
+	if (appID == nil || *appID == uuid.Nil) && (orgID == nil || *orgID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -422,32 +423,25 @@ func deleteApplicationOrganizationHandler(c *gin.Context) {
 	if appID != nil && appID.String() != c.Param("id") {
 		provide.RenderError("forbidden", 403, c)
 		return
-	}
-
-	buf, err := c.GetRawData()
-	if err != nil {
-		provide.RenderError(err.Error(), 400, c)
-		return
-	}
-	params := map[string]interface{}{}
-	err = json.Unmarshal(buf, &params)
-	if err != nil {
-		provide.RenderError(err.Error(), 400, c)
-		return
-	}
-
-	var organizationID *uuid.UUID
-	if orgIDStr, orgIDOk := params["organization_id"].(string); orgIDOk {
-		orgID, err := uuid.FromString(orgIDStr)
+	} else if appID == nil {
+		_appID, err := uuid.FromString(c.Param("id"))
 		if err != nil {
 			provide.RenderError(err.Error(), 422, c)
 			return
 		}
-		organizationID = &orgID
+		appID = &_appID
 	}
-	if organizationID == nil || *organizationID == uuid.Nil {
+
+	if orgID != nil && orgID.String() != c.Param("orgId") {
 		provide.RenderError("no organization_id provided", 422, c)
 		return
+	} else if orgID == nil {
+		_orgID, err := uuid.FromString(c.Param("orgId"))
+		if err != nil {
+			provide.RenderError(err.Error(), 422, c)
+			return
+		}
+		orgID = &_orgID
 	}
 
 	db := dbconf.DatabaseConnection()
@@ -460,7 +454,7 @@ func deleteApplicationOrganizationHandler(c *gin.Context) {
 	}
 
 	org := &organization.Organization{}
-	db.Where("id = ?", organizationID).Find(&org)
+	db.Where("id = ?", orgID).Find(&org)
 	if org == nil || org.ID == uuid.Nil {
 		provide.RenderError("organization not found", 404, c)
 		return
@@ -637,8 +631,9 @@ func updateApplicationUserHandler(c *gin.Context) {
 func deleteApplicationUserHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 	appID := bearer.ApplicationID
+	userID := bearer.UserID
 
-	if appID == nil || *appID == uuid.Nil {
+	if (appID == nil || *appID == uuid.Nil) && (userID == nil || *userID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -646,28 +641,25 @@ func deleteApplicationUserHandler(c *gin.Context) {
 	if appID != nil && appID.String() != c.Param("id") {
 		provide.RenderError("forbidden", 403, c)
 		return
-	}
-
-	buf, err := c.GetRawData()
-	if err != nil {
-		provide.RenderError(err.Error(), 400, c)
-		return
-	}
-	params := map[string]interface{}{}
-	err = json.Unmarshal(buf, &params)
-	if err != nil {
-		provide.RenderError(err.Error(), 400, c)
-		return
-	}
-
-	var userID *uuid.UUID
-	if userIDStr, userIDOk := params["user_id"].(string); userIDOk {
-		appID, err := uuid.FromString(userIDStr)
+	} else if appID == nil {
+		_appID, err := uuid.FromString(c.Param("id"))
 		if err != nil {
 			provide.RenderError(err.Error(), 422, c)
 			return
 		}
-		userID = &appID
+		appID = &_appID
+	}
+
+	if userID != nil && userID.String() != c.Param("userId") {
+		provide.RenderError("no user_id provided", 422, c)
+		return
+	} else if userID == nil {
+		_userID, err := uuid.FromString(c.Param("userId"))
+		if err != nil {
+			provide.RenderError(err.Error(), 422, c)
+			return
+		}
+		userID = &_userID
 	}
 
 	db := dbconf.DatabaseConnection()
