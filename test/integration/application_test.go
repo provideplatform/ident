@@ -1185,7 +1185,3 @@ func TestDeleteApplicationUserWithApplicationAPIToken(t *testing.T) {
 		t.Errorf("incorrect number of application users returned, expected 1, got %d", len(users))
 	}
 }
-
-func TestListApplicationInvitations(t *testing.T) {
-	t.Errorf("incomplete test")
-}

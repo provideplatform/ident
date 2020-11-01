@@ -33,14 +33,28 @@ func userFactory(firstName, lastName, email, password string) (*provide.User, er
 	})
 }
 
-func orgTokenFactory(auth string, organizationID uuid.UUID) (*provide.Token, error) {
-	return provide.CreateToken(auth, map[string]interface{}{
-		"organization_id": organizationID,
+func appFactory(token, name, desc string) (*provide.Application, error) {
+	return provide.CreateApplication(token, map[string]interface{}{
+		"name":        name,
+		"description": desc,
 	})
 }
 
 func appTokenFactory(auth string, applicationID uuid.UUID) (*provide.Token, error) {
 	return provide.CreateToken(auth, map[string]interface{}{
 		"application_id": applicationID,
+	})
+}
+
+func orgFactory(token, name, desc string) (*provide.Organization, error) {
+	return provide.CreateOrganization(token, map[string]interface{}{
+		"name":        name,
+		"description": desc,
+	})
+}
+
+func orgTokenFactory(auth string, organizationID uuid.UUID) (*provide.Token, error) {
+	return provide.CreateToken(auth, map[string]interface{}{
+		"organization_id": organizationID,
 	})
 }
