@@ -250,7 +250,6 @@ func organizationUsersListHandler(c *gin.Context) {
 	userID := bearer.UserID
 	applicationID := bearer.ApplicationID
 
-	// CHECKME - removing appid check temporarily for orgs that aren't part of an app
 	if userID == nil || *userID == uuid.Nil {
 		provide.RenderError("unauthorized", 401, c)
 		return
@@ -261,10 +260,12 @@ func organizationUsersListHandler(c *gin.Context) {
 		provide.RenderError(err.Error(), 422, c)
 		return
 	}
-	//HACK for DEBUGGING - so I can check the db without reading binary
+
+	// HACK for DEBUGGING - so I can check the db without reading binary
 	orgIDString := organizationID.String()
 	userIDString := userID.String()
 	common.Log.Debugf("getting org %s list of users by userid %s", orgIDString, userIDString)
+
 	org := &Organization{}
 	query := dbconf.DatabaseConnection()
 	resolveOrganization(query, &organizationID, applicationID, userID).Find(&org)
@@ -416,7 +417,6 @@ func deleteOrganizationUserHandler(c *gin.Context) {
 		return
 	}
 
-	//CHECKME - pulling user id from url params rather than json
 	if userID == nil {
 		usrID, err := uuid.FromString(c.Param("userId"))
 		if err != nil {
@@ -424,6 +424,7 @@ func deleteOrganizationUserHandler(c *gin.Context) {
 			return
 		}
 		userID = &usrID
+		// TODO: this userID should be authorized
 	}
 
 	db := dbconf.DatabaseConnection()
