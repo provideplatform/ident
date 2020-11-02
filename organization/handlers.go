@@ -98,7 +98,31 @@ func organizationsListHandler(c *gin.Context) {
 }
 
 func organizationDetailsHandler(c *gin.Context) {
-	provide.RenderError("not implemented", 501, c)
+	bearer := token.InContext(c)
+	userID := bearer.UserID
+	orgID := bearer.ApplicationID
+
+	if (userID == nil || *userID == uuid.Nil) && (orgID == nil || *orgID == uuid.Nil) {
+		provide.RenderError("unauthorized", 401, c)
+		return
+	}
+
+	if orgID != nil && orgID.String() != c.Param("id") {
+		provide.RenderError("forbidden", 403, c)
+		return
+	}
+
+	db := dbconf.DatabaseConnection()
+	org := &Organization{}
+	resolveOrganization(db, orgID, nil, userID).Find(&org)
+
+	if org == nil || org.ID == uuid.Nil {
+		provide.RenderError("organization not found", 404, c)
+		return
+	}
+
+	org.Enrich(db, nil)
+	provide.Render(org, 200, c)
 }
 
 func createOrganizationHandler(c *gin.Context) {
@@ -191,7 +215,43 @@ func createOrganizationHandler(c *gin.Context) {
 }
 
 func updateOrganizationHandler(c *gin.Context) {
-	provide.RenderError("not implemented", 501, c)
+	bearer := token.InContext(c)
+	if bearer == nil || (bearer.UserID == nil || *bearer.UserID == uuid.Nil) {
+		provide.RenderError("unauthorized", 401, c)
+		return
+	}
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	org := &Organization{}
+	dbconf.DatabaseConnection().Where("id = ?", c.Param("id")).Find(&org)
+	if org.ID == uuid.Nil {
+		provide.RenderError("org not found", 404, c)
+		return
+	}
+
+	if bearer.UserID != nil && bearer.UserID.String() != org.UserID.String() { // FIXME-- this should be more than just org.UserID
+		provide.RenderError("forbidden", 403, c)
+		return
+	}
+
+	err = json.Unmarshal(buf, org)
+	if err != nil {
+		provide.RenderError(err.Error(), 422, c)
+		return
+	}
+
+	if org.Update() {
+		provide.Render(nil, 204, c)
+	} else {
+		obj := map[string]interface{}{}
+		obj["errors"] = org.Errors
+		provide.Render(obj, 422, c)
+	}
 }
 
 func deleteOrganizationHandler(c *gin.Context) {
@@ -260,11 +320,6 @@ func organizationUsersListHandler(c *gin.Context) {
 		provide.RenderError(err.Error(), 422, c)
 		return
 	}
-
-	// HACK for DEBUGGING - so I can check the db without reading binary
-	orgIDString := organizationID.String()
-	userIDString := userID.String()
-	common.Log.Debugf("getting org %s list of users by userid %s", orgIDString, userIDString)
 
 	org := &Organization{}
 	query := dbconf.DatabaseConnection()

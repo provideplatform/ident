@@ -158,184 +158,173 @@ func TestListOrganizationTokens(t *testing.T) {
 }
 
 func TestGetOrganizationDetails(t *testing.T) {
-	t.Logf("get org details not yet implemented")
+
+	testId, err := uuid.NewV4()
+	if err != nil {
+		t.Logf("error creating new UUID")
+	}
+
+	type User struct {
+		firstName string
+		lastName  string
+		email     string
+		password  string
+	}
+
+	authUser := User{
+		"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password",
+	}
+
+	tt := []struct {
+		name        string
+		description string
+	}{
+		{"Org1" + testId.String(), "Org1 Description" + testId.String()},
+		{"Org2" + testId.String(), "Org2 Description" + testId.String()},
+	}
+
+	// set up the user that will create the organization
+	user, err := userFactory(authUser.firstName, authUser.lastName, authUser.email, authUser.password)
+	if err != nil {
+		t.Errorf("user creation failed. Error: %s", err.Error())
+		return
+	}
+
+	// get the auth token for the auth user
+	auth, err := provide.Authenticate(authUser.email, authUser.password)
+	if err != nil {
+		t.Errorf("user authentication failed for user %s. error: %s", authUser.email, err.Error())
+	}
+
+	for _, tc := range tt {
+
+		// Create an Organization for that org
+		org, err := provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
+			"name":        tc.name,
+			"description": tc.description,
+		})
+		if err != nil {
+			t.Errorf("error creation organization for user id %s", user.ID)
+		}
+
+		if org == nil {
+			t.Errorf("no organization created")
+			return
+		}
+
+		deets, err := provide.GetOrganizationDetails(*auth.Token.Token, org.ID.String(), map[string]interface{}{})
+		if err != nil {
+			t.Errorf("error getting organization details. Error: %s", err.Error())
+			return
+		}
+
+		if *org.Name != *deets.Name {
+			t.Errorf("Name mismatch. Expected %s, got %s", *org.Name, *deets.Name)
+			return
+		}
+
+		if *org.Description != *deets.Description {
+			t.Errorf("Description mismatch. Expected %s, got %s", *org.Description, *deets.Description)
+			return
+		}
+
+		if org.UserID.String() != deets.UserID.String() {
+			t.Errorf("UserID mismatch. Expected %s, got %s", org.UserID.String(), deets.UserID.String())
+			return
+		}
+	}
 }
-
-//CHECKME get org details is 501 not implemented, so no point lighting this test up yet...
-// func TestGetOrganizationDetails(t *testing.T) {
-
-// 	testId, err := uuid.NewV4()
-// 	if err != nil {
-// 		t.Logf("error creating new UUID")
-// 	}
-
-// 	type User struct {
-// 		firstName string
-// 		lastName  string
-// 		email     string
-// 		password  string
-// 	}
-
-// 	authUser := User{
-// 		"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password",
-// 	}
-
-// 	tt := []struct {
-// 		name        string
-// 		description string
-// 	}{
-// 		{"Org1" + testId.String(), "Org1 Description" + testId.String()},
-// 		{"Org2" + testId.String(), "Org2 Description" + testId.String()},
-// 	}
-
-// 	// set up the user that will create the organization
-// 	user, err := userFactory(authUser.firstName, authUser.lastName, authUser.email, authUser.password)
-// 	if err != nil {
-// 		t.Errorf("user creation failed. Error: %s", err.Error())
-// 		return
-// 	}
-
-// 	// get the auth token for the auth user
-// 	auth, err := provide.Authenticate(authUser.email, authUser.password)
-// 	if err != nil {
-// 		t.Errorf("user authentication failed for user %s. error: %s", authUser.email, err.Error())
-// 	}
-
-// 	for _, tc := range tt {
-
-// 		// Create an Organization for that org
-// 		org, err := provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
-// 			"name":        tc.name,
-// 			"description": tc.description,
-// 			"user_id":     user.ID,
-// 		})
-// 		if err != nil {
-// 			t.Errorf("error creation organization for user id %s", user.ID)
-// 		}
-
-// 		if org == nil {
-// 			t.Errorf("no organization created")
-// 			return
-// 		}
-
-// 		deets, err := provide.GetOrganizationDetails(*auth.Token.Token, org.ID.String(), map[string]interface{}{})
-// 		if err != nil {
-// 			t.Errorf("error getting organization details. Error: %s", err.Error())
-// 			return
-// 		}
-
-// 		if *org.Name != *deets.Name {
-// 			t.Errorf("Name mismatch. Expected %s, got %s", *org.Name, *deets.Name)
-// 			return
-// 		}
-
-// 		if *org.Description != *deets.Description {
-// 			t.Errorf("Description mismatch. Expected %s, got %s", *org.Description, *deets.Description)
-// 			return
-// 		}
-
-// 		if org.UserID.String() != deets.UserID.String() {
-// 			t.Errorf("UserID mismatch. Expected %s, got %s", org.UserID.String(), deets.UserID.String())
-// 			return
-// 		}
-// 	}
-// }
 
 func TestUpdateOrganizationDetails(t *testing.T) {
-	t.Logf("update org details not yet implemented")
+
+	testId, err := uuid.NewV4()
+	if err != nil {
+		t.Logf("error creating new UUID")
+	}
+
+	type User struct {
+		firstName string
+		lastName  string
+		email     string
+		password  string
+	}
+
+	authUser := User{
+		"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password",
+	}
+
+	tt := []struct {
+		name        string
+		description string
+	}{
+		{"Org1" + testId.String(), "Org1 Description" + testId.String()},
+		{"Org2" + testId.String(), "Org2 Description" + testId.String()},
+	}
+
+	// set up the user that will create the organization
+	user, err := userFactory(authUser.firstName, authUser.lastName, authUser.email, authUser.password)
+	if err != nil {
+		t.Errorf("user creation failed. Error: %s", err.Error())
+		return
+	}
+
+	// get the auth token for the auth user
+	auth, err := provide.Authenticate(authUser.email, authUser.password)
+	if err != nil {
+		t.Errorf("user authentication failed for user %s. error: %s", authUser.email, err.Error())
+	}
+
+	// loop through orgs and create, and update them
+	for _, tc := range tt {
+
+		// Create an Organization for that org
+		org, err := provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
+			"name":        tc.name,
+			"description": tc.description,
+			"user_id":     user.ID,
+		})
+		if err != nil {
+			t.Errorf("error creation organization for user id %s", user.ID)
+		}
+
+		if org == nil {
+			t.Errorf("no organization created")
+			return
+		}
+
+		updatedName := tc.name + testId.String()
+		updatedDescription := tc.description + testId.String()
+
+		err = provide.UpdateOrganization(string(*auth.Token.Token), org.ID.String(), map[string]interface{}{
+			"name":        updatedName,
+			"description": updatedDescription,
+		})
+		if err != nil {
+			t.Errorf("error updating organization details. Error: %s", err.Error())
+		}
+
+		deets, err := provide.GetOrganizationDetails(*auth.Token.Token, org.ID.String(), map[string]interface{}{})
+		if err != nil {
+			t.Errorf("error getting organization details. Error: %s", err.Error())
+			return
+		}
+
+		if *deets.Name != updatedName {
+			t.Errorf("Name mismatch. Expected %s, got %s", updatedName, *deets.Name)
+			return
+		}
+
+		if *deets.Description != updatedDescription {
+			t.Errorf("Description mismatch. Expected %s, got %s", updatedDescription, *deets.Description)
+			return
+		}
+
+		if org.UserID.String() != deets.UserID.String() {
+			t.Errorf("UserID mismatch. Expected %s, got %s", org.UserID.String(), deets.UserID.String())
+			return
+		}
+	}
 }
-
-//CHECKME get org details is 501 not implemented, so no point lighting this test up yet...
-// func TestUpdateOrganizationDetails(t *testing.T) {
-
-// 	testId, err := uuid.NewV4()
-// 	if err != nil {
-// 		t.Logf("error creating new UUID")
-// 	}
-
-// 	type User struct {
-// 		firstName string
-// 		lastName  string
-// 		email     string
-// 		password  string
-// 	}
-
-// 	authUser := User{
-// 		"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password",
-// 	}
-
-// 	tt := []struct {
-// 		name        string
-// 		description string
-// 	}{
-// 		{"Org1" + testId.String(), "Org1 Description" + testId.String()},
-// 		{"Org2" + testId.String(), "Org2 Description" + testId.String()},
-// 	}
-
-// 	// set up the user that will create the organization
-// 	user, err := userFactory(authUser.firstName, authUser.lastName, authUser.email, authUser.password)
-// 	if err != nil {
-// 		t.Errorf("user creation failed. Error: %s", err.Error())
-// 		return
-// 	}
-
-// 	// get the auth token for the auth user
-// 	auth, err := provide.Authenticate(authUser.email, authUser.password)
-// 	if err != nil {
-// 		t.Errorf("user authentication failed for user %s. error: %s", authUser.email, err.Error())
-// 	}
-
-// 	// loop through orgs and create, and update them
-// 	for _, tc := range tt {
-
-// 		// Create an Organization for that org
-// 		org, err := provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
-// 			"name":        tc.name,
-// 			"description": tc.description,
-// 			"user_id":     user.ID,
-// 		})
-// 		if err != nil {
-// 			t.Errorf("error creation organization for user id %s", user.ID)
-// 		}
-
-// 		if org == nil {
-// 			t.Errorf("no organization created")
-// 			return
-// 		}
-
-// 		updatedName := tc.name + testId.String()
-// 		updatedDescription := tc.description + testId.String()
-
-// 		err = provide.UpdateOrganization(string(*auth.Token.Token), org.ID.String(), map[string]interface{}{
-// 			"name":        updatedName,
-// 			"description": updatedDescription,
-// 		})
-// 		if err != nil {
-// 			t.Errorf("error updating organization details. Error: %s", err.Error())
-// 		}
-
-// 		deets, err := provide.GetOrganizationDetails(*auth.Token.Token, org.ID.String(), map[string]interface{}{})
-// 		if err != nil {
-// 			t.Errorf("error getting organization details. Error: %s", err.Error())
-// 			return
-// 		}
-
-// 		if *deets.Name != updatedName {
-// 			t.Errorf("Name mismatch. Expected %s, got %s", updatedName, *deets.Name)
-// 			return
-// 		}
-
-// 		if *deets.Description != updatedDescription {
-// 			t.Errorf("Description mismatch. Expected %s, got %s", updatedDescription, *deets.Description)
-// 			return
-// 		}
-
-// 		if org.UserID.String() != deets.UserID.String() {
-// 			t.Errorf("UserID mismatch. Expected %s, got %s", org.UserID.String(), deets.UserID.String())
-// 			return
-// 		}
-// 	}
-// }
 
 // CHECKME this test will check if I can view the organization details
 // by a user who has nothing to do with the organization
