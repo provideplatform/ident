@@ -3,8 +3,6 @@
 package integration
 
 import (
-	"encoding/json"
-	"fmt"
 	"testing"
 
 	uuid "github.com/kthomas/go.uuid"
@@ -846,57 +844,24 @@ func TestDeleteOrganizationUser(t *testing.T) {
 				t.Errorf("failed to add user %s to organization %s; %s", user.ID, org.ID.String(), err.Error())
 				return
 			}
-			t.Logf("*** added user %s to organization %s", user.ID.String(), org.ID.String())
 
-			// err = provide.DeleteOrganizationUser(*organizingUserToken.Token, org.ID.String(), user.ID.String())
-			// if err != nil {
-			// 	t.Errorf("error deleting organization user. Error: %s", err.Error())
-			// }
-
-			// t.Logf("*** deleted user %s from organization %s", user.ID.String(), org.ID.String())
-
-			// CHECKME - I think I introduced this error, but I don't understand it?
-			// interface conversion: interface {} is nil, not []interface {} [recovered]
-			// okay let's bypass the code in provide-go
-			//listOrgUsers, err := provide.ListOrganizationUsers(string(*organizingUserToken.Token), org.ID.String(), map[string]interface{}{})
-			uri := fmt.Sprintf("organizations/%s/users", org.ID.String())
-			status, resp, err := provide.InitIdentService(organizingUserToken.AccessToken).Get(uri, map[string]interface{}{})
-			t.Logf("status: %+v", status)
-			t.Logf("resp: %+v", resp)
-			t.Logf("err: %+v", err)
-
-			if status != 200 {
-				t.Errorf("XXX failed to list application users; status: %v", status)
+			err = provide.DeleteOrganizationUser(*organizingUserToken.Token, org.ID.String(), user.ID.String())
+			if err != nil {
+				t.Errorf("error deleting organization user; %s", err.Error())
 				return
 			}
+		}
 
-			users := make([]*User, 0)
-			for _, item := range resp.([]interface{}) {
-				usr := &User{}
-				usrraw, _ := json.Marshal(item)
-				json.Unmarshal(usrraw, &usr)
-				users = append(users, usr)
-			}
+		orgUsers, err := provide.ListOrganizationUsers(*organizingUserToken.Token, org.ID.String(), map[string]interface{}{})
+		if err != nil {
+			t.Errorf("error listing organization users; %s", err.Error())
+			return
+		}
 
-			if err != nil {
-				t.Errorf("error getting organization users list %s", err.Error())
-			}
-
-			// if listOrgUsers == nil {
-			// 	t.Logf("user removed from organization?")
-			// 	return
-			// }
-			// userFound := false
-			// for _, orguser := range listOrgUsers {
-			// 	if orguser.Name == user.Name {
-			// 		userFound = true
-			// 	}
-			// }
-			// if userFound == true {
-			// 	t.Errorf("removed organization user found in list")
-			// 	return
-			// }
-
+		if len(orgUsers) != 1 {
+			// the original user still exists...
+			t.Errorf("deleting organization users failed; expected 1, got %d", len(orgUsers))
+			return
 		}
 	}
 }
