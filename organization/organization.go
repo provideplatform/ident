@@ -257,6 +257,11 @@ func (o *Organization) Update() bool {
 	return success
 }
 
+// FullName returns the organizations full name; see Invitor interface
+func (o *Organization) FullName() *string {
+	return o.Name
+}
+
 // Enrich an organization
 func (o *Organization) Enrich(db *gorm.DB, keyType *string) {
 

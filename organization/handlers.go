@@ -202,21 +202,27 @@ func organizationInvitationsListHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 	userID := bearer.UserID
 	applicationID := bearer.ApplicationID
+	organizationID := bearer.OrganizationID
 
-	if (userID == nil || *userID == uuid.Nil) && (applicationID == nil || *applicationID == uuid.Nil) {
+	if (userID == nil || *userID == uuid.Nil) && (applicationID == nil || *applicationID == uuid.Nil) && (organizationID == nil || *organizationID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
 
-	organizationID, err := uuid.FromString(c.Param("id"))
+	orgID, err := uuid.FromString(c.Param("id"))
 	if err != nil {
 		provide.RenderError(err.Error(), 422, c)
 		return
 	}
 
+	if organizationID != nil && organizationID.String() != orgID.String() {
+		provide.RenderError(err.Error(), 403, c)
+		return
+	}
+
 	org := &Organization{}
 	query := dbconf.DatabaseConnection()
-	resolveOrganization(query, &organizationID, applicationID, userID).Find(&org)
+	resolveOrganization(query, &orgID, applicationID, userID).Find(&org)
 
 	if org == nil || org.ID == uuid.Nil {
 		provide.RenderError("unauthorized", 401, c)

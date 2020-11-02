@@ -325,6 +325,11 @@ func (app *Application) updateUser(tx *gorm.DB, usr user.User, permissions commo
 	return success
 }
 
+// FullName returns the application name; see Invitor interface
+func (app *Application) FullName() *string {
+	return app.Name
+}
+
 // Create and persist an application
 func (app *Application) Create(tx *gorm.DB) bool {
 	var db *gorm.DB
@@ -357,7 +362,7 @@ func (app *Application) Create(tx *gorm.DB) bool {
 		if !db.NewRecord(app) {
 			success := rowsAffected > 0
 			if success {
-				usr := user.Find(&app.UserID)
+				usr := user.Find(app.UserID)
 				if usr != nil && app.addUser(db, *usr, common.DefaultApplicationResourcePermission) {
 					db.Commit()
 				}

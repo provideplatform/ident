@@ -64,7 +64,7 @@ type Response struct {
 }
 
 // Find returns a user for the given id
-func Find(userID *uuid.UUID) *User {
+func Find(userID uuid.UUID) *User {
 	db := dbconf.DatabaseConnection()
 	user := &User{}
 	db.Where("id = ?", userID).Find(&user)

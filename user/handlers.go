@@ -97,7 +97,7 @@ func authenticationHandler(c *gin.Context) {
 						return
 					}
 
-					user := Find(&resp.User.ID)
+					user := Find(resp.User.ID)
 					if user != nil && invite != nil {
 						err = processUserInvite(db, *user, *invite)
 						if err != nil {
@@ -577,8 +577,10 @@ func userResetPasswordHandler(c *gin.Context) {
 func vendInvitationTokenHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 	userID := bearer.UserID
+	appID := bearer.ApplicationID
+	orgID := bearer.OrganizationID
 
-	if userID == nil || *userID == uuid.Nil {
+	if (userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) && (orgID == nil || *orgID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -608,15 +610,31 @@ func vendInvitationTokenHandler(c *gin.Context) {
 		return
 	}
 
-	invitor := Find(userID)
+	var invitor Invitor
+	if userID != nil {
+		invitor = Find(*userID)
+		invite.InvitorID = userID
+		invite.InvitorName = invitor.FullName()
+	}
 
-	invite.InvitorID = userID
-	invite.InvitorName = invitor.FullName()
-	// TODO: load invitor permissions in the appropriate context; i.e., in the ApplicationID context if it is set
+	// FIXME -- implement Invitor interface on Org and App?
+	// else if orgID != nil {
+	// 	// TODO: organization.Find(*orgID)
+	// } else if appID != nil {
+	// 	// TODO: application.Find(*appID)
+	// }
 
-	_, permissionsOk := params["permissions"]
+	if appID != nil {
+		invite.ApplicationID = appID
+		// TODO: load invitor permissions in the appropriate context; i.e., in the ApplicationID context
+	}
 
-	if permissionsOk {
+	if orgID != nil {
+		invite.OrganizationID = orgID
+		// TODO: load invitor permissions in the appropriate context; i.e., in the OrganizationID context
+	}
+
+	if _, permissionsOk := params["permissions"]; permissionsOk {
 		if invite.ApplicationID != nil {
 			common.Log.Warningf("arbitrary permissions specified for user application invitation: %s", *invite.Email)
 		} else if invite.OrganizationID != nil {
@@ -628,7 +646,7 @@ func vendInvitationTokenHandler(c *gin.Context) {
 	}
 
 	if Exists(*invite.Email, invite.ApplicationID, invite.OrganizationID) {
-		// FIXME-- check existing user against organization_id if one is provided alongside an application_id
+		// FIXME-- check existing user against organization_id if one is provided alongside an application_id -- CHECKME... this may be done be the above...?
 		msg := fmt.Sprintf("user exists: %s", *invite.Email)
 		provide.RenderError(msg, 409, c)
 		return
