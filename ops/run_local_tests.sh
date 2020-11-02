@@ -11,6 +11,10 @@ if [[ -z "${NATS_STREAMING_SERVER_PORT}" ]]; then
   NATS_STREAMING_SERVER_PORT=4222
 fi
 
+if [[ -z "${DATABASE_HOST}" ]]; then
+  DATABASE_HOST=localhost
+fi
+
 if [[ -z "${DATABASE_NAME}" ]]; then
   DATABASE_NAME=ident_dev
 fi
@@ -291,8 +295,8 @@ for d in "${pkgs[@]}" ; do
     NATS_CLUSTER_ID=provide \
     NATS_STREAMING_CONCURRENCY=1 \
     GIN_MODE=release \
-    DATABASE_HOST=localhost \
-    DATABASE_NAME=ident_test \
+    DATABASE_HOST=${DATABASE_HOST} \
+    DATABASE_NAME=${DATABASE_NAME} \
     DATABASE_USER=${DATABASE_USER} \
     DATABASE_PASSWORD=${DATABASE_PASSWORD} \
     LOG_LEVEL=DEBUG \
@@ -319,8 +323,8 @@ for d in "${pkgs[@]}" ; do
     NATS_CLUSTER_ID=provide \
     NATS_STREAMING_CONCURRENCY=1 \
     GIN_MODE=release \
-    DATABASE_HOST=localhost \
-    DATABASE_NAME=ident_test \
+    DATABASE_HOST=${DATABASE_HOST} \
+    DATABASE_NAME=${DATABASE_NAME} \
     DATABASE_USER=${DATABASE_USER} \
     DATABASE_PASSWORD=${DATABASE_PASSWORD} \
     LOG_LEVEL=DEBUG \

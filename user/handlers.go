@@ -472,8 +472,8 @@ func userResetPasswordRequestHandler(c *gin.Context) {
 		return
 	}
 
-	if user.CreateResetPasswordToken(db) {
-		provide.Render(user.ResetPasswordTokenResponse(), 201, c)
+	if user.requestPasswordReset(db) {
+		provide.Render(nil, 204, c)
 	} else {
 		obj := map[string]interface{}{}
 		obj["errors"] = user.Errors

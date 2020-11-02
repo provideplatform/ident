@@ -468,6 +468,12 @@ func (u *User) Enrich() error {
 	return nil
 }
 
+// Reload the user
+func (u *User) Reload() {
+	db := dbconf.DatabaseConnection()
+	db.Model(&u).Find(u)
+}
+
 // validate a user for persistence
 func (u *User) validate() bool {
 	u.Errors = make([]*provide.Error, 0)
@@ -558,6 +564,18 @@ func (u *User) AsResponse() *Response {
 	}
 }
 
+// requestPasswordReset attempts to dispatch a reset password token
+func (u *User) requestPasswordReset(db *gorm.DB) bool {
+	if u.CreateResetPasswordToken(db) {
+		common.Log.Debugf("created reset password token for user: %s", u.ID)
+		common.Log.Warningf("TODO: dispatch reset password token to user out-of-band...")
+		common.Log.Debugf("%s", *u.ResetPasswordToken)
+		return true
+	}
+
+	return false
+}
+
 // CreateResetPasswordToken creates a reset password token
 func (u *User) CreateResetPasswordToken(db *gorm.DB) bool {
 	issuedAt := time.Now()
@@ -602,11 +620,4 @@ func (u *User) CreateResetPasswordToken(db *gorm.DB) bool {
 		return false
 	}
 	return true
-}
-
-// ResetPasswordTokenResponse marshals a reset password token response
-func (u *User) ResetPasswordTokenResponse() map[string]interface{} {
-	return map[string]interface{}{
-		"reset_password_token": u.ResetPasswordToken,
-	}
 }

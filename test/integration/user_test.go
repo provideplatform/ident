@@ -8,6 +8,8 @@ import (
 
 	uuid "github.com/kthomas/go.uuid"
 	provide "github.com/provideservices/provide-go/api/ident"
+
+	identuser "github.com/provideapp/ident/user"
 )
 
 func TestCreateUser(t *testing.T) {
@@ -219,10 +221,51 @@ func TestUserUpdate(t *testing.T) {
 
 func TestDeleteUser(t *testing.T) {
 	t.Errorf("incomplete test - might require soft delete code change?")
+	// TODO-- we need this but there are GDPR implications. what we can do is encrypt the data...
+	// when a user exercises his right to "be forgotten" ... we can either (a) encrypt the data
+	// with an ephemeral vault key... (i.e., we will never be able to decrypt the data...) or (b)
+	// have the data encrypted at rest at all times using a vault key (i.e., key-per-user)... and
+	// deleting the key upon the user requesting the deletion... --KT
 }
 
-func TestResetPassword(t *testing.T) {
-	t.Errorf("incomplete test")
+func TestResetUserPasswordSucceeds(t *testing.T) {
+	testId, _ := uuid.NewV4()
+	email := fmt.Sprintf("%s@prvd.local", testId.String())
+
+	// create the user
+	_, err := userFactory("a", "user", email, "passw0rd")
+	if err != nil {
+		t.Errorf("user creation failed; %s", err.Error())
+		return
+	}
+
+	// request password reset
+	err = provide.RequestPasswordReset(nil, nil, email)
+	if err != nil {
+		t.Errorf("password reset request failed for user %s; %s", email, err.Error())
+		return
+	}
+
+	// resolve the password reset token
+	usr := identuser.FindByEmail(email, nil, nil)
+	if usr.ResetPasswordToken == nil { // FIXME-- cleanup how this is stored on the user model...
+		t.Errorf("password reset request failed for user %s; password reset token not available", email)
+		return
+	}
+
+	// attempt password reset
+	err = provide.ResetPassword(nil, *usr.ResetPasswordToken, "newpassw0rd")
+	if err != nil {
+		t.Errorf("password reset failed for user %s; %s", email, err.Error())
+		return
+	}
+
+	// test auth with new password
+	_, err = provide.Authenticate(email, "newpassw0rd")
+	if err != nil {
+		t.Errorf("user authentication failed for user %s with new password; %s", email, err.Error())
+		return
+	}
 }
 
 func TestOauthCallback(t *testing.T) {
