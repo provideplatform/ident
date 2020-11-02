@@ -225,10 +225,6 @@ func TestResetPassword(t *testing.T) {
 	t.Errorf("incomplete test")
 }
 
-func TestVendInvitationToken(t *testing.T) {
-	t.Errorf("incomplete test")
-}
-
 func TestOauthCallback(t *testing.T) {
 	t.Errorf("incomplete test")
 }

@@ -237,47 +237,6 @@ func TestInviteApplicationUserWithApplicationAPIToken(t *testing.T) {
 	}
 }
 
-// func TestListApplicationInvitationsWithApplicationAPIToken(t *testing.T) {
-// 	// create the user
-// 	user, err := userFactory(tc.firstName, tc.lastName, tc.email, tc.password)
-// 	if err != nil {
-// 		t.Errorf("user creation failed. Error: %s", err.Error())
-// 		return
-// 	}
-
-// 	// get the auth token
-// 	auth, err := provide.Authenticate(tc.email, tc.password)
-// 	if err != nil {
-// 		t.Errorf("user authentication failed for user %s. error: %s", tc.email, err.Error())
-// 		return
-// 	}
-
-// 	// create the app
-// 	app, err := appFactory(*auth.Token.Token, "test app", "baseline workgroup")
-// 	if err != nil {
-// 		t.Errorf("app creaton failed; %s", err.Error())
-// 		return
-// 	}
-
-// 	// create a token for the application
-// 	apptkn, err := appTokenFactory(*auth.Token.Token, app.ID)
-// 	if err != nil {
-// 		t.Errorf("token creation failed for application id %s; %s", app.ID, err.Error())
-// 		return
-// 	}
-
-// 	invitations, err := provide.ListApplicationInvitations(*apptkn.Token.Token, app.ID.String(), map[string]interface{}{})
-// 	if err != nil {
-// 		t.Errorf("listing app invitations failed for application id %s; %s", app.ID, err.Error())
-// 		return
-// 	}
-
-// 	if len(invitations) != 1 {
-// 		t.Errorf("listing app invitations failed for application id %s; expected 1 invitation, got %d", app.ID, len(invitations))
-// 		return
-// 	}
-// }
-
 func TestInviteOrganizationUserWithOrganizationAPIToken(t *testing.T) {
 	testId, _ := uuid.NewV4()
 	email := fmt.Sprintf("%s@prvd.local", testId.String())
