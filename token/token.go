@@ -519,7 +519,9 @@ func (t *Token) vendRefreshToken() bool {
 // are persisted as "legacy" tokens as described in the VendLegacyToken docs
 func VendApplicationToken(
 	tx *gorm.DB,
-	applicationID, organizationID, userID *uuid.UUID,
+	applicationID,
+	organizationID,
+	userID *uuid.UUID,
 	extPermissions map[string]common.Permission,
 	audience *string,
 ) (*Token, error) {
@@ -594,16 +596,13 @@ func (t *Token) validate() bool {
 			Message: common.StringOrNil("token has already been vended"),
 		})
 	}
-	if (t.ApplicationID != nil && t.UserID != nil) || (t.OrganizationID != nil && t.UserID != nil) {
-		t.Errors = append(t.Errors, &provide.Error{
-			Message: common.StringOrNil("ambiguous token subject"),
-		})
-	}
+
 	if t.IssuedAt != nil {
 		t.Errors = append(t.Errors, &provide.Error{
 			Message: common.StringOrNil("token must not self-assert iat claim"),
 		})
 	}
+
 	if t.ExpiresAt != nil {
 		t.Errors = append(t.Errors, &provide.Error{
 			Message: common.StringOrNil("token must not self-assert exp claim"),
@@ -652,11 +651,11 @@ func (t *Token) validate() bool {
 		if t.Subject == nil {
 			var sub *string
 			if t.UserID != nil {
-				sub = common.StringOrNil(fmt.Sprintf("user:%s", t.UserID.String()))
+				sub = common.StringOrNil(fmt.Sprintf("%s:%s", authorizationSubjectUser, t.UserID.String()))
 			} else if t.ApplicationID != nil {
-				sub = common.StringOrNil(fmt.Sprintf("application:%s", t.ApplicationID.String()))
+				sub = common.StringOrNil(fmt.Sprintf("%s:%s", authorizationSubjectApplication, t.ApplicationID.String()))
 			} else if t.OrganizationID != nil {
-				sub = common.StringOrNil(fmt.Sprintf("organization:%s", t.OrganizationID.String()))
+				sub = common.StringOrNil(fmt.Sprintf("%s:%s", authorizationSubjectOrganization, t.OrganizationID.String()))
 			}
 			t.Subject = sub
 		}
@@ -674,6 +673,7 @@ func (t *Token) validate() bool {
 // Delete a legacy API token; effectively revokes the legacy token by permanently removing it from
 // persistent storage; subsequent attempts to authorize requests with this token will fail after
 // calling this method
+// FIXME -- how revocation works
 func (t *Token) Delete(tx *gorm.DB) bool {
 	if t.ID == uuid.Nil {
 		common.Log.Warning("attempted to delete ephemeral token instance")

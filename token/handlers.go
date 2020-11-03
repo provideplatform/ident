@@ -3,7 +3,6 @@ package token
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	dbconf "github.com/kthomas/go-db-config"
@@ -95,15 +94,16 @@ func createTokenHandler(c *gin.Context) {
 		}
 	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
 		orgID = bearer.OrganizationID
-	} else if scope != nil && strings.HasPrefix(*scope, "organization:") {
-		orgUUID, err := uuid.FromString((*scope)[13:])
-		if err != nil {
-			provide.RenderError(fmt.Sprintf("invalid organization scope; %s", err.Error()), 422, c)
-			return
+	}
+
+	var userID *uuid.UUID
+	if usrID, ok := params["user_id"].(string); ok {
+		userUUID, err := uuid.FromString(usrID)
+		if err == nil {
+			userID = &userUUID
 		}
-		orgID = &orgUUID
-		scope = nil // unset scope in this context; it's an edge-case and needs documentation
-		// FIXME!!!!! authorize the user<>org relationship...
+	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
+		userID = bearer.UserID
 	}
 
 	var audience *string
@@ -116,50 +116,34 @@ func createTokenHandler(c *gin.Context) {
 		audience = &altAudience
 	}
 
-	if appID != nil {
-		var resp *Token
-		if scope != nil && *scope == authorizationScopeOfflineAccess {
-			tkn := &Token{
-				ApplicationID: appID,
-				Scope:         scope,
-				Audience:      audience,
-			}
+	tkn := &Token{
+		Audience:       audience,
+		ApplicationID:  appID,
+		OrganizationID: orgID,
+		UserID:         userID,
+		Scope:          scope,
+	}
 
-			if !tkn.Vend() {
-				provide.RenderError(*tkn.Errors[0].Message, 401, c)
-				return
-			}
+	offlineAccess := scope != nil && *scope == authorizationScopeOfflineAccess
 
-			provide.Render(tkn.AsResponse(), 201, c)
-			return
-		}
-
+	if appID != nil && !offlineAccess {
+		// overwrite tkn
 		db := dbconf.DatabaseConnection()
-		tkn, err := VendApplicationToken(db, appID, orgID, nil, nil, audience) // FIXME-- support users and extended permissions
+		tkn, err = VendApplicationToken(db, appID, orgID, userID, nil, audience) // FIXME-- support users and extended permissions
 		if err != nil {
 			provide.RenderError(err.Error(), 401, c)
 			return
 		}
-		resp = tkn
-		provide.Render(resp.AsResponse(), 201, c)
-		return
-	} else if orgID != nil {
-		tkn := &Token{
-			OrganizationID: orgID,
-			Scope:          scope,
-			Audience:       audience,
-		}
-
-		if !tkn.Vend() {
-			provide.RenderError(*tkn.Errors[0].Message, 401, c)
-			return
-		}
-
 		provide.Render(tkn.AsResponse(), 201, c)
 		return
 	}
 
-	provide.RenderError("unauthorized", 401, c)
+	if !tkn.Vend() {
+		provide.RenderError(*tkn.Errors[0].Message, 401, c)
+		return
+	}
+
+	provide.Render(tkn.AsResponse(), 201, c)
 }
 
 func deleteTokenHandler(c *gin.Context) {
