@@ -368,7 +368,9 @@ func (app *Application) Create(tx *gorm.DB) bool {
 				}
 
 				if common.DispatchSiaNotifications {
-					payload, _ := json.Marshal(app)
+					payload, _ := json.Marshal(map[string]interface{}{
+						"id": app.ID.String(),
+					})
 					natsutil.NatsStreamingPublish(natsSiaApplicationNotificationSubject, payload)
 				}
 			}
