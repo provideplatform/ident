@@ -28,7 +28,6 @@ const authorizationSubjectUser = "user"
 
 const defaultRefreshTokenTTL = time.Hour * 24 * 30
 const defaultAccessTokenTTL = time.Minute * 60
-const defaultTokenType = "bearer"
 
 const extendedApplicationClaimsKey = "extended"
 const wildcardApplicationResource = "*"
@@ -56,7 +55,6 @@ type Token struct {
 	// OAuth 2 fields
 	AccessToken  *string `sql:"-" json:"access_token,omitempty"`
 	RefreshToken *string `sql:"-" json:"refresh_token,omitempty"`
-	TokenType    *string `sql:"-" json:"token_type,omitempty"`
 	Scope        *string `sql:"-" json:"scope,omitempty"`
 
 	// Ephemeral JWT header fields and claims; these are here for convenience and are not
@@ -83,7 +81,6 @@ type Token struct {
 // Response represents the token portion of the response to a successful authentication request
 type Response struct {
 	ID           *uuid.UUID `json:"id,omitempty"`
-	TokenType    *string    `json:"token_type,omitempty"`
 	AccessToken  *string    `json:"access_token,omitempty"`
 	RefreshToken *string    `json:"refresh_token,omitempty"`
 	IDToken      *string    `json:"id_token,omitempty"`
@@ -348,20 +345,6 @@ func FindLegacyToken(token string) *Token {
 	return nil
 }
 
-// GetApplicationTokens - retrieve the tokens associated with the given application
-func GetApplicationTokens(applicationID *uuid.UUID) []*Token {
-	var tokens []*Token
-	dbconf.DatabaseConnection().Where("application_id = ?", applicationID).Find(&tokens)
-	return tokens
-}
-
-// GetOrganizationTokens - retrieve the tokens associated with the given organization
-func GetOrganizationTokens(organizationID *uuid.UUID) []*Token {
-	var tokens []*Token
-	dbconf.DatabaseConnection().Where("organization_id = ?", organizationID).Find(&tokens)
-	return tokens
-}
-
 // IsRevoked returns true if the token has been revoked
 func (t *Token) IsRevoked() bool {
 	return IsRevoked(t)
@@ -409,7 +392,6 @@ func (t *Token) AsResponse() *Response {
 	permissions := uint32(t.Permissions)
 	resp := &Response{
 		ID:          &t.ID,
-		TokenType:   t.TokenType,
 		ExpiresIn:   expiresIn,
 		Scope:       t.Scope,
 		Permissions: &permissions,
@@ -510,7 +492,6 @@ func (t *Token) vendRefreshToken() bool {
 
 	ttl := int(defaultRefreshTokenTTL.Seconds())
 	refreshToken := &Token{
-		TokenType:           common.StringOrNil(defaultTokenType),
 		UserID:              t.UserID,
 		ApplicationID:       t.ApplicationID,
 		OrganizationID:      t.OrganizationID,
