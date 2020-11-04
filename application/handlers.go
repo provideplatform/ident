@@ -73,16 +73,19 @@ func applicationsListHandler(c *gin.Context) {
 		return
 	}
 
-	var hidden = false
-	if c.Query("hidden") == "true" {
-		hidden = true
-	}
-
 	var apps []Application
 
 	query := dbconf.DatabaseConnection()
 	query = query.Select("applications.*")
-	query = query.Where("applications.hidden = ?", hidden)
+
+	if c.Query("hidden") == "true" {
+		query = query.Where("applications.hidden IS TRUE")
+	} else if c.Query("hidden") == "false" {
+		query = query.Where("applications.hidden IS FALSE")
+	} else if c.Query("hidden") != "" {
+		provide.RenderError("invalid value for hidden query param", 422, c)
+		return
+	}
 
 	query = query.Joins("LEFT OUTER JOIN applications_organizations as ao ON ao.application_id = applications.id LEFT OUTER JOIN organizations_users as ou ON ou.organization_id = ao.organization_id")
 	query = query.Joins("LEFT OUTER JOIN applications_users as au ON au.application_id = applications.id")
