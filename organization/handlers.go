@@ -483,14 +483,9 @@ func deleteOrganizationUserHandler(c *gin.Context) {
 	// Third Priority: 	The bearer token contains a UserID corresponding to the params.UserID
 	// Third Priority: 	AND the UserID has the DeleteX Permission in the organizations_users table
 	// Result:					PROCEED WITH DELETE
-	// Question: 				if the user is the organizing user, and has delete permissions, can they delete another user?
-	// Question: 				if the user is not the organizing user, with delete permissions, can they delete another user?
+	// Question: 				if the user has specific DeleteResource permissions in the organizations_users table, can they delete another user, or themselves? YES
 
-	// Edge Case:
-	//  - Condition: 		The UserID is the organizing user (UserID present in the Organization table)
-	//  - Permission:		AND the UserID has the DeleteX Permission in the organizations_users table
-	//  - Result:    		PROCEED WITH DELETE
-	//  - Consequence:	No organizing user in the Organization! Update Organization required to add new Organizing User
+	// todo at some point: allow the user in the organization table to reset up a user, or something
 
 	// ensure we have the required parameters
 	organizationID, err := uuid.FromString(c.Param("id"))
@@ -556,15 +551,15 @@ func deleteOrganizationUserHandler(c *gin.Context) {
 			provide.RenderError("unauthorized - user not in org", 401, c)
 			return
 		}
-		// 3. TODO: check permissions for DeleteUser permission
+		// 3. TODO: check permissions for DeleteResource permission
 		deleteRightsGranted = true
 	}
 
 	// check that the bearer User token is for the organizing user
 	if bearerUserID != nil && (*bearerUserID != userID) && !deleteRightsGranted {
 		// the bearerToken user is performing an action on another user
-		// TODO check that the useriD is the organizing user
-		// TODO check permissions for DeleteUser permission
+		// TODO check that both bearerUserId and userID are in the same org
+		// TODO check permissions for DeleteResource permission
 		// if OK, deleteRightsGranted := true
 		provide.RenderError("use case not implemented", 501, c)
 		return
