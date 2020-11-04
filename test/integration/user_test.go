@@ -226,6 +226,10 @@ func TestDeleteUser(t *testing.T) {
 	// with an ephemeral vault key... (i.e., we will never be able to decrypt the data...) or (b)
 	// have the data encrypted at rest at all times using a vault key (i.e., key-per-user)... and
 	// deleting the key upon the user requesting the deletion... --KT
+
+	// Yeah, the PII here is the email address. if we're no-revert, but soft-deleting, then it would be enough to scramble the email address to random string --EC
+	// that's assuming we're not running an audit db containing insert/update/delete changes, but that's likely why GDPR is so painful :)
+
 }
 
 func TestResetUserPasswordSucceeds(t *testing.T) {

@@ -40,12 +40,6 @@ func appFactory(token, name, desc string) (*provide.Application, error) {
 	})
 }
 
-func appTokenFactory(auth string, applicationID uuid.UUID) (*provide.Token, error) {
-	return provide.CreateToken(auth, map[string]interface{}{
-		"application_id": applicationID,
-	})
-}
-
 func orgFactory(token, name, desc string) (*provide.Organization, error) {
 	return provide.CreateOrganization(token, map[string]interface{}{
 		"name":        name,
@@ -53,8 +47,27 @@ func orgFactory(token, name, desc string) (*provide.Organization, error) {
 	})
 }
 
+func apporgFactory(token, applicationID, organizationID string) error {
+	return provide.CreateApplicationOrganization(token, applicationID, map[string]interface{}{
+		"organization_id": organizationID,
+	})
+}
+
+func appTokenFactory(auth string, applicationID uuid.UUID) (*provide.Token, error) {
+	return provide.CreateToken(auth, map[string]interface{}{
+		"application_id": applicationID,
+	})
+}
+
 func orgTokenFactory(auth string, organizationID uuid.UUID) (*provide.Token, error) {
 	return provide.CreateToken(auth, map[string]interface{}{
 		"organization_id": organizationID,
+	})
+}
+
+func orgUserTokenFactory(auth string, organizationID, userID uuid.UUID) (*provide.Token, error) {
+	return provide.CreateToken(auth, map[string]interface{}{
+		"organization_id": organizationID,
+		"user_id":         userID,
 	})
 }

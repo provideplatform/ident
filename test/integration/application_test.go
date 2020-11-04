@@ -374,7 +374,7 @@ func TestFetchAppDetailsFailsWithUnauthorizedUser(t *testing.T) {
 
 	for _, tc := range tt {
 
-		// Create an Application for that org
+		// Create an Application for that user
 		app, err := provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
 			"name":        tc.name,
 			"description": tc.description,
@@ -1087,7 +1087,6 @@ func TestCreateApplicationUser(t *testing.T) {
 }
 
 func TestUpdateApplicationUser(t *testing.T) {
-	//in provide-go
 	t.Logf("not yet implemented")
 }
 

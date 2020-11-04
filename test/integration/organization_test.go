@@ -212,25 +212,36 @@ func TestGetOrganizationDetails(t *testing.T) {
 			return
 		}
 
-		deets, err := provide.GetOrganizationDetails(*auth.Token.Token, org.ID.String(), map[string]interface{}{})
+		orgToken, err := orgTokenFactory(*auth.Token.Token, org.ID)
+		if err != nil {
+			t.Errorf("error generating org token for org %s", org.ID.String())
+		}
+
+		t.Logf("getting organisation details for org %s", org.ID.String())
+		deets, err := provide.GetOrganizationDetails(*orgToken.Token, org.ID.String(), map[string]interface{}{})
 		if err != nil {
 			t.Errorf("error getting organization details. Error: %s", err.Error())
 			return
 		}
+		if deets.Name != nil {
+			t.Logf("org deets %+v", *deets)
 
-		if *org.Name != *deets.Name {
-			t.Errorf("Name mismatch. Expected %s, got %s", *org.Name, *deets.Name)
-			return
-		}
+			if *org.Name != *deets.Name {
+				t.Errorf("Name mismatch. Expected %s, got %s", *org.Name, *deets.Name)
+				return
+			}
 
-		if *org.Description != *deets.Description {
-			t.Errorf("Description mismatch. Expected %s, got %s", *org.Description, *deets.Description)
-			return
-		}
+			if *org.Description != *deets.Description {
+				t.Errorf("Description mismatch. Expected %s, got %s", *org.Description, *deets.Description)
+				return
+			}
 
-		if org.UserID.String() != deets.UserID.String() {
-			t.Errorf("UserID mismatch. Expected %s, got %s", org.UserID.String(), deets.UserID.String())
-			return
+			if org.UserID.String() != deets.UserID.String() {
+				t.Errorf("UserID mismatch. Expected %s, got %s", org.UserID.String(), deets.UserID.String())
+				return
+			}
+		} else {
+			t.Errorf("could not get organization details - org not returned")
 		}
 	}
 }
@@ -303,9 +314,15 @@ func TestUpdateOrganizationDetails(t *testing.T) {
 			t.Errorf("error updating organization details. Error: %s", err.Error())
 		}
 
+		// FIXME, or rather when the code is updated to enable user org tokens, this will return the right org
 		deets, err := provide.GetOrganizationDetails(*auth.Token.Token, org.ID.String(), map[string]interface{}{})
 		if err != nil {
 			t.Errorf("error getting organization details. Error: %s", err.Error())
+			return
+		}
+
+		if deets.Name == nil {
+			t.Errorf("no org returned")
 			return
 		}
 
@@ -689,8 +706,6 @@ func TestUpdateOrganizationUser(t *testing.T) {
 		t.Logf("error creating new UUID")
 	}
 
-	// t.Logf("*** test list users *** using testid %s", testId)
-
 	type organization struct {
 		name        string
 		description string
@@ -753,7 +768,7 @@ func TestUpdateOrganizationUser(t *testing.T) {
 				return
 			}
 
-			err = provide.UpdateOrganizationUser(*organizingUserToken.Token, org.ID.String(), map[string]interface{}{
+			err = provide.UpdateOrganizationUser(*organizingUserToken.Token, org.ID.String(), user.ID.String(), map[string]interface{}{
 				"user_id": user.ID.String(),
 			})
 			if err != nil {
@@ -770,13 +785,7 @@ func TestDeleteOrganizationUser(t *testing.T) {
 		t.Logf("error creating new UUID")
 	}
 
-	// t.Logf("*** test list users *** using testid %s", testId)
-
-	type organization struct {
-		name        string
-		description string
-	}
-	userOrg := organization{
+	userOrg := Organization{
 		"Org " + testId.String(),
 		"Org " + testId.String() + " Decription",
 	}
@@ -794,6 +803,7 @@ func TestDeleteOrganizationUser(t *testing.T) {
 
 	var org *provide.Organization
 	var organizingUserToken *provide.Token
+	orgExists := false
 
 	for _, tc := range tt {
 		// create the user
@@ -802,6 +812,7 @@ func TestDeleteOrganizationUser(t *testing.T) {
 			t.Errorf("user creation failed. Error: %s", err.Error())
 			return
 		}
+		t.Logf("created user %s", user.ID.String())
 
 		// get the auth token
 		auth, err := provide.Authenticate(tc.email, tc.password)
@@ -814,17 +825,8 @@ func TestDeleteOrganizationUser(t *testing.T) {
 			organizingUserToken = auth.Token
 		}
 
-		// Create an Organization if it doesn't exist
-		if org == nil {
-			org, err = provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
-				"name":        userOrg.name,
-				"description": userOrg.description,
-			})
-			if err != nil {
-				t.Errorf("error creation organization for user id %s", user.ID)
-				return
-			}
-		} else {
+		// if the org exists, then create a user and then delete them
+		if orgExists {
 			// let's add this user to the organization as the creating user is automatically added...
 			err := provide.CreateOrganizationUser(*organizingUserToken.Token, org.ID.String(), map[string]interface{}{
 				"user_id": user.ID.String(),
@@ -833,24 +835,48 @@ func TestDeleteOrganizationUser(t *testing.T) {
 				t.Errorf("failed to add user %s to organization %s; %s", user.ID, org.ID.String(), err.Error())
 				return
 			}
+			t.Logf("created user %s for org %s", user.ID.String(), org.ID.String())
 
-			err = provide.DeleteOrganizationUser(*organizingUserToken.Token, org.ID.String(), user.ID.String())
+			orgToken, _ := orgTokenFactory(*organizingUserToken.Token, org.ID)
+			//we need to use the user token as the delete handler requires a user token
+			err = provide.DeleteOrganizationUser(*orgToken.Token, org.ID.String(), user.ID.String())
 			if err != nil {
 				t.Errorf("error deleting organization user; %s", err.Error())
 				return
 			}
+			t.Logf("deleted user %s from org %s", user.ID.String(), org.ID.String())
+
+			// list the org users using this org token
+			orgUsers, err := provide.ListOrganizationUsers(*organizingUserToken.Token, org.ID.String(), map[string]interface{}{})
+			if err != nil {
+				t.Errorf("error listing organization users; %s", err.Error())
+				return
+			}
+
+			userFound := false
+			for _, orguser := range orgUsers {
+				if orguser.Name == user.Name {
+					userFound = true
+				}
+			}
+			if userFound == true {
+				t.Errorf("deleted organization user found in list")
+				return
+			}
 		}
 
-		orgUsers, err := provide.ListOrganizationUsers(*organizingUserToken.Token, org.ID.String(), map[string]interface{}{})
-		if err != nil {
-			t.Errorf("error listing organization users; %s", err.Error())
-			return
-		}
-
-		if len(orgUsers) != 1 {
-			// the original user still exists...
-			t.Errorf("deleting organization users failed; expected 1, got %d", len(orgUsers))
-			return
+		// Create an Organization if it doesn't exist
+		if !orgExists {
+			org, err = provide.CreateOrganization(string(*organizingUserToken.Token), map[string]interface{}{
+				"name":        userOrg.name,
+				"description": userOrg.description,
+			})
+			if err != nil {
+				t.Errorf("error creation organization for user id %s", user.ID)
+				return
+			}
+			t.Logf("created organization %s", org.ID.String())
+			orgExists = true
 		}
 	}
 }

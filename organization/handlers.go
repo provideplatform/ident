@@ -100,7 +100,7 @@ func organizationsListHandler(c *gin.Context) {
 func organizationDetailsHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 	userID := bearer.UserID
-	orgID := bearer.ApplicationID
+	orgID := bearer.OrganizationID
 
 	if (userID == nil || *userID == uuid.Nil) && (orgID == nil || *orgID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
@@ -323,6 +323,7 @@ func organizationUsersListHandler(c *gin.Context) {
 
 	org := &Organization{}
 	query := dbconf.DatabaseConnection()
+
 	resolveOrganization(query, &organizationID, applicationID, userID).Find(&org)
 
 	if org == nil || org.ID == uuid.Nil {
@@ -457,40 +458,64 @@ func updateOrganizationUserHandler(c *gin.Context) {
 	provide.RenderError("not implemented", 501, c)
 }
 
+// deleteOrganizationUserHandler deletes an organization user
 func deleteOrganizationUserHandler(c *gin.Context) {
 	bearer := token.InContext(c)
-	userID := bearer.UserID
 
-	if userID == nil || *userID == uuid.Nil {
-		provide.RenderError("unauthorized", 401, c)
-		return
-	}
+	// pull the information from the bearer token
+	bearerApplicationID := bearer.ApplicationID
+	bearerOrganizationID := bearer.OrganizationID
+	bearerUserID := bearer.UserID
 
+	// default is not to delete
+	deleteRightsGranted := false
+
+	// this action can be completed under the following conditions:
+
+	// First Priority: 	The bearer token contains an ApplicationID which the params.OrganizationID is linked to in the applications_organizations table
+	// Permissions?: 		No user permissions checks required - Application token trumps all
+	// Result: 					PROCEED WITH DELETE
+
+	// Second Priority: The bearer token contains an OrganizationID corresponding to the params.OrganizationID
+	// Permissions?:		No user permissions checks required - Organization token allows all organization operations
+	// Result: 					PROCEED WITH DELETE
+
+	// Third Priority: 	The bearer token contains a UserID corresponding to the params.UserID
+	// Third Priority: 	AND the UserID has the DeleteX Permission in the organizations_users table
+	// Result:					PROCEED WITH DELETE
+	// Question: 				if the user is the organizing user, and has delete permissions, can they delete another user?
+	// Question: 				if the user is not the organizing user, with delete permissions, can they delete another user?
+
+	// Edge Case:
+	//  - Condition: 		The UserID is the organizing user (UserID present in the Organization table)
+	//  - Permission:		AND the UserID has the DeleteX Permission in the organizations_users table
+	//  - Result:    		PROCEED WITH DELETE
+	//  - Consequence:	No organizing user in the Organization! Update Organization required to add new Organizing User
+
+	// ensure we have the required parameters
 	organizationID, err := uuid.FromString(c.Param("id"))
 	if err != nil {
 		provide.RenderError(err.Error(), 422, c)
 		return
 	}
 
-	if userID == nil {
-		usrID, err := uuid.FromString(c.Param("userId"))
-		if err != nil {
-			provide.RenderError(err.Error(), 422, c)
-			return
-		}
-		userID = &usrID
-		// TODO: this userID should be authorized
+	userID, err := uuid.FromString(c.Param("userId"))
+	if err != nil {
+		provide.RenderError(err.Error(), 422, c)
+		return
 	}
 
 	db := dbconf.DatabaseConnection()
 
+	// check if organization exists
 	org := &Organization{}
-	resolveOrganization(dbconf.DatabaseConnection(), &organizationID, nil, nil).Find(&org)
+	resolveOrganization(db, &organizationID, nil, nil).Find(&org)
 	if org == nil || org.ID == uuid.Nil {
 		provide.RenderError("organization not found", 404, c)
 		return
 	}
 
+	// check if user exists
 	usr := &user.User{}
 	db.Where("id = ?", userID).Find(&usr)
 	if usr == nil || usr.ID == uuid.Nil {
@@ -498,12 +523,66 @@ func deleteOrganizationUserHandler(c *gin.Context) {
 		return
 	}
 
-	if org.removeUser(db, usr) {
-		provide.Render(nil, 204, c)
-	} else {
-		obj := map[string]interface{}{}
-		obj["errors"] = org.Errors
-		provide.Render(obj, 422, c)
+	// check if we have a bearer Application token...
+	if bearerApplicationID != nil {
+		// check application_organization table to check if the organizationID belongs to the bearerApplicationID
+		// if it does, check that the userID is in the organizationID (organization_users table)
+		// if the userID is in the organizationID, deleteRightsGranted := true
+		resolveOrganization(db, &organizationID, bearerApplicationID, &userID).Find(&org)
+		if org == nil || org.ID == uuid.Nil {
+			provide.RenderError("unauthorized - org not in app", 401, c)
+			return
+		}
+		deleteRightsGranted = true
+	}
+
+	// check if we have a bearer Organization token...
+	if bearerOrganizationID != nil && (*bearer.OrganizationID == organizationID) && !deleteRightsGranted {
+		// check that the userID is in the organizationID (organization_users table)
+		// if the userID is in the organizationID, deleteRightsGranted := true
+		resolveOrganization(db, &organizationID, nil, &userID).Find(&org)
+		if org == nil || org.ID == uuid.Nil {
+			provide.RenderError("unauthorized - user not in org", 401, c)
+			return
+		}
+		deleteRightsGranted = true
+	}
+
+	// check if we have a bearer User token for the userID
+	if bearerUserID != nil && (*bearerUserID == userID) && !deleteRightsGranted {
+		// 2. check that the bearerUserID is in the organizationID (organization_users table)
+		resolveOrganization(db, &organizationID, nil, bearerUserID).Find(&org)
+		if org == nil || org.ID == uuid.Nil {
+			provide.RenderError("unauthorized - user not in org", 401, c)
+			return
+		}
+		// 3. TODO: check permissions for DeleteUser permission
+		deleteRightsGranted = true
+	}
+
+	// check that the bearer User token is for the organizing user
+	if bearerUserID != nil && (*bearerUserID != userID) && !deleteRightsGranted {
+		// the bearerToken user is performing an action on another user
+		// TODO check that the useriD is the organizing user
+		// TODO check permissions for DeleteUser permission
+		// if OK, deleteRightsGranted := true
+		provide.RenderError("use case not implemented", 501, c)
+		return
+	}
+
+	if deleteRightsGranted {
+		if org.removeUser(db, usr) {
+			provide.Render(nil, 204, c)
+		} else {
+			obj := map[string]interface{}{}
+			obj["errors"] = org.Errors
+			provide.Render(obj, 422, c)
+		}
+	}
+
+	if !deleteRightsGranted {
+		provide.RenderError("unauthorized - no delete rights granted", 401, c)
+		return
 	}
 }
 
