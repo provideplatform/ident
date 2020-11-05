@@ -104,6 +104,8 @@ func runAPI() {
 	r.Use(provide.CORSMiddleware())
 
 	r.GET("/status", statusHandler)
+	r.GET("/legal/privacy_policy", privacyPolicyHandler)
+	r.GET("/legal/terms_of_service", termsOfServiceHandler)
 	user.InstallPublicUserAPI(r)
 
 	r.Use(token.AuthMiddleware())
@@ -140,6 +142,16 @@ func statusHandler(c *gin.Context) {
 		"terms_of_service_updated_at": termsOfServiceUpdatedAt,
 	}
 	provide.Render(status, 200, c)
+}
+
+func privacyPolicyHandler(c *gin.Context) {
+	resp := map[string]interface{}{}
+	provide.Render(resp, 200, c)
+}
+
+func termsOfServiceHandler(c *gin.Context) {
+	resp := map[string]interface{}{}
+	provide.Render(resp, 200, c)
 }
 
 func shuttingDown() bool {
