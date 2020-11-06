@@ -307,13 +307,11 @@ func organizationInvitationsListHandler(c *gin.Context) {
 
 func organizationUsersListHandler(c *gin.Context) {
 	bearer := token.InContext(c)
-	userID := bearer.UserID
-	applicationID := bearer.ApplicationID
+	bearerUserID := bearer.UserID
+	bearerOrganizationID := bearer.OrganizationID
+	bearerApplicationID := bearer.ApplicationID
 
-	if userID == nil || *userID == uuid.Nil {
-		provide.RenderError("unauthorized", 401, c)
-		return
-	}
+	listRightsGranted := false
 
 	organizationID, err := uuid.FromString(c.Param("id"))
 	if err != nil {
@@ -321,35 +319,100 @@ func organizationUsersListHandler(c *gin.Context) {
 		return
 	}
 
+	db := dbconf.DatabaseConnection()
+
+	// check if organization exists
 	org := &Organization{}
-	query := dbconf.DatabaseConnection()
-
-	resolveOrganization(query, &organizationID, applicationID, userID).Find(&org)
-
+	resolveOrganization(db, &organizationID, nil, nil).Find(&org)
 	if org == nil || org.ID == uuid.Nil {
+		provide.RenderError("organization not found", 404, c)
+		return
+	}
+
+	// bearer Application token even if org is in app, must have ReadResources bearer permission
+	if bearerApplicationID != nil {
+		resolveOrganization(db, &organizationID, bearerApplicationID, nil).Find(&org)
+		if org == nil || org.ID == uuid.Nil {
+			provide.RenderError("unauthorized - org not in app", 401, c)
+			return
+		}
+
+		// check for read resources permision
+		if !bearer.HasPermission(common.ReadResources) {
+			provide.RenderError("unauthorized - insufficient permissions", 401, c)
+			return
+		}
+
+		listRightsGranted = true
+	}
+
+	// bearer Organization token must still have ReadResources bearer permission
+	if bearerOrganizationID != nil && (*bearer.OrganizationID == organizationID) && !listRightsGranted {
+		resolveOrganization(db, &organizationID, nil, nil).Find(&org)
+		if org == nil || org.ID == uuid.Nil {
+			provide.RenderError("unauthorized - org not resolved", 401, c)
+			return
+		}
+
+		// check for read resources permision
+		if !bearer.HasPermission(common.ReadResources) {
+			provide.RenderError("unauthorized - insufficient permissions", 401, c)
+			return
+		}
+		listRightsGranted = true
+	}
+
+	// bearer user id must be user in org and have ReadResources permission
+	if bearerUserID != nil && !listRightsGranted {
+		// check if user is in org
+		resolveOrganization(db, &organizationID, nil, bearerUserID).Find(&org)
+		if org == nil || org.ID == uuid.Nil {
+			provide.RenderError("unauthorized - user not in org", 401, c)
+			return
+		}
+
+		// check for read resources permision
+		if !bearer.HasPermission(common.ReadResources) {
+			provide.RenderError("unauthorized - insufficient permissions", 401, c)
+			return
+		}
+		listRightsGranted = true
+	}
+
+	if listRightsGranted {
+		usersQuery := resolveOrganizationUsers(db, organizationID, bearerApplicationID).Order("users.created_at ASC")
+
+		var users []*user.User
+		provide.Paginate(c, usersQuery, &user.User{}).Find(&users)
+		for _, usr := range users {
+			usr.Enrich()
+		}
+		provide.Render(users, 200, c)
+	}
+
+	if !listRightsGranted {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
 
-	usersQuery := resolveOrganizationUsers(query, organizationID, applicationID).Order("users.created_at ASC")
-
-	var users []*user.User
-	provide.Paginate(c, usersQuery, &user.User{}).Find(&users)
-	for _, usr := range users {
-		usr.Enrich()
-	}
-	provide.Render(users, 200, c)
 }
 
 func createOrganizationUserHandler(c *gin.Context) {
 	bearer := token.InContext(c)
-	userID := bearer.UserID
+	bearerUserID := bearer.UserID
+	// bearerOrganizationID := bearer.OrganizationID (CHECKME - can an org token invite a user? - I'm assuming no for now)
+	// bearerApplicationID := bearer.ApplicationID   (CHECKME - can an app token invite a user? - I'm assuming no for now)
 
-	if userID == nil || *userID == uuid.Nil {
-		provide.RenderError("unauthorized", 401, c)
+	// createRightsGranted := false without the ability for org or app to grant, we don't need this
+
+	// get the organization id
+	organizationID, err := uuid.FromString(c.Param("id"))
+	if err != nil {
+		provide.RenderError(err.Error(), 422, c)
 		return
 	}
 
+	// get the user id of the user to be added to the org
 	buf, err := c.GetRawData()
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -363,23 +426,36 @@ func createOrganizationUserHandler(c *gin.Context) {
 		return
 	}
 
-	organizationID, err := uuid.FromString(c.Param("id"))
-	if err != nil {
-		provide.RenderError(err.Error(), 422, c)
-		return
-	}
-
-	// if userID == nil {
+	userID := uuid.Nil
 	if userIDStr, userIDStrOk := params["user_id"].(string); userIDStrOk {
-		usrID, err := uuid.FromString(userIDStr)
+		err := err
+		userID, err = uuid.FromString(userIDStr)
 		if err != nil {
 			provide.RenderError(err.Error(), 422, c)
 			return
 		}
-		userID = &usrID
 	}
-	// }
 
+	db := dbconf.DatabaseConnection()
+
+	// check if organization exists
+	org := &Organization{}
+	resolveOrganization(db, &organizationID, nil, nil).Find(&org)
+	if org == nil || org.ID == uuid.Nil {
+		provide.RenderError("organization not found", 404, c)
+		return
+	}
+
+	// check if the user exists
+	usr := &user.User{}
+	db.Where("id = ?", userID).Find(&usr)
+	if usr == nil || usr.ID == uuid.Nil {
+		provide.RenderError("user not found", 404, c)
+		return
+	}
+
+	// CHECKME this all left as is (mostly, I assume the bearerUserID is the inviter, and the invite.UserID is the invitee)
+	// - could be dragons
 	var invite *user.Invite
 	var permissions common.Permission
 
@@ -400,7 +476,7 @@ func createOrganizationUserHandler(c *gin.Context) {
 			return
 		}
 
-		if invite.UserID != nil && userID != nil && invite.UserID.String() != userID.String() {
+		if invite.UserID != nil && bearerUserID != nil && invite.UserID.String() != bearerUserID.String() {
 			provide.RenderError("invitation user_id did not match authorized user", 403, c)
 			return
 		}
@@ -415,25 +491,10 @@ func createOrganizationUserHandler(c *gin.Context) {
 	} else if invite != nil && invite.Permissions != nil {
 		permissions = *invite.Permissions
 	} else {
-		permissions = common.DefaultApplicationOrganizationPermission
+		permissions = common.DefaultOrganizationUserPermission //CHECKME - easy to miss this one!
 	}
 
-	db := dbconf.DatabaseConnection()
 	tx := db.Begin()
-
-	org := &Organization{}
-	resolveOrganization(db, &organizationID, nil, nil).Find(&org)
-	if org == nil || org.ID == uuid.Nil {
-		provide.RenderError("organization not found", 404, c)
-		return
-	}
-
-	usr := &user.User{}
-	db.Where("id = ?", userID).Find(&usr)
-	if usr == nil || usr.ID == uuid.Nil {
-		provide.RenderError("user not found", 404, c)
-		return
-	}
 
 	success := org.addUser(tx, *usr, permissions)
 	if success && invite != nil {
@@ -522,10 +583,17 @@ func deleteOrganizationUserHandler(c *gin.Context) {
 	if bearerApplicationID != nil {
 		// check application_organization table to check if the organizationID belongs to the bearerApplicationID
 		// if it does, check that the userID is in the organizationID (organization_users table)
-		// if the userID is in the organizationID, deleteRightsGranted := true
+		// if the userID is in the organizationID,
+		// AND the bearer token has the DeleteResource permission deleteRightsGranted := true
 		resolveOrganization(db, &organizationID, bearerApplicationID, &userID).Find(&org)
 		if org == nil || org.ID == uuid.Nil {
 			provide.RenderError("unauthorized - org not in app", 401, c)
+			return
+		}
+
+		// check for delete resource permision
+		if !bearer.HasPermission(common.DeleteResource) {
+			provide.RenderError("unauthorized - insufficient permissions", 401, c)
 			return
 		}
 		deleteRightsGranted = true
@@ -534,12 +602,20 @@ func deleteOrganizationUserHandler(c *gin.Context) {
 	// check if we have a bearer Organization token...
 	if bearerOrganizationID != nil && (*bearer.OrganizationID == organizationID) && !deleteRightsGranted {
 		// check that the userID is in the organizationID (organization_users table)
-		// if the userID is in the organizationID, deleteRightsGranted := true
+		// if the userID is in the organizationID
+		// AND the bearer token has the DeleteResource permission deleteRightsGranted := true
 		resolveOrganization(db, &organizationID, nil, &userID).Find(&org)
 		if org == nil || org.ID == uuid.Nil {
 			provide.RenderError("unauthorized - user not in org", 401, c)
 			return
 		}
+
+		// check for delete resource permision
+		if !bearer.HasPermission(common.DeleteResource) {
+			provide.RenderError("unauthorized - insufficient permissions", 401, c)
+			return
+		}
+
 		deleteRightsGranted = true
 	}
 
@@ -548,10 +624,16 @@ func deleteOrganizationUserHandler(c *gin.Context) {
 		// 2. check that the bearerUserID is in the organizationID (organization_users table)
 		resolveOrganization(db, &organizationID, nil, bearerUserID).Find(&org)
 		if org == nil || org.ID == uuid.Nil {
-			provide.RenderError("unauthorized - user not in org", 401, c)
+			provide.RenderError("unauthorized - bearer user not in org", 401, c)
 			return
 		}
-		// 3. TODO: check permissions for DeleteResource permission
+
+		// check for delete resource permision
+		if !bearer.HasPermission(common.DeleteResource) {
+			provide.RenderError("unauthorized - insufficient permissions", 401, c)
+			return
+		}
+
 		deleteRightsGranted = true
 	}
 
@@ -561,8 +643,28 @@ func deleteOrganizationUserHandler(c *gin.Context) {
 		// TODO check that both bearerUserId and userID are in the same org
 		// TODO check permissions for DeleteResource permission
 		// if OK, deleteRightsGranted := true
-		provide.RenderError("use case not implemented", 501, c)
-		return
+
+		// check the bearer user is in the organization
+		resolveOrganization(db, &organizationID, nil, bearerUserID).Find(&org)
+		if org == nil || org.ID == uuid.Nil {
+			provide.RenderError("unauthorized - bearer user not in org", 401, c)
+			return
+		}
+
+		//check the user is also in the organization
+		resolveOrganization(db, &organizationID, nil, &userID).Find(&org)
+		if org == nil || org.ID == uuid.Nil {
+			provide.RenderError("unauthorized - user not in org", 401, c)
+			return
+		}
+
+		// check for delete resource permision
+		if !bearer.HasPermission(common.DeleteResource) {
+			provide.RenderError("unauthorized - insufficient permissions", 401, c)
+			return
+		}
+
+		deleteRightsGranted = true
 	}
 
 	if deleteRightsGranted {
@@ -576,7 +678,7 @@ func deleteOrganizationUserHandler(c *gin.Context) {
 	}
 
 	if !deleteRightsGranted {
-		provide.RenderError("unauthorized - no delete rights granted", 401, c)
+		provide.RenderError("unauthorized", 401, c)
 		return
 	}
 }
