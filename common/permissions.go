@@ -98,6 +98,12 @@ const DefaultApplicationResourcePermission Permission = ReadResources | CreateRe
 // DefaultAuth0RequestPermission is the ephemeral permission mask to apply to Auth0 requests
 const DefaultAuth0RequestPermission = ListUsers | CreateUser
 
+// DefaultOrganizationTokenPermission is the default mask to use for an organization if permissions are not explicitly set upon organization token creation
+const DefaultOrganizationTokenPermission Permission = ReadResources | CreateResource | UpdateResource | DeleteResource
+
+// DefaultOrganizationUserPermission is the default mask to use for an organization user if permissions are not explicitly set upon organization user creation
+const DefaultOrganizationUserPermission Permission = Publish | Subscribe | ReadResources
+
 // DefaultSudoerPermission is the default mask to use when a new sudoer is created
 const DefaultSudoerPermission = DefaultUserPermission | Sudo
 
