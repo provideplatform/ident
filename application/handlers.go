@@ -198,7 +198,7 @@ func applicationDetailsHandler(c *gin.Context) {
 	}
 
 	appUser := resolveAppUser(db, app, userID)
-	if appUser == nil && userID != nil && userID.String() != app.UserID.String() {
+	if (appUser == nil && userID != nil && userID.String() != app.UserID.String()) || !bearer.HasPermission(common.ListApplications) {
 		provide.RenderError("forbidden", 403, c)
 		return
 	} else if appUser != nil && !appUser.Permissions.Has(common.ReadResources) {
