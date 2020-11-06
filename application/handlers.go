@@ -176,9 +176,16 @@ func applicationDetailsHandler(c *gin.Context) {
 		return
 	}
 
-	if appID != nil && appID.String() != c.Param("id") {
+	if appID != nil && appID.String() != c.Param("id") && !bearer.HasPermission(common.ListApplications) { // FIXME -- test ListApplications permission
 		provide.RenderError("forbidden", 403, c)
 		return
+	} else if bearer.HasPermission(common.ListApplications) {
+		_appID, err := uuid.FromString(c.Param("id"))
+		if err != nil {
+			provide.RenderError(err.Error(), 422, c)
+			return
+		}
+		appID = &_appID
 	}
 
 	db := dbconf.DatabaseConnection()
