@@ -176,7 +176,7 @@ func applicationDetailsHandler(c *gin.Context) {
 		return
 	}
 
-	if !bearer.HasPermission(common.ListApplications) || (appID != nil && appID.String() != c.Param("id")) { // FIXME -- test ListApplications permission
+	if (appID != nil && appID.String() != c.Param("id")) || !bearer.HasPermission(common.ListApplications) { // FIXME -- test ListApplications permission
 		provide.RenderError("forbidden", 403, c)
 		return
 	} else if bearer.HasPermission(common.ListApplications) {
@@ -198,7 +198,7 @@ func applicationDetailsHandler(c *gin.Context) {
 	}
 
 	appUser := resolveAppUser(db, app, userID)
-	if !bearer.HasPermission(common.ListApplications) || (appUser == nil && userID != nil && userID.String() != app.UserID.String()) {
+	if (appUser == nil && userID != nil && userID.String() != app.UserID.String()) || !bearer.HasPermission(common.ListApplications) {
 		provide.RenderError("forbidden", 403, c)
 		return
 	} else if appUser != nil && !appUser.Permissions.Has(common.ReadResources) {
