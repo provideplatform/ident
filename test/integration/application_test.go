@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	uuid "github.com/kthomas/go.uuid"
+	common "github.com/provideapp/ident/common"
 	provide "github.com/provideservices/provide-go/api/ident"
 )
 
@@ -232,6 +233,89 @@ func TestGetApplicationDetails(t *testing.T) {
 			t.Errorf("UserID mismatch. Expected %s, got %s", app.UserID.String(), deets.UserID.String())
 			return
 		}
+	}
+}
+
+func TestGetApplicationDetailsWithUserBearerListApplicationsPermissions(t *testing.T) {
+
+	testId, err := uuid.NewV4()
+	if err != nil {
+		t.Logf("error creating new UUID")
+	}
+
+	authUser := User{
+		"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password",
+	}
+
+	// set up the user that will create the application
+	user, err := userFactory(authUser.firstName, authUser.lastName, authUser.email, authUser.password)
+	if err != nil {
+		t.Errorf("user creation failed. Error: %s", err.Error())
+		return
+	}
+
+	// get the auth token for the auth user
+	auth, err := provide.Authenticate(authUser.email, authUser.password)
+	if err != nil {
+		t.Errorf("user authentication failed for user %s. error: %s", authUser.email, err.Error())
+	}
+
+	// Create an Application for that org
+	app, err := provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+		"name":        "App1" + testId.String(),
+		"description": "App1 Description" + testId.String(),
+		"user_id":     user.ID,
+	})
+	if err != nil {
+		t.Errorf("error creation application for user id %s", user.ID)
+	}
+
+	if app == nil {
+		t.Errorf("no application created")
+		return
+	}
+
+	authUser2 := User{
+		"first", "last", "first.last." + testId.String() + "-2@email.com", "secrit_password",
+	}
+
+	// the following user will be assigned the application permission
+	_, err = permissionedUserFactory(authUser2.firstName, authUser2.lastName, authUser2.email, authUser2.password, common.Authenticate|common.ListApplications)
+	if err != nil {
+		t.Errorf("user creation failed. Error: %s", err.Error())
+		return
+	}
+
+	// get the auth token for the user
+	auth2, err := provide.Authenticate(authUser2.email, authUser2.password)
+	if err != nil {
+		t.Errorf("user authentication failed for user %s. error: %s", authUser2.email, err.Error())
+	}
+
+	deets, err := provide.GetApplicationDetails(*auth2.Token.Token, app.ID.String(), map[string]interface{}{})
+	if err != nil {
+		t.Errorf("error getting application details. Error: %s", err.Error())
+		return
+	}
+
+	if deets == nil || deets.ID == uuid.Nil {
+		t.Error("error getting application details")
+		return
+	}
+
+	if *app.Name != *deets.Name {
+		t.Errorf("Name mismatch. Expected %s, got %s", *app.Name, *deets.Name)
+		return
+	}
+
+	if *app.Description != *deets.Description {
+		t.Errorf("Description mismatch. Expected %s, got %s", *app.Description, *deets.Description)
+		return
+	}
+
+	if app.UserID.String() != deets.UserID.String() {
+		t.Errorf("UserID mismatch. Expected %s, got %s", app.UserID.String(), deets.UserID.String())
+		return
 	}
 }
 

@@ -3,7 +3,10 @@
 package integration
 
 import (
+	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
+	identcommon "github.com/provideapp/ident/common"
+	identuser "github.com/provideapp/ident/user"
 	provide "github.com/provideservices/provide-go/api/ident"
 )
 
@@ -22,6 +25,26 @@ type Application struct {
 type Organization struct {
 	name        string
 	description string
+}
+
+func permissionedUserFactory(firstName, lastName, email, password string, permissions identcommon.Permission) (*provide.User, error) {
+	user, err := provide.CreateUser("", map[string]interface{}{
+		"first_name": firstName,
+		"last_name":  lastName,
+		"email":      email,
+		"password":   password,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	usr := &identuser.User{}
+	db := dbconf.DatabaseConnection()
+	db.Where("id = ?", user.ID.String()).Find(&usr)
+	usr.Permissions = permissions
+	db.Save(usr)
+
+	return user, nil
 }
 
 func userFactory(firstName, lastName, email, password string) (*provide.User, error) {

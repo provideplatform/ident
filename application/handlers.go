@@ -179,7 +179,8 @@ func applicationDetailsHandler(c *gin.Context) {
 	if appID != nil && appID.String() != c.Param("id") && !bearer.HasPermission(common.ListApplications) { // FIXME -- test ListApplications permission
 		provide.RenderError("forbidden", 403, c)
 		return
-	} else if bearer.HasPermission(common.ListApplications) {
+	} else if bearer.HasAnyPermission(common.ListApplications, common.Sudo) {
+		common.Log.Tracef("bearer token authorization grants arbitrary access to application: %s", c.Param("id"))
 		_appID, err := uuid.FromString(c.Param("id"))
 		if err != nil {
 			provide.RenderError(err.Error(), 422, c)
@@ -198,7 +199,7 @@ func applicationDetailsHandler(c *gin.Context) {
 	}
 
 	appUser := resolveAppUser(db, app, userID)
-	if appUser == nil && userID != nil && (userID.String() != app.UserID.String() || !bearer.HasPermission(common.ListApplications)) {
+	if appUser == nil && userID != nil && userID.String() != app.UserID.String() && !bearer.HasAnyPermission(common.ListApplications, common.Sudo) {
 		provide.RenderError("forbidden", 403, c)
 		return
 	} else if appUser != nil && !appUser.Permissions.Has(common.ReadResources) {
