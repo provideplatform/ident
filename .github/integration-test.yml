@@ -28,6 +28,8 @@ jobs:
       - run: echo '::set-env name=DATABASE_SUPERUSER_PASSWORD::prvdp455'
       - run: echo '::set-env name=DATABASE_SSL_MODE::disable'
       - run: echo '::set-env name=DATABASE_LOGGING::false'
+      - run: echo '::set-env name=IDENT_API_HOST::localhost:8081'
+      - run: echo '::set-env name=IDENT_API_SCHEME::http'
       - run: echo '::set-env name=TAGS::integration'
       - run: echo '::set-env name=JWT_SIGNER_PUBLIC_KEY::${{ secrets.DEV_JWT }}'
       - run: go mod tidy
