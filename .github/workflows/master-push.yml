@@ -9,7 +9,7 @@ jobs:
     outputs:
       version: ${{ steps.release.outputs.version }}
     env:
-      GITHUB_TOKEN: ${{ secrets.DEPLOY_GITHUB_PAT }}
+      GITHUB_TOKEN: ${{ secrets.SECRET_PAT_CHANGEME }}
     steps:
       - id: release
         uses: rymndhng/release-on-push-action@master
