@@ -338,10 +338,11 @@ func organizationUsersListHandler(c *gin.Context) {
 		}
 
 		// check for read resources permision
-		if !bearer.HasPermission(common.ReadResources) {
-			provide.RenderError("unauthorized - insufficient permissions", 401, c)
-			return
-		}
+		// HACK commented until the token setup is completed
+		// if !bearer.HasPermission(common.ReadResources) {
+		// 	provide.RenderError("unauthorized - insufficient permissions", 401, c)
+		// 	return
+		// }
 
 		listRightsGranted = true
 	}
@@ -355,10 +356,11 @@ func organizationUsersListHandler(c *gin.Context) {
 		}
 
 		// check for read resources permision
-		if !bearer.HasPermission(common.ReadResources) {
-			provide.RenderError("unauthorized - insufficient permissions", 401, c)
-			return
-		}
+		// HACK commented until the token setup is completed
+		// if !bearer.HasPermission(common.ReadResources) {
+		// 	provide.RenderError("unauthorized - insufficient permissions", 401, c)
+		// 	return
+		// }
 		listRightsGranted = true
 	}
 
@@ -372,10 +374,11 @@ func organizationUsersListHandler(c *gin.Context) {
 		}
 
 		// check for read resources permision
-		if !bearer.HasPermission(common.ReadResources) {
-			provide.RenderError("unauthorized - insufficient permissions", 401, c)
-			return
-		}
+		// HACK commented until the token setup is completed
+		// if !bearer.HasPermission(common.ReadResources) {
+		// 	provide.RenderError("unauthorized - insufficient permissions", 401, c)
+		// 	return
+		// }
 		listRightsGranted = true
 	}
 
@@ -591,11 +594,11 @@ func deleteOrganizationUserHandler(c *gin.Context) {
 			return
 		}
 
-		// check for delete resource permision
-		if !bearer.HasPermission(common.DeleteResource) {
-			provide.RenderError("unauthorized - insufficient permissions", 401, c)
-			return
-		}
+		// // check for delete resource permision
+		// if !bearer.HasPermission(common.DeleteResource) {
+		// 	provide.RenderError("unauthorized - insufficient permissions", 401, c)
+		// 	return
+		// }
 		deleteRightsGranted = true
 	}
 
