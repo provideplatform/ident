@@ -253,7 +253,7 @@ func TestFetchOrgDetailsFailsWithUnauthorizedUser(t *testing.T) {
 	}
 
 	nonAuthUser := User{
-		"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password",
+		"first", "last.notauth", "first.last.notauth" + testId.String() + "@email.com", "secrit_password",
 	}
 
 	tt := []struct {

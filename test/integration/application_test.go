@@ -419,7 +419,7 @@ func TestFetchAppDetailsFailsWithUnauthorizedUser(t *testing.T) {
 	}
 
 	nonAuthUser := User{
-		"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password",
+		"first", "last.notauth", "first.last.notauth" + testId.String() + "@email.com", "secrit_password",
 	}
 
 	tt := []struct {
@@ -438,7 +438,7 @@ func TestFetchAppDetailsFailsWithUnauthorizedUser(t *testing.T) {
 	}
 
 	// set up a user that will have nothing to do with the application
-	_, err = userFactory(nonAuthUser.firstName, nonAuthUser.lastName, nonAuthUser.email, nonAuthUser.password)
+	notAuthorizedUser, err := userFactory(nonAuthUser.firstName, nonAuthUser.lastName, nonAuthUser.email, nonAuthUser.password)
 	if err != nil {
 		t.Errorf("user creation failed. Error: %s", err.Error())
 		return
@@ -472,6 +472,9 @@ func TestFetchAppDetailsFailsWithUnauthorizedUser(t *testing.T) {
 			return
 		}
 
+		t.Logf("about to check app details with unauthorized user")
+		t.Logf("app id: %s", app.ID)
+		t.Logf("user id: %+v", notAuthorizedUser)
 		_, err = provide.GetApplicationDetails(*nonAuth.Token.Token, app.ID.String(), map[string]interface{}{})
 		if err == nil {
 			t.Errorf("expected error getting application details by a user not associated with the application")
