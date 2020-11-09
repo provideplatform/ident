@@ -462,7 +462,6 @@ func TestFetchAppDetailsFailsWithUnauthorizedUser(t *testing.T) {
 		app, err := provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
 			"name":        tc.name,
 			"description": tc.description,
-			"user_id":     user.ID,
 		})
 		if err != nil {
 			t.Errorf("error creation application for user id %s", user.ID)
@@ -1186,80 +1185,60 @@ func TestDeleteApplicationUserWithApplicationAPIToken(t *testing.T) {
 		"App " + testId.String() + " Decription",
 	}
 
-	tt := []struct {
-		firstName string
-		lastName  string
-		email     string
-		password  string
-	}{
-		{"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password"},
-		{"joey", "joe joe", "j.j" + testId.String() + "@email.com", "joeyjoejoe"},
-		{"joey2", "joe joe2", "j.j2" + testId.String() + "@email.com", "joeyjoejoe2"},
+	organizingUserEmail := "organizer" + testId.String() + "@email.com"
+	organizingUser, err := userFactory("O", "User", organizingUserEmail, "testzxcv")
+	if err != nil {
+		t.Errorf("user creation failed. Error: %s", err.Error())
+		return
 	}
 
-	var app *provide.Application
-	var appToken *provide.Token
-	var userToken *provide.Token
-
-	for _, tc := range tt {
-		// create the user
-		user, err := userFactory(tc.firstName, tc.lastName, tc.email, tc.password)
-		if err != nil {
-			t.Errorf("user creation failed. Error: %s", err.Error())
-			return
-		}
-
-		// get the auth token
-		auth, err := provide.Authenticate(tc.email, tc.password)
-		if err != nil {
-			t.Errorf("user authentication failed for user %s. error: %s", tc.email, err.Error())
-			return
-		}
-
-		if userToken == nil {
-			userToken = auth.Token
-		}
-
-		// Create an Application if it doesn't exist
-		if app == nil {
-			app, err = provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
-				"name":        userApp.name,
-				"description": userApp.description,
-			})
-			if err != nil {
-				t.Errorf("error creation application for user id %s", user.ID)
-				return
-			}
-
-			if appToken == nil {
-				// create a token for the application
-				apptkn, err := appTokenFactory(*auth.Token.Token, app.ID)
-				if err != nil {
-					t.Errorf("token creation failed for application id %s. error: %s", app.ID, err.Error())
-					return
-				}
-				appToken = apptkn
-			}
-		} else {
-			// let's add this user to the application as the creating user is automatically added...
-			err := provide.CreateApplicationUser(*appToken.Token, app.ID.String(), map[string]interface{}{
-				"user_id": user.ID.String(),
-			})
-			if err != nil {
-				t.Errorf("failed to add user %s to application %s; %s", user.ID, app.ID.String(), err.Error())
-				return
-			}
-
-			//now we'll delete the user
-			err = provide.DeleteApplicationUser(*appToken.Token, app.ID.String(), user.ID.String())
-			if err != nil {
-				t.Errorf("failed to delete user %s from application %s; %s", user.ID, app.ID.String(), err.Error())
-				return
-			}
-		}
+	// get the auth token
+	auth, err := provide.Authenticate(organizingUserEmail, "testzxcv")
+	if err != nil {
+		t.Errorf("user authentication failed for user %s. error: %s", "o", err.Error())
+		return
 	}
 
-	users, err := provide.ListApplicationUsers(string(*appToken.Token), app.ID.String(), map[string]interface{}{})
+	app, err := provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+		"name":        userApp.name,
+		"description": userApp.description,
+	})
+	if err != nil {
+		t.Errorf("error creation application for user id %s", organizingUser.ID)
+		return
+	}
+
+	// create a token for the application
+	apptkn, err := appTokenFactory(*auth.Token.Token, app.ID)
+	if err != nil {
+		t.Errorf("token creation failed for application id %s. error: %s", app.ID, err.Error())
+		return
+	}
+
+	// create the user
+	user, err := userFactory("App", "User", "appuser"+testId.String()+"@email.com", "asdf1234")
+	if err != nil {
+		t.Errorf("user creation failed. Error: %s", err.Error())
+		return
+	}
+
+	// let's add this user to the application as the creating user is automatically added...
+	err = provide.CreateApplicationUser(*apptkn.Token, app.ID.String(), map[string]interface{}{
+		"user_id": user.ID.String(),
+	})
+	if err != nil {
+		t.Errorf("failed to add user %s to application %s; %s", user.ID, app.ID.String(), err.Error())
+		return
+	}
+
+	//now we'll delete the user
+	err = provide.DeleteApplicationUser(*apptkn.Token, app.ID.String(), user.ID.String())
+	if err != nil {
+		t.Errorf("failed to delete user %s from application %s; %s", user.ID, app.ID.String(), err.Error())
+		return
+	}
+
+	users, err := provide.ListApplicationUsers(string(*apptkn.Token), app.ID.String(), map[string]interface{}{})
 	if err != nil {
 		t.Errorf("error getting users list %s", err.Error())
 		return

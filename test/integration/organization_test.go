@@ -88,14 +88,6 @@ func TestGetOrganizationDetails(t *testing.T) {
 		"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password",
 	}
 
-	tt := []struct {
-		name        string
-		description string
-	}{
-		{"Org1" + testId.String(), "Org1 Description" + testId.String()},
-		{"Org2" + testId.String(), "Org2 Description" + testId.String()},
-	}
-
 	// set up the user that will create the organization
 	user, err := userFactory(authUser.firstName, authUser.lastName, authUser.email, authUser.password)
 	if err != nil {
@@ -109,52 +101,49 @@ func TestGetOrganizationDetails(t *testing.T) {
 		t.Errorf("user authentication failed for user %s. error: %s", authUser.email, err.Error())
 	}
 
-	for _, tc := range tt {
+	// Create an Organization for that org
+	org, err := provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
+		"name":        "organiation name",
+		"description": "organization description",
+	})
+	if err != nil {
+		t.Errorf("error creation organization for user id %s", user.ID)
+	}
 
-		// Create an Organization for that org
-		org, err := provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
-			"name":        tc.name,
-			"description": tc.description,
-		})
-		if err != nil {
-			t.Errorf("error creation organization for user id %s", user.ID)
-		}
+	if org == nil {
+		t.Errorf("no organization created")
+		return
+	}
 
-		if org == nil {
-			t.Errorf("no organization created")
+	orgToken, err := orgTokenFactory(*auth.Token.Token, org.ID)
+	if err != nil {
+		t.Errorf("error generating org token for org %s", org.ID.String())
+	}
+
+	t.Logf("getting organisation details for org %s", org.ID.String())
+	deets, err := provide.GetOrganizationDetails(*orgToken.Token, org.ID.String(), map[string]interface{}{})
+	if err != nil {
+		t.Errorf("error getting organization details. Error: %s", err.Error())
+		return
+	}
+
+	if deets.Name != nil {
+		if *org.Name != *deets.Name {
+			t.Errorf("Name mismatch. Expected %s, got %s", *org.Name, *deets.Name)
 			return
 		}
 
-		orgToken, err := orgTokenFactory(*auth.Token.Token, org.ID)
-		if err != nil {
-			t.Errorf("error generating org token for org %s", org.ID.String())
-		}
-
-		t.Logf("getting organisation details for org %s", org.ID.String())
-		deets, err := provide.GetOrganizationDetails(*orgToken.Token, org.ID.String(), map[string]interface{}{})
-		if err != nil {
-			t.Errorf("error getting organization details. Error: %s", err.Error())
+		if *org.Description != *deets.Description {
+			t.Errorf("Description mismatch. Expected %s, got %s", *org.Description, *deets.Description)
 			return
 		}
-		if deets.Name != nil {
 
-			if *org.Name != *deets.Name {
-				t.Errorf("Name mismatch. Expected %s, got %s", *org.Name, *deets.Name)
-				return
-			}
-
-			if *org.Description != *deets.Description {
-				t.Errorf("Description mismatch. Expected %s, got %s", *org.Description, *deets.Description)
-				return
-			}
-
-			if org.UserID.String() != deets.UserID.String() {
-				t.Errorf("UserID mismatch. Expected %s, got %s", org.UserID.String(), deets.UserID.String())
-				return
-			}
-		} else {
-			t.Errorf("could not get organization details - org not returned")
+		if org.UserID.String() != deets.UserID.String() {
+			t.Errorf("UserID mismatch. Expected %s, got %s", org.UserID.String(), deets.UserID.String())
+			return
 		}
+	} else {
+		t.Errorf("could not get organization details - org not returned")
 	}
 }
 
@@ -176,14 +165,6 @@ func TestUpdateOrganizationDetails(t *testing.T) {
 		"first", "last", "first.last." + testId.String() + "@email.com", "secrit_password",
 	}
 
-	tt := []struct {
-		name        string
-		description string
-	}{
-		{"Org1" + testId.String(), "Org1 Description" + testId.String()},
-		{"Org2" + testId.String(), "Org2 Description" + testId.String()},
-	}
-
 	// set up the user that will create the organization
 	user, err := userFactory(authUser.firstName, authUser.lastName, authUser.email, authUser.password)
 	if err != nil {
@@ -197,61 +178,56 @@ func TestUpdateOrganizationDetails(t *testing.T) {
 		t.Errorf("user authentication failed for user %s. error: %s", authUser.email, err.Error())
 	}
 
-	// loop through orgs and create, and update them
-	for _, tc := range tt {
+	// Create an Organization for that org
+	org, err := provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
+		"name":        "org name",
+		"description": "org description",
+	})
+	if err != nil {
+		t.Errorf("error creation organization for user id %s", user.ID)
+	}
 
-		// Create an Organization for that org
-		org, err := provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
-			"name":        tc.name,
-			"description": tc.description,
-			"user_id":     user.ID,
-		})
-		if err != nil {
-			t.Errorf("error creation organization for user id %s", user.ID)
-		}
+	if org == nil {
+		t.Errorf("no organization created")
+		return
+	}
 
-		if org == nil {
-			t.Errorf("no organization created")
-			return
-		}
+	updatedName := "org nane " + testId.String()
+	updatedDescription := "org description " + testId.String()
 
-		updatedName := tc.name + testId.String()
-		updatedDescription := tc.description + testId.String()
+	err = provide.UpdateOrganization(string(*auth.Token.Token), org.ID.String(), map[string]interface{}{
+		"name":        updatedName,
+		"description": updatedDescription,
+	})
+	if err != nil {
+		t.Errorf("error updating organization details. Error: %s", err.Error())
+	}
 
-		err = provide.UpdateOrganization(string(*auth.Token.Token), org.ID.String(), map[string]interface{}{
-			"name":        updatedName,
-			"description": updatedDescription,
-		})
-		if err != nil {
-			t.Errorf("error updating organization details. Error: %s", err.Error())
-		}
+	// FIXME, or rather when the code is updated to enable user org tokens, this will return the right org
+	deets, err := provide.GetOrganizationDetails(*auth.Token.Token, org.ID.String(), map[string]interface{}{})
+	if err != nil {
+		t.Errorf("error getting organization details. Error: %s", err.Error())
+		return
+	}
 
-		// FIXME, or rather when the code is updated to enable user org tokens, this will return the right org
-		deets, err := provide.GetOrganizationDetails(*auth.Token.Token, org.ID.String(), map[string]interface{}{})
-		if err != nil {
-			t.Errorf("error getting organization details. Error: %s", err.Error())
-			return
-		}
+	if deets.Name == nil {
+		t.Errorf("no org returned")
+		return
+	}
 
-		if deets.Name == nil {
-			t.Errorf("no org returned")
-			return
-		}
+	if *deets.Name != updatedName {
+		t.Errorf("Name mismatch. Expected %s, got %s", updatedName, *deets.Name)
+		return
+	}
 
-		if *deets.Name != updatedName {
-			t.Errorf("Name mismatch. Expected %s, got %s", updatedName, *deets.Name)
-			return
-		}
+	if *deets.Description != updatedDescription {
+		t.Errorf("Description mismatch. Expected %s, got %s", updatedDescription, *deets.Description)
+		return
+	}
 
-		if *deets.Description != updatedDescription {
-			t.Errorf("Description mismatch. Expected %s, got %s", updatedDescription, *deets.Description)
-			return
-		}
-
-		if org.UserID.String() != deets.UserID.String() {
-			t.Errorf("UserID mismatch. Expected %s, got %s", org.UserID.String(), deets.UserID.String())
-			return
-		}
+	if org.UserID.String() != deets.UserID.String() {
+		t.Errorf("UserID mismatch. Expected %s, got %s", org.UserID.String(), deets.UserID.String())
+		return
 	}
 }
 
@@ -339,9 +315,8 @@ func TestFetchOrgDetailsFailsWithUnauthorizedUser(t *testing.T) {
 	}
 }
 
-func TestUserUpdateOrgDetailsAccess(t *testing.T) {
-	t.Logf("update org details not yet implemented")
-}
+// TODO-- TestUserUpdateOrgDetailsAccess
+// func TestUserUpdateOrgDetailsAccess(t *testing.T) {}
 
 // CHECKME this test will check if I can update the organization details
 // by a user who has nothing to do with the organization
@@ -456,12 +431,8 @@ func TestUserUpdateOrgDetailsAccess(t *testing.T) {
 // 	}
 // }
 
-func TestDeleteOrganization(t *testing.T) {
-	// FIXME if the magic elves can add a DeleteOrganization to provide-go, I will put out a saucer of milk tonight
-	// note the saucer of milk still applies, even if it's a soft delete behind the scenes in the handlers, although
-	// then a recover method might also be needed (unless this is all the same as updating with Hidden set to true/false)
-	t.Errorf("provide-go method missing")
-}
+// TODO-- TestDeleteOrganization
+// func TestDeleteOrganization(t *testing.T) {}
 
 //CHECKME - need to add to provide-go
 // func TestListOrganizationTokens(t *testing.T) {

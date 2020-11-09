@@ -363,7 +363,7 @@ func (app *Application) Create(tx *gorm.DB) bool {
 			success := rowsAffected > 0
 			if success {
 				usr := user.Find(app.UserID)
-				if usr != nil && app.addUser(db, *usr, common.DefaultApplicationResourcePermission) {
+				if usr != nil && app.addUser(db, *usr, common.DefaultApplicationUserResourcePermission) {
 					db.Commit()
 				}
 
