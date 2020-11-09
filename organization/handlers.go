@@ -595,6 +595,7 @@ func deleteOrganizationUserHandler(c *gin.Context) {
 		}
 
 		// // check for delete resource permision
+		// HACK remove until permissions tidied up
 		// if !bearer.HasPermission(common.DeleteResource) {
 		// 	provide.RenderError("unauthorized - insufficient permissions", 401, c)
 		// 	return
@@ -614,10 +615,11 @@ func deleteOrganizationUserHandler(c *gin.Context) {
 		}
 
 		// check for delete resource permision
-		if !bearer.HasPermission(common.DeleteResource) {
-			provide.RenderError("unauthorized - insufficient permissions", 401, c)
-			return
-		}
+		// HACK remove until permissions tidied up
+		// if !bearer.HasPermission(common.DeleteResource) {
+		// 	provide.RenderError("unauthorized - insufficient permissions", 401, c)
+		// 	return
+		// }
 
 		deleteRightsGranted = true
 	}
@@ -632,10 +634,11 @@ func deleteOrganizationUserHandler(c *gin.Context) {
 		}
 
 		// check for delete resource permision
-		if !bearer.HasPermission(common.DeleteResource) {
-			provide.RenderError("unauthorized - insufficient permissions", 401, c)
-			return
-		}
+		// HACK remove until permissions tidied up
+		// if !bearer.HasPermission(common.DeleteResource) {
+		// 	provide.RenderError("unauthorized - insufficient permissions", 401, c)
+		// 	return
+		// }
 
 		deleteRightsGranted = true
 	}
@@ -662,10 +665,11 @@ func deleteOrganizationUserHandler(c *gin.Context) {
 		}
 
 		// check for delete resource permision
-		if !bearer.HasPermission(common.DeleteResource) {
-			provide.RenderError("unauthorized - insufficient permissions", 401, c)
-			return
-		}
+		// HACK remove until permissions tidied up
+		// if !bearer.HasPermission(common.DeleteResource) {
+		// 	provide.RenderError("unauthorized - insufficient permissions", 401, c)
+		// 	return
+		// }
 
 		deleteRightsGranted = true
 	}
