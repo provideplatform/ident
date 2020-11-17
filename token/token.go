@@ -904,6 +904,9 @@ func (t *Token) encodeJWTNatsClaims() (map[string]interface{}, error) {
 		subscribeAllow = append(subscribeAllow, "network.*.connector.*")
 		subscribeAllow = append(subscribeAllow, "network.*.status")
 		subscribeAllow = append(subscribeAllow, "platform.>")
+		subscribeAllow = append(subscribeAllow, "baseline.>")
+
+		publishAllow = append(publishAllow, "baseline.>")
 	}
 
 	var publishPermissions map[string]interface{}
