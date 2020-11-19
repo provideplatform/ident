@@ -29,7 +29,7 @@ require (
 	github.com/onsi/gomega v1.10.1
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pkg/errors v0.8.2-0.20190227000051-27936f6d90f9 // indirect
-	github.com/provideservices/provide-go v0.0.0-20201109140457-70d750eff26f
+	github.com/provideservices/provide-go v0.0.0-20201109202001-a527b36e6cf1
 	github.com/t-tiger/gorm-bulk-insert v1.3.0
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	google.golang.org/protobuf v1.25.0 // indirect
