@@ -99,7 +99,7 @@ func applicationsListHandler(c *gin.Context) {
 		return
 	} else {
 		// default api scope filters hidden
-		query = query.Where("applications.hidden IS TRUE")
+		query = query.Where("applications.hidden IS FALSE")
 	}
 
 	query = query.Order("applications.created_at DESC").Group("id")
