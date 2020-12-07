@@ -2,6 +2,7 @@ package application
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
@@ -78,15 +79,6 @@ func applicationsListHandler(c *gin.Context) {
 	query := dbconf.DatabaseConnection()
 	query = query.Select("applications.*")
 
-	if c.Query("hidden") == "true" {
-		query = query.Where("applications.hidden IS TRUE")
-	} else if c.Query("hidden") == "false" {
-		query = query.Where("applications.hidden IS FALSE")
-	} else if c.Query("hidden") != "" {
-		provide.RenderError("invalid value for hidden query param", 422, c)
-		return
-	}
-
 	query = query.Joins("LEFT OUTER JOIN applications_organizations as ao ON ao.application_id = applications.id LEFT OUTER JOIN organizations_users as ou ON ou.organization_id = ao.organization_id")
 	query = query.Joins("LEFT OUTER JOIN applications_users as au ON au.application_id = applications.id")
 	query = query.Where("applications.user_id = ? OR au.user_id = ? OR (ao.organization_id = ou.organization_id AND ou.user_id = ?)", userID, userID, userID)
@@ -97,6 +89,18 @@ func applicationsListHandler(c *gin.Context) {
 
 	if c.Query("type") != "" {
 		query = query.Where("applications.type = ?", c.Query("type"))
+	}
+
+	if c.Query("hidden") == "true" {
+		query = query.Where("applications.hidden IS TRUE")
+	} else if c.Query("hidden") == "false" {
+		query = query.Where("applications.hidden IS FALSE")
+	} else if c.Query("hidden") != "" {
+		provide.RenderError("invalid value for hidden query param", 422, c)
+		return
+	} else {
+		// default api scope filters hidden
+		query = query.Where("applications.hidden IS FALSE")
 	}
 
 	query = query.Order("applications.created_at DESC").Group("id")
