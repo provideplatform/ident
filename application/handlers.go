@@ -2,7 +2,6 @@ package application
 
 import (
 	"encoding/json"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
