@@ -22,7 +22,7 @@ jobs:
           repository: provideapp/integration
           path: 'integration'
           ref: master
-          token: ${{ secrets.PAT }}          
+          token: ${{ secrets.DEPLOY_GITHUB_PAT }}          
       - run: docker-compose -f ./ops/docker-compose-integration.yml up -d
         working-directory: ident
       - run:     make integration_ident                                   
