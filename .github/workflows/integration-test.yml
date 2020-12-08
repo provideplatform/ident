@@ -11,7 +11,9 @@ jobs:
       - name: Checkout ident
         uses: actions/checkout@v2
         with:
-          path: 'ident'        
+          path: 'ident'
+          ref: integration
+          token: ${{ secrets.PAT }}                  
       - name: Setup go
         uses: actions/setup-go@v2
         with:
