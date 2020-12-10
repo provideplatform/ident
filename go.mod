@@ -13,6 +13,7 @@ require (
 	github.com/gin-gonic/gin v1.6.3
 	github.com/golang-migrate/migrate v3.5.4+incompatible
 	github.com/jinzhu/gorm v1.9.16
+	github.com/joho/godotenv v1.3.0
 	github.com/kthomas/go-auth0 v0.0.0-20200602063018-d45ad85a2325
 	github.com/kthomas/go-db-config v0.0.0-20200612131637-ec0436a9685e
 	github.com/kthomas/go-logger v0.0.0-20200602072946-d7d72dfc2531
@@ -28,7 +29,7 @@ require (
 	github.com/onsi/gomega v1.10.1
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pkg/errors v0.8.2-0.20190227000051-27936f6d90f9 // indirect
-	github.com/provideservices/provide-go v0.0.0-20200929141258-9a03d0e3ee26
+	github.com/provideservices/provide-go v0.0.0-20201109202001-a527b36e6cf1
 	github.com/t-tiger/gorm-bulk-insert v1.3.0
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	google.golang.org/protobuf v1.25.0 // indirect

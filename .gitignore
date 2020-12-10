@@ -48,3 +48,9 @@ vendor/
 coverage.txt
 profile.out
 
+
+# dev files
+.vscode/launch.json
+*.env
+*.key
+*.crt

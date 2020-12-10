@@ -84,6 +84,14 @@ func (o *Organization) addUser(tx *gorm.DB, usr user.User, permissions common.Pe
 		common.Log.Debugf("added user %s to organization: %s", usr.ID, o.ID)
 	} else {
 		common.Log.Warningf("failed to add user %s to organization: %s; %s", usr.ID, o.ID, result.Error.Error())
+		errors := result.GetErrors()
+		if len(errors) > 0 {
+			for _, err := range errors {
+				o.Errors = append(o.Errors, &provide.Error{
+					Message: common.StringOrNil(err.Error()),
+				})
+			}
+		}
 	}
 	return success
 }
@@ -103,6 +111,14 @@ func (o *Organization) removeUser(tx *gorm.DB, usr *user.User) bool {
 		common.Log.Debugf("removed user %s from organization: %s", usr.ID, o.ID)
 	} else {
 		common.Log.Warningf("failed to remove user %s from organization: %s; %s", usr.ID, o.ID, result.Error.Error())
+		errors := result.GetErrors()
+		if len(errors) > 0 {
+			for _, err := range errors {
+				o.Errors = append(o.Errors, &provide.Error{
+					Message: common.StringOrNil(err.Error()),
+				})
+			}
+		}
 	}
 	return success
 }
@@ -122,6 +138,14 @@ func (o *Organization) updateUser(tx *gorm.DB, usr *user.User, permissions commo
 		common.Log.Debugf("updated user %s for organization: %s", usr.ID, o.ID)
 	} else {
 		common.Log.Warningf("failed to update user %s for organization: %s; %s", usr.ID, o.ID, result.Error.Error())
+		errors := result.GetErrors()
+		if len(errors) > 0 {
+			for _, err := range errors {
+				o.Errors = append(o.Errors, &provide.Error{
+					Message: common.StringOrNil(err.Error()),
+				})
+			}
+		}
 	}
 	return success
 }
@@ -231,6 +255,11 @@ func (o *Organization) Update() bool {
 
 	tx.Commit()
 	return success
+}
+
+// FullName returns the organizations full name; see Invitor interface
+func (o *Organization) FullName() *string {
+	return o.Name
 }
 
 // Enrich an organization

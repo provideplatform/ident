@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/badoux/checkmail"
 	natsutil "github.com/kthomas/go-natsutil"
 	"github.com/kthomas/go-redisutil"
 	uuid "github.com/kthomas/go.uuid"
@@ -15,6 +16,11 @@ import (
 )
 
 const defaultInvitationTokenTimeout = time.Hour * 48
+
+// Invitor interface
+type Invitor interface {
+	FullName() *string
+}
 
 // Invite model
 type Invite struct {
@@ -240,8 +246,31 @@ func (i *Invite) InvalidateCache() error {
 	return nil
 }
 
+func (i *Invite) validate() bool {
+	i.Errors = make([]*provide.Error, 0)
+
+	if i.Email == nil {
+		i.Errors = append(i.Errors, &provide.Error{
+			Message: common.StringOrNil(fmt.Sprintf("email address is required")),
+		})
+	}
+
+	err := checkmail.ValidateFormat(*i.Email)
+	if err != nil {
+		i.Errors = append(i.Errors, &provide.Error{
+			Message: common.StringOrNil(fmt.Sprintf("invalid email address: %s; %s", *i.Email, err.Error())),
+		})
+	}
+
+	return len(i.Errors) == 0
+}
+
 // Create the invite
 func (i *Invite) Create() bool {
+	if !i.validate() {
+		return false
+	}
+
 	token, err := i.vendToken()
 	if err != nil {
 		common.Log.Warningf("failed to vend invite token; %s", err.Error())

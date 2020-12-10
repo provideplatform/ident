@@ -65,7 +65,7 @@ func refreshAccessToken(c *gin.Context) {
 
 		var err error
 		if len(accessToken.Errors) > 0 {
-			err = fmt.Errorf("failed to authorize access token using refresh token on behalf of user: %s; %s", *accessToken.UserID, *accessToken.Errors[0].Message)
+			err = fmt.Errorf("failed to authorize access token using refresh token on behalf of subject: %s; %s", *accessToken.Subject, *accessToken.Errors[0].Message)
 			common.Log.Warningf(err.Error())
 			provide.RenderError(err.Error(), 401, c)
 			return

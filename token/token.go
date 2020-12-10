@@ -28,7 +28,6 @@ const authorizationSubjectUser = "user"
 
 const defaultRefreshTokenTTL = time.Hour * 24 * 30
 const defaultAccessTokenTTL = time.Minute * 60
-const defaultTokenType = "bearer"
 
 const extendedApplicationClaimsKey = "extended"
 const wildcardApplicationResource = "*"
@@ -56,7 +55,6 @@ type Token struct {
 	// OAuth 2 fields
 	AccessToken  *string `sql:"-" json:"access_token,omitempty"`
 	RefreshToken *string `sql:"-" json:"refresh_token,omitempty"`
-	TokenType    *string `sql:"-" json:"token_type,omitempty"`
 	Scope        *string `sql:"-" json:"scope,omitempty"`
 
 	// Ephemeral JWT header fields and claims; these are here for convenience and are not
@@ -74,6 +72,8 @@ type Token struct {
 	ExtendedPermissions  *json.RawMessage  `sql:"-" json:"-"`
 	TTL                  *int              `sql:"-" json:"-"` // number of seconds this token will be valid; used internally
 	Data                 *json.RawMessage  `sql:"-" json:"data,omitempty"`
+	IsRefreshToken       bool              `sql:"-" json:"-"`
+	IsRevocable          bool              `sql:"-" json:"-"`
 
 	NatsClaims map[string]interface{} `sql:"-" json:"-"` // NATS claims
 }
@@ -81,7 +81,6 @@ type Token struct {
 // Response represents the token portion of the response to a successful authentication request
 type Response struct {
 	ID           *uuid.UUID `json:"id,omitempty"`
-	TokenType    *string    `json:"token_type,omitempty"`
 	AccessToken  *string    `json:"access_token,omitempty"`
 	RefreshToken *string    `json:"refresh_token,omitempty"`
 	IDToken      *string    `json:"id_token,omitempty"`
@@ -144,6 +143,7 @@ func Parse(token string) (*Token, error) {
 	})
 
 	var tkn *Token
+	isRefreshToken := false
 
 	if err != nil {
 		tkn = FindLegacyToken(token)
@@ -197,7 +197,9 @@ func Parse(token string) (*Token, error) {
 	case authorizationSubjectOrganization:
 		orgID = &subUUID
 	case authorizationSubjectToken:
-		// this is a refresh token and can only authorize new access tokens on behalf of a user_id specified in the application claims
+		isRefreshToken = true
+
+		// this is a refresh token and can only authorize new access tokens on behalf of an app, org or user specified in the application claims
 		if appclaimsOk {
 			if claimedUserID, claimedUserIDOk := appclaims["user_id"].(string); claimedUserIDOk {
 				subUUID, err := uuid.FromString(claimedUserID)
@@ -207,6 +209,22 @@ func Parse(token string) (*Token, error) {
 
 				userID = &subUUID
 				common.Log.Debugf("authorized refresh token for creation of new access token on behalf of user: %s", userID)
+			} else if claimedAppID, claimedAppIDOk := appclaims["application_id"].(string); claimedAppIDOk {
+				subUUID, err := uuid.FromString(claimedAppID)
+				if err != nil {
+					return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
+				}
+
+				appID = &subUUID
+				common.Log.Debugf("authorized refresh token for creation of new access token on behalf of application: %s", appID)
+			} else if claimedOrgID, claimedOrgIDOk := appclaims["organization_id"].(string); claimedOrgIDOk {
+				subUUID, err := uuid.FromString(claimedOrgID)
+				if err != nil {
+					return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
+				}
+
+				orgID = &subUUID
+				common.Log.Debugf("authorized refresh token for creation of new access token on behalf of organization: %s", orgID)
 			}
 		}
 	case authorizationSubjectUser:
@@ -232,6 +250,7 @@ func Parse(token string) (*Token, error) {
 		Token:          &jwtToken.Raw,
 		IssuedAt:       iat,
 		ExpiresAt:      exp,
+		IsRefreshToken: isRefreshToken,
 		NotBefore:      nbf,
 		Subject:        common.StringOrNil(sub),
 		UserID:         userID,
@@ -326,20 +345,6 @@ func FindLegacyToken(token string) *Token {
 	return nil
 }
 
-// GetApplicationTokens - retrieve the tokens associated with the given application
-func GetApplicationTokens(applicationID *uuid.UUID) []*Token {
-	var tokens []*Token
-	dbconf.DatabaseConnection().Where("application_id = ?", applicationID).Find(&tokens)
-	return tokens
-}
-
-// GetOrganizationTokens - retrieve the tokens associated with the given organization
-func GetOrganizationTokens(organizationID *uuid.UUID) []*Token {
-	var tokens []*Token
-	dbconf.DatabaseConnection().Where("organization_id = ?", organizationID).Find(&tokens)
-	return tokens
-}
-
 // IsRevoked returns true if the token has been revoked
 func (t *Token) IsRevoked() bool {
 	return IsRevoked(t)
@@ -387,7 +392,6 @@ func (t *Token) AsResponse() *Response {
 	permissions := uint32(t.Permissions)
 	resp := &Response{
 		ID:          &t.ID,
-		TokenType:   t.TokenType,
 		ExpiresIn:   expiresIn,
 		Scope:       t.Scope,
 		Permissions: &permissions,
@@ -475,7 +479,7 @@ func (t *Token) Vend() bool {
 			})
 			return false
 		}
-		return t.Token != nil
+		return t.Token != nil || t.AccessToken != nil || t.RefreshToken != nil
 	}
 	return false
 }
@@ -488,7 +492,6 @@ func (t *Token) vendRefreshToken() bool {
 
 	ttl := int(defaultRefreshTokenTTL.Seconds())
 	refreshToken := &Token{
-		TokenType:           common.StringOrNil(defaultTokenType),
 		UserID:              t.UserID,
 		ApplicationID:       t.ApplicationID,
 		OrganizationID:      t.OrganizationID,
@@ -507,6 +510,7 @@ func (t *Token) vendRefreshToken() bool {
 	}
 
 	t.RefreshToken = refreshToken.Token
+	t.IsRefreshToken = true
 	return true
 }
 
@@ -515,7 +519,9 @@ func (t *Token) vendRefreshToken() bool {
 // are persisted as "legacy" tokens as described in the VendLegacyToken docs
 func VendApplicationToken(
 	tx *gorm.DB,
-	applicationID, organizationID, userID *uuid.UUID,
+	applicationID,
+	organizationID,
+	userID *uuid.UUID,
 	extPermissions map[string]common.Permission,
 	audience *string,
 ) (*Token, error) {
@@ -540,6 +546,7 @@ func VendApplicationToken(
 		Permissions:         common.DefaultApplicationResourcePermission,
 		ExtendedPermissions: &extPermissionsJSON,
 		Audience:            audience,
+		IsRevocable:         true,
 	}
 
 	if !t.validate() {
@@ -589,16 +596,13 @@ func (t *Token) validate() bool {
 			Message: common.StringOrNil("token has already been vended"),
 		})
 	}
-	if (t.ApplicationID != nil && t.UserID != nil) || (t.OrganizationID != nil && t.UserID != nil) {
-		t.Errors = append(t.Errors, &provide.Error{
-			Message: common.StringOrNil("ambiguous token subject"),
-		})
-	}
+
 	if t.IssuedAt != nil {
 		t.Errors = append(t.Errors, &provide.Error{
 			Message: common.StringOrNil("token must not self-assert iat claim"),
 		})
 	}
+
 	if t.ExpiresAt != nil {
 		t.Errors = append(t.Errors, &provide.Error{
 			Message: common.StringOrNil("token must not self-assert exp claim"),
@@ -615,7 +619,11 @@ func (t *Token) validate() bool {
 		} else {
 			exp = t.IssuedAt.Add(util.JWTAuthorizationTTL)
 		}
-		t.ExpiresAt = &exp
+
+		if !t.IsRevocable {
+			// FIXME-- revocable strategy should be top stop verifying signatures for a specific `kid`
+			t.ExpiresAt = &exp
+		}
 
 		if t.ExpiresAt != nil && t.ExpiresAt.Before(*t.IssuedAt) {
 			t.Errors = append(t.Errors, &provide.Error{
@@ -642,12 +650,12 @@ func (t *Token) validate() bool {
 
 		if t.Subject == nil {
 			var sub *string
-			if t.UserID != nil {
-				sub = common.StringOrNil(fmt.Sprintf("user:%s", t.UserID.String()))
+			if t.OrganizationID != nil {
+				sub = common.StringOrNil(fmt.Sprintf("%s:%s", authorizationSubjectOrganization, t.OrganizationID.String()))
 			} else if t.ApplicationID != nil {
-				sub = common.StringOrNil(fmt.Sprintf("application:%s", t.ApplicationID.String()))
-			} else if t.OrganizationID != nil {
-				sub = common.StringOrNil(fmt.Sprintf("organization:%s", t.OrganizationID.String()))
+				sub = common.StringOrNil(fmt.Sprintf("%s:%s", authorizationSubjectApplication, t.ApplicationID.String()))
+			} else if t.UserID != nil {
+				sub = common.StringOrNil(fmt.Sprintf("%s:%s", authorizationSubjectUser, t.UserID.String()))
 			}
 			t.Subject = sub
 		}
@@ -665,6 +673,7 @@ func (t *Token) validate() bool {
 // Delete a legacy API token; effectively revokes the legacy token by permanently removing it from
 // persistent storage; subsequent attempts to authorize requests with this token will fail after
 // calling this method
+// FIXME -- how revocation works
 func (t *Token) Delete(tx *gorm.DB) bool {
 	if t.ID == uuid.Nil {
 		common.Log.Warning("attempted to delete ephemeral token instance")
@@ -744,18 +753,21 @@ func (t *Token) Revoke(tx *gorm.DB) bool {
 func (t *Token) encodeJWT() error {
 	claims := map[string]interface{}{
 		"aud": t.Audience,
-		"exp": t.ExpiresAt.Unix(),
 		"iat": t.IssuedAt.Unix(),
 		"iss": t.Issuer,
 		"jti": t.ID,
 		"sub": t.Subject,
 	}
 
+	if t.ExpiresAt != nil {
+		claims["exp"] = t.ExpiresAt.Unix()
+	}
+
 	if t.NotBefore != nil {
 		claims["nbf"] = t.NotBefore.Unix()
 	}
 
-	if t.ApplicationID != nil {
+	if t.IsRevocable {
 		// drop exp claim from revocable application token
 		delete(claims, "exp")
 	}
@@ -784,6 +796,7 @@ func (t *Token) encodeJWT() error {
 		common.Log.Warningf("failed to sign JWT; %s", err.Error())
 		return nil
 	}
+
 	t.Token = common.StringOrNil(token)
 	t.AccessToken = t.Token
 
