@@ -2,7 +2,8 @@ name: integration-test
 on:
   push:
     branches:
-      - integration
+      - dev
+      - master
 jobs:
   test:
     runs-on: ubuntu-latest
