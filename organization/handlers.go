@@ -112,6 +112,18 @@ func organizationDetailsHandler(c *gin.Context) {
 		return
 	}
 
+	// if we don't have an org bearer token, pull the org id from the params
+	// the resolveOrganization will ensure that the bearer token user is
+	// associated with that org
+	if orgID == nil {
+		organizationID, err := uuid.FromString(c.Param("id"))
+		if err != nil {
+			provide.RenderError("bad request", 400, c)
+			return
+		}
+		orgID = &organizationID
+	}
+
 	db := dbconf.DatabaseConnection()
 	org := &Organization{}
 	resolveOrganization(db, orgID, nil, userID).Find(&org)
