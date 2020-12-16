@@ -1,4 +1,4 @@
-// +build integration
+// +build integration ident
 
 package integration
 
@@ -12,6 +12,7 @@ import (
 )
 
 func TestUserAccessRefreshToken(t *testing.T) {
+	t.Parallel()
 	testId, err := uuid.NewV4()
 	if err != nil {
 		t.Errorf("error creating uuid; %s", err.Error())
@@ -103,6 +104,7 @@ func TestUserAccessRefreshToken(t *testing.T) {
 }
 
 func TestAppRevocableToken(t *testing.T) {
+	t.Parallel()
 	testId, err := uuid.NewV4()
 	if err != nil {
 		t.Errorf("error creating uuid; %s", err.Error())
@@ -163,6 +165,7 @@ func TestAppRevocableToken(t *testing.T) {
 }
 
 func TestAppAccessRefreshToken(t *testing.T) {
+	t.Parallel()
 	testId, err := uuid.NewV4()
 	if err != nil {
 		t.Errorf("error creating uuid; %s", err.Error())
@@ -253,6 +256,7 @@ func TestAppAccessRefreshToken(t *testing.T) {
 }
 
 func TestOrgAccessRefreshToken(t *testing.T) {
+	t.Parallel()
 	testId, err := uuid.NewV4()
 	if err != nil {
 		t.Errorf("error creating uuid; %s", err.Error())

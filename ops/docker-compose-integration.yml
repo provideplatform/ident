@@ -16,7 +16,7 @@ services:
       start_period: 10s
     hostname: postgres
     volumes:
-      - vault-db:/var/lib/postgresql/data
+      - provide-db:/var/lib/postgresql/data
     networks:
       - provide
     ports:
@@ -323,4 +323,4 @@ networks:
       - subnet: 172.40.0.0/24
 
 volumes:
-  vault-db:
+  provide-db:

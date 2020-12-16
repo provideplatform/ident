@@ -1,4 +1,4 @@
-// +build integration
+// +build integration ident
 
 package integration
 
@@ -11,6 +11,7 @@ import (
 )
 
 func TestInviteUserFailsWithoutEmail(t *testing.T) {
+	t.Parallel()
 	testId, _ := uuid.NewV4()
 	email := fmt.Sprintf("%s@prvd.local", testId.String())
 
@@ -37,6 +38,7 @@ func TestInviteUserFailsWithoutEmail(t *testing.T) {
 }
 
 func TestInviteUserFailsWithInvalidEmail(t *testing.T) {
+	t.Parallel()
 	testId, _ := uuid.NewV4()
 	email := fmt.Sprintf("%s@prvd.local", testId.String())
 
@@ -65,6 +67,7 @@ func TestInviteUserFailsWithInvalidEmail(t *testing.T) {
 }
 
 func TestInviteUserByUserWithoutSudoFailsWithArbitraryPermission(t *testing.T) {
+	t.Parallel()
 	testId, _ := uuid.NewV4()
 	email := fmt.Sprintf("%s@prvd.local", testId.String())
 
@@ -99,6 +102,7 @@ func TestInviteUserByUserWithoutSudoFailsWithArbitraryPermission(t *testing.T) {
 }
 
 func TestInviteUserFailsWithExistingUserEmail(t *testing.T) {
+	t.Parallel()
 	testId, _ := uuid.NewV4()
 	email := fmt.Sprintf("%s@prvd.local", testId.String())
 
@@ -137,6 +141,7 @@ func TestInviteUserFailsWithExistingUserEmail(t *testing.T) {
 }
 
 func TestInviteUserWithUserAPIToken(t *testing.T) {
+	t.Parallel()
 	testId, _ := uuid.NewV4()
 	email := fmt.Sprintf("%s@prvd.local", testId.String())
 
@@ -181,6 +186,7 @@ func TestInviteUserWithUserAPIToken(t *testing.T) {
 }
 
 func TestInviteApplicationUserWithApplicationAPIToken(t *testing.T) {
+	t.Parallel()
 	testId, _ := uuid.NewV4()
 	email := fmt.Sprintf("%s@prvd.local", testId.String())
 
@@ -238,6 +244,7 @@ func TestInviteApplicationUserWithApplicationAPIToken(t *testing.T) {
 }
 
 func TestInviteOrganizationUserWithOrganizationAPIToken(t *testing.T) {
+	t.Parallel()
 	testId, _ := uuid.NewV4()
 	email := fmt.Sprintf("%s@prvd.local", testId.String())
 

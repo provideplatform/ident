@@ -1,4 +1,4 @@
-// +build integration
+// +build integration ident
 
 package integration
 
@@ -10,7 +10,7 @@ import (
 )
 
 func TestDeleteOrganizationUser(t *testing.T) {
-
+	t.Parallel()
 	testId, err := uuid.NewV4()
 	if err != nil {
 		t.Logf("error creating new UUID")
@@ -157,6 +157,7 @@ func TestDeleteOrganizationUser(t *testing.T) {
 }
 
 func TestListOrganizationUsersWithNoUsersInOrg(t *testing.T) {
+	t.Parallel()
 	testId, err := uuid.NewV4()
 	if err != nil {
 		t.Logf("error creating new UUID")
@@ -226,6 +227,7 @@ func TestListOrganizationUsersWithNoUsersInOrg(t *testing.T) {
 }
 
 func TestListOrganizationUsersUsingOrganizingUser(t *testing.T) {
+	t.Parallel()
 	testId, err := uuid.NewV4()
 	if err != nil {
 		t.Logf("error creating new UUID")
@@ -287,7 +289,7 @@ func TestListOrganizationUsersUsingOrganizingUser(t *testing.T) {
 // to be a programmatic api token for interacting with organization-owned resources *without*
 // undermining the privacy of users who may be part of the organization...
 func TestListOrganizationUsers(t *testing.T) {
-
+	t.Parallel()
 	testId, err := uuid.NewV4()
 	if err != nil {
 		t.Logf("error creating new UUID")
