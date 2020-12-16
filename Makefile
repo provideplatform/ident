@@ -61,6 +61,6 @@ test: build
 	NATS_SERVER_PORT=4223 NATS_STREAMING_SERVER_PORT=4224 ./ops/run_local_dependencies.sh
 	NATS_SERVER_PORT=4223 NATS_STREAMING_SERVER_PORT=4224 ./ops/run_unit_tests.sh
 
-integration: build
-	NATS_SERVER_PORT=4223 NATS_STREAMING_SERVER_PORT=4224 ./ops/run_local_dependencies.sh
+integration:
+	# NATS_SERVER_PORT=4223 NATS_STREAMING_SERVER_PORT=4224 ./ops/run_local_dependencies.sh
 	NATS_SERVER_PORT=4223 NATS_STREAMING_SERVER_PORT=4224 ./ops/run_integration_tests.sh
