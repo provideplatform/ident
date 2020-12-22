@@ -73,9 +73,6 @@ type SiaModel struct {
 }
 
 func (call *siaAPICall) enrich(db *gorm.DB) {
-	// var call *common.APICall
-	var params map[string]interface{}
-
 	tmpCall := &siaAPICall{}
 	db.Where("sha256 = ?", *call.Sha256).Find(&tmpCall)
 	if tmpCall != nil && tmpCall.ID != 0 { // FIXME- use int?
@@ -84,17 +81,18 @@ func (call *siaAPICall) enrich(db *gorm.DB) {
 		return
 	}
 
-	// err = json.Unmarshal(msg.Data, &call)
-	// if err != nil {
-	// 	common.Log.Warningf("failed to unmarshal API call event; %s", err.Error())
-	// 	// natsutil.AttemptNack(msg, natsSiaAPIUsageEventTimeout)
-	// 	return
-	// }
+	isApplicationSub := false
+	isUserSub := false
+	// isOrgSub := false
 
-	subjectParts := strings.Split(params["sub"].(string), ":")
-	isApplicationSub := subjectParts[0] == "application"
-	isUserSub := subjectParts[0] == "user"
-	// FIXME? isOrgSub := subjectParts[0] == "organization"
+	subjectParts := make([]string, 0)
+	if call.Sub != "" {
+		subjectParts = strings.Split(call.Sub, ":")
+
+		isApplicationSub = subjectParts[0] == "application"
+		isUserSub = subjectParts[0] == "user"
+		// FIXME? isOrgSub := subjectParts[0] == "organization"
+	}
 
 	account := &siaAccount{} // responsible billing account
 	var resolverErr error
