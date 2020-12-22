@@ -1,6 +1,9 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -36,6 +39,27 @@ type siaAPICall struct {
 
 	Hash *string `gorm:"column:sha256" json:"sha256"`
 	Raw  []byte  `json:"raw"`
+}
+
+// CalculateHash calculates the sha256 hash of the APICall instance using
+// the given packet; if packet is nil, the json representation of APICall
+// is used to calculate the hash; this is used to ensure no api call is
+// accounted for twice
+func (a *siaAPICall) CalculateHash(packet *[]byte) error {
+	representation := packet
+	if packet == nil {
+		apiCallJSON, _ := json.Marshal(a)
+		packet = &apiCallJSON
+	}
+
+	digest := sha256.New()
+	_, err := digest.Write(*representation)
+	if err != nil {
+		return err
+	}
+	hash := hex.EncodeToString(digest.Sum(nil))
+	a.Sha256 = &hash
+	return nil
 }
 
 func (siaAPICall) TableName() string {
