@@ -102,6 +102,7 @@ services:
       - postgres
       - redis
     environment:
+      - API_ACCOUNTING_ADDRESS=api-accountant:8889
       - DATABASE_HOST=postgres
       - DATABASE_NAME=ident_dev
       - DATABASE_USER=ident
@@ -130,6 +131,37 @@ services:
       - 8081:8080
     restart: always
 
+  api-accountant:
+    build: ../
+    entrypoint: ./ops/run_api_accountant.sh
+    container_name: api-accountant
+    depends_on:
+      - postgres
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_NAME=ident_dev
+      - DATABASE_USER=ident
+      - DATABASE_PASSWORD=ident
+      - DATABASE_SUPERUSER=prvd
+      - DATABASE_SUPERUSER_PASSWORD=prvdp455
+      - NATS_CLIENT_PREFIX=ident
+      - NATS_URL=nats://nats:4222
+      - NATS_STREAMING_URL=nats://nats-streaming:4222
+      - REDIS_HOSTS=redis:6379
+      - LOG_LEVEL=DEBUG
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://ident:8080/status"]
+      interval: 1m
+      timeout: 1s
+      retries: 2
+      start_period: 10s
+    hostname: api-accountant
+    networks:
+      - ident
+    ports:
+      - 8889:8889/udp
+    restart: always
+
 networks:
   ident:
     driver: bridge
@@ -139,4 +171,3 @@ networks:
 
 volumes:
   ident-db:
-

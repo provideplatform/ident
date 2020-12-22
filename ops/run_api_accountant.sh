@@ -5,11 +5,11 @@ if [[ -z "${API_ACCOUNTING_LISTEN_ADDRESS}" ]]; then
 fi
 
 if [[ -z "${LOG_LEVEL}" ]]; then
-  LOG_LEVEL=info
+  LOG_LEVEL=debug
 fi
 
 if [[ -z "${DATABASE_HOST}" ]]; then
-  DATABASE_HOST=localhost
+  DATABASE_HOST=0.0.0.0
 fi
 
 if [[ -z "${DATABASE_NAME}" ]]; then
