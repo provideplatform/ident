@@ -38,8 +38,8 @@ type siaAPICall struct {
 	AccountID     *uint //`json:"account_id"`
 	ApplicationID *uint //`json:"application_id"`
 
-	Hash *string `gorm:"column:sha256" json:"sha256"`
-	Raw  []byte  `json:"raw"`
+	Hash *string         `gorm:"-"`
+	Raw  json.RawMessage `json:"raw"`
 }
 
 // CalculateHash calculates the sha256 hash of the APICall instance using
