@@ -138,8 +138,8 @@ func (a *accountant) flush() error {
 				} else if apiCall != nil {
 					common.Log.Debugf("resolved %d-byte api call accounting packet to accountable user: %s: ", len(packet), apiCall.UserID)
 					apiCall.CalculateHash(&packet)
-					apiCall.enrich(a.db)
 					apiCall.Hash = apiCall.Sha256 // HACK
+					apiCall.enrich(a.db)
 					packets = append(packets, *apiCall)
 				}
 			} else {
