@@ -136,7 +136,7 @@ func (a *accountant) flush() error {
 				if err != nil {
 					common.Log.Warningf("failed to resolve %d-byte api call accounting packet to accountable user; %s: ", len(packet), err.Error())
 				} else if apiCall != nil {
-					common.Log.Debugf("resolved %d-byte api call accounting packet to accountable user: %s: ", len(packet), apiCall.UserID)
+					common.Log.Debugf("resolved %d-byte api call accounting packet to accountable user: %s: ", len(packet), apiCall.IdentUserID)
 					apiCall.CalculateHash(&packet)
 					apiCall.Hash = apiCall.Sha256 // HACK
 					apiCall.enrich(a.db)
