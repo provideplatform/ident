@@ -2,14 +2,19 @@ package main
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"os/signal"
 	"sync/atomic"
 	"syscall"
 	"time"
 
+	"github.com/gin-gonic/gin"
+
 	dbconf "github.com/kthomas/go-db-config"
 	"github.com/provideapp/ident/common"
+	provide "github.com/provideservices/provide-go/common"
+	util "github.com/provideservices/provide-go/common/util"
 )
 
 const runloopSleepInterval = 100 * time.Millisecond
@@ -28,6 +33,7 @@ var (
 func main() {
 	installSignalHandlers()
 
+	runAPI()
 	err := runAPIAccountant(
 		dbconf.DatabaseConnection(),
 		apiAccountantBufferSize,
@@ -57,6 +63,31 @@ func main() {
 
 	common.Log.Debug("exiting API accounting daemon")
 	cancelF()
+}
+
+func runAPI() {
+	r := gin.New()
+	r.Use(gin.Logger())
+	r.Use(gin.Recovery())
+
+	r.GET("/status", statusHandler)
+
+	srv := &http.Server{
+		Addr:    util.ListenAddr,
+		Handler: r,
+	}
+
+	if util.ServeTLS {
+		go srv.ListenAndServeTLS(util.CertificatePath, util.PrivateKeyPath)
+	} else {
+		go srv.ListenAndServe()
+	}
+
+	common.Log.Debugf("listening on %s", util.ListenAddr)
+}
+
+func statusHandler(c *gin.Context) {
+	provide.Render(nil, 204, c)
 }
 
 func installSignalHandlers() {

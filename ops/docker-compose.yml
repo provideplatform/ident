@@ -149,6 +149,7 @@ services:
       - NATS_STREAMING_URL=nats://nats-streaming:4222
       - REDIS_HOSTS=redis:6379
       - LOG_LEVEL=DEBUG
+      - PORT=8080
     healthcheck:
       test: ["CMD", "curl", "-f", "http://ident:8080/status"]
       interval: 1m
