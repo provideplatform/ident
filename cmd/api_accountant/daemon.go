@@ -131,13 +131,15 @@ func (a *accountant) flush() error {
 		case packet, ok := <-a.q:
 			if ok {
 				common.Log.Debugf("handling %d-byte api call accounting packet: %s: ", len(packet), string(packet))
-				var apiCall *common.APICall
+				var apiCall *siaAPICall
 				err := json.Unmarshal(packet, &apiCall)
 				if err != nil {
 					common.Log.Warningf("failed to resolve %d-byte api call accounting packet to accountable user; %s: ", len(packet), err.Error())
 				} else if apiCall != nil {
 					common.Log.Debugf("resolved %d-byte api call accounting packet to accountable user: %s: ", len(packet), apiCall.UserID)
+					apiCall.Raw = packet
 					apiCall.CalculateHash(&packet)
+					apiCall.enrich(a.db)
 					packets = append(packets, *apiCall)
 				}
 			} else {
