@@ -78,10 +78,10 @@ func init() {
 	DispatchSiaNotifications = strings.ToLower(os.Getenv("DISPATCH_SIA_NOTIFICATIONS")) == "true"
 }
 
-// RequireAPIAccounting allows a package to conditionally require the presence of
+// EnableAPIAccounting allows a package to conditionally require the presence of
 // an API_ACCOUNTING_ADDRESS environment variable which specifies the address to
 // which API call accounting packets will be delivered via UDP
-func RequireAPIAccounting() {
+func EnableAPIAccounting() {
 	if os.Getenv(apiAccountingAddressEnvVar) != "" {
 		addr := os.Getenv(apiAccountingAddressEnvVar)
 		udpaddr, err := net.ResolveUDPAddr("udp", addr)
@@ -92,7 +92,7 @@ func RequireAPIAccounting() {
 		apiAccountingAddress = udpaddr
 		establishAPIAccountingConn()
 	} else {
-		Log.Panicf("failed to parse %s; no api accounting endpoint configured", apiAccountingAddressEnvVar)
+		Log.Tracef("failed to parse %s; no api accounting endpoint configured", apiAccountingAddressEnvVar)
 	}
 }
 

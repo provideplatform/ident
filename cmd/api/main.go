@@ -51,7 +51,7 @@ func init() {
 	pgputil.RequirePGP()
 	redisutil.RequireRedis()
 	// util.RequireVault()
-	common.RequireAPIAccounting()
+	common.EnableAPIAccounting()
 }
 
 func main() {
