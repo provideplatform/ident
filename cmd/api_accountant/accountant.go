@@ -17,8 +17,9 @@ import (
 type siaAPICall struct {
 	SiaModel
 
-	IdentApplicationID string `gorm:"-" json:"application_id,omitempty"`
-	IdentUserID        string `gorm:"-" json:"user_id,omitempty"`
+	IdentApplicationID  string `gorm:"-" json:"application_id,omitempty"`
+	IdentOrganizationID string `gorm:"-" json:"organization_id,omitempty"`
+	IdentUserID         string `gorm:"-" json:"user_id,omitempty"`
 
 	Sub           string    `json:"sub,omitempty"`
 	Method        string    `json:"method,omitempty"`
@@ -126,9 +127,20 @@ func (call *siaAPICall) enrich(db *gorm.DB) {
 	isUserSub := false
 	// isOrgSub := false
 
+	_sub := call.Sub
+	if _sub == "" {
+		if call.IdentUserID != "" {
+			_sub = fmt.Sprintf("user:%s", call.IdentUserID)
+		} else if call.IdentApplicationID != "" {
+			_sub = fmt.Sprintf("application:%s", call.IdentApplicationID)
+		} else if call.IdentOrganizationID != "" {
+			_sub = fmt.Sprintf("organization:%s", call.IdentOrganizationID)
+		}
+	}
+
 	subjectParts := make([]string, 0)
-	if call.Sub != "" {
-		subjectParts = strings.Split(call.Sub, ":")
+	if _sub != "" {
+		subjectParts = strings.Split(_sub, ":")
 
 		isApplicationSub = subjectParts[0] == "application"
 		isUserSub = subjectParts[0] == "user"

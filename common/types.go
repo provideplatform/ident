@@ -11,17 +11,18 @@ import (
 
 // APICall for accounting purposes
 type APICall struct {
-	ApplicationID string    `json:"application_id,omitempty"`
-	UserID        string    `json:"user_id,omitempty"`
-	Sub           string    `json:"sub,omitempty"`
-	Method        string    `json:"method,omitempty"`
-	Host          string    `json:"host,omitempty"`
-	Path          string    `json:"path,omitempty"`
-	RemoteAddr    string    `json:"remote_addr,omitempty"`
-	Timestamp     time.Time `json:"timestamp,omitempty"`
-	ContentLength *uint     `json:"content_length,omitempty"`
-	StatusCode    int       `json:"status_code,omitempty"`
-	Sha256        *string   `json:"sha256,omitempty"`
+	ApplicationID  string    `json:"application_id,omitempty"`
+	UserID         string    `json:"user_id,omitempty"`
+	OrganizationID string    `json:"organization_id,omitempty"`
+	Sub            string    `json:"sub,omitempty"`
+	Method         string    `json:"method,omitempty"`
+	Host           string    `json:"host,omitempty"`
+	Path           string    `json:"path,omitempty"`
+	RemoteAddr     string    `json:"remote_addr,omitempty"`
+	Timestamp      time.Time `json:"timestamp,omitempty"`
+	ContentLength  *uint     `json:"content_length,omitempty"`
+	StatusCode     int       `json:"status_code,omitempty"`
+	Sha256         *string   `json:"sha256,omitempty"`
 }
 
 // CalculateHash calculates the sha256 hash of the APICall instance using
