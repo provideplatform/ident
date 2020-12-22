@@ -69,6 +69,8 @@ func main() {
 }
 
 func runAPI() {
+	util.RequireGin()
+
 	r := gin.New()
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
