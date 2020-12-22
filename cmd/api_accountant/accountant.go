@@ -14,8 +14,8 @@ type siaAPICall struct {
 	SiaModel
 	common.APICall
 
-	AccountID     *uint `json:"account_id"`
-	ApplicationID *uint `json:"application_id"`
+	AccountID     *uint //`json:"account_id"`
+	ApplicationID *uint //`json:"application_id"`
 
 	Hash *string `gorm:"column:sha256" json:"sha256"`
 	Raw  []byte  `json:"raw"`
