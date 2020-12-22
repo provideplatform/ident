@@ -17,7 +17,7 @@ import (
 type siaAPICall struct {
 	SiaModel
 
-	IdentApplicationID string `json:"application_id,omitempty"`
+	IdentApplicationID string `gorm:"-" json:"application_id,omitempty"`
 	IdentUserID        string `gorm:"-" json:"user_id,omitempty"`
 
 	Sub           string    `json:"sub,omitempty"`
