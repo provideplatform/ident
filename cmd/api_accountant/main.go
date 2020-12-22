@@ -28,6 +28,8 @@ var (
 	closing     uint32
 	shutdownCtx context.Context
 	sigs        chan os.Signal
+
+	srv *http.Server
 )
 
 func main() {
@@ -53,6 +55,7 @@ func main() {
 			go daemon.read()
 		case sig := <-sigs:
 			common.Log.Infof("received signal: %s", sig)
+			srv.Shutdown(shutdownCtx)
 			shutdown()
 		case <-shutdownCtx.Done():
 			close(sigs)
