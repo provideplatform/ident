@@ -14,6 +14,11 @@ type siaAPICall struct {
 	SiaModel
 	common.APICall
 
+	// ident types
+	// ApplicationID string `json:"application_id,omitempty"`
+	UserID string `gorm:"-" json:"user_id,omitempty"`
+
+	// sia types
 	AccountID     *uint //`json:"account_id"`
 	ApplicationID *uint //`json:"application_id"`
 
