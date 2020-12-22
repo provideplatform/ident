@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	uuid "github.com/kthomas/go.uuid"
@@ -12,11 +13,22 @@ import (
 
 type siaAPICall struct {
 	SiaModel
-	common.APICall
+
+	IdentApplicationID string `json:"application_id,omitempty"`
+	IdentUserID        string `gorm:"-" json:"user_id,omitempty"`
+
+	Sub           string    `json:"sub,omitempty"`
+	Method        string    `json:"method,omitempty"`
+	Host          string    `json:"host,omitempty"`
+	Path          string    `json:"path,omitempty"`
+	RemoteAddr    string    `json:"remote_addr,omitempty"`
+	Timestamp     time.Time `json:"timestamp,omitempty"`
+	ContentLength *uint     `json:"content_length,omitempty"`
+	StatusCode    int       `json:"status_code,omitempty"`
+	Sha256        *string   `json:"sha256,omitempty"`
 
 	// ident types
 	// ApplicationID string `json:"application_id,omitempty"`
-	UserID string `gorm:"-" json:"user_id,omitempty"`
 
 	// sia types
 	AccountID     *uint //`json:"account_id"`
