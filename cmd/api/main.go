@@ -110,7 +110,6 @@ func runAPI() {
 	r.Use(token.AuthMiddleware())
 	r.Use(common.AccountingMiddleware())
 	r.Use(common.RateLimitingMiddleware())
-	r.Use(util.TrackAPICalls())
 
 	application.InstallApplicationAPI(r)
 	application.InstallApplicationOrganizationsAPI(r)
