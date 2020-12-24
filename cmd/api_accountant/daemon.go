@@ -12,7 +12,7 @@ import (
 
 	"github.com/jinzhu/gorm"
 	"github.com/provideapp/ident/common"
-	gormbulk "github.com/t-tiger/gorm-bulk-insert"
+	// gormbulk "github.com/t-tiger/gorm-bulk-insert"
 )
 
 const identAPIAccountingListenAddressEnvVar = "API_ACCOUNTING_LISTEN_ADDRESS"
