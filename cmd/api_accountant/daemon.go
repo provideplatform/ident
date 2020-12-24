@@ -148,12 +148,12 @@ func (a *accountant) flush() error {
 			}
 		default:
 			if len(a.q) == 0 {
-				common.Log.Debugf("batching insert of %d flushed api call accounting packets", len(packets))
-				err := gormbulk.BulkInsert(a.db, packets, identAPIAccountingInsertBatchSize)
-				if err != nil {
-					common.Log.Warningf("failed to execute batch insert of %d flushed api call accounting packets; %s", len(packets), err.Error())
-					return err
-				}
+				// common.Log.Debugf("batching insert of %d flushed api call accounting packets", len(packets))
+				//err := gormbulk.BulkInsert(a.db, packets, identAPIAccountingInsertBatchSize)
+				// if err != nil {
+				// 	common.Log.Warningf("failed to execute batch insert of %d flushed api call accounting packets; %s", len(packets), err.Error())
+				// 	return err
+				// }
 
 				common.Log.Debugf("successfully flushed %d api call accounting packets", len(packets))
 				return nil
