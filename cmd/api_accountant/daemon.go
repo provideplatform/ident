@@ -147,7 +147,7 @@ func (a *accountant) flush() error {
 		default:
 			if len(a.q) == 0 {
 				for _, pkt := range packets {
-					result := a.db.Create(&pkt)
+					result := a.db.Create(pkt.(siaAPICall))
 					rowsAffected := result.RowsAffected
 					errors := result.GetErrors()
 					if len(errors) > 0 {
