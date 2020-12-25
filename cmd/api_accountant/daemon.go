@@ -152,13 +152,13 @@ func (a *accountant) flush() error {
 					errors := result.GetErrors()
 					if len(errors) > 0 {
 						for _, err := range errors {
-							common.Log.Warningf("failed to insert API call event: %s; %s", *pkt.(*siaAPICall).Sha256, err.Error())
+							common.Log.Warningf("failed to insert API call event: %s; %s", *pkt.(siaAPICall).Sha256, err.Error())
 						}
 					}
 					if rowsAffected == 0 {
 						common.Log.Warning("failed to persist API call event")
 					}
-					common.Log.Debugf("call API call event persisted: %s", *pkt.(*siaAPICall).Sha256)
+					common.Log.Debugf("call API call event persisted: %s", *pkt.(siaAPICall).Sha256)
 				}
 
 				// common.Log.Debugf("batching insert of %d flushed api call accounting packets", len(packets))
