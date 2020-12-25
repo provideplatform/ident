@@ -14,7 +14,6 @@ type APICall struct {
 	ApplicationID  string    `json:"application_id,omitempty"`
 	UserID         string    `json:"user_id,omitempty"`
 	OrganizationID string    `json:"organization_id,omitempty"`
-	Sub            string    `json:"sub,omitempty"`
 	Method         string    `json:"method,omitempty"`
 	Host           string    `json:"host,omitempty"`
 	Path           string    `json:"path,omitempty"`
@@ -23,6 +22,7 @@ type APICall struct {
 	ContentLength  *uint     `json:"content_length,omitempty"`
 	StatusCode     int       `json:"status_code,omitempty"`
 	Sha256         *string   `json:"sha256,omitempty"`
+	UserAgent      *string   `json:"user_agent,omitempty"`
 }
 
 // CalculateHash calculates the sha256 hash of the APICall instance using

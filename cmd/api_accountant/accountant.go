@@ -21,7 +21,6 @@ type siaAPICall struct {
 	IdentOrganizationID string `gorm:"-" json:"organization_id,omitempty"`
 	IdentUserID         string `gorm:"-" json:"user_id,omitempty"`
 
-	Sub           string    `json:"sub,omitempty"`
 	Method        string    `json:"method,omitempty"`
 	Host          string    `json:"host,omitempty"`
 	Path          string    `json:"path,omitempty"`
@@ -30,9 +29,7 @@ type siaAPICall struct {
 	ContentLength *uint     `json:"content_length,omitempty"`
 	StatusCode    int       `json:"status_code,omitempty"`
 	Sha256        *string   `json:"sha256,omitempty"`
-
-	// ident types
-	// ApplicationID string `json:"application_id,omitempty"`
+	UserAgent     *string   `json:"user_agent,omitempty"`
 
 	// sia types
 	AccountID     *uint //`json:"account_id"`
@@ -127,7 +124,7 @@ func (call *siaAPICall) enrich(db *gorm.DB) {
 	isUserSub := false
 	// isOrgSub := false
 
-	_sub := call.Sub
+	var _sub string
 	if _sub == "" {
 		if call.IdentUserID != "" {
 			_sub = fmt.Sprintf("user:%s", call.IdentUserID)
@@ -194,27 +191,9 @@ func (call *siaAPICall) enrich(db *gorm.DB) {
 
 	if resolverErr != nil {
 		common.Log.Warningf("Failed to persist API call event: %s; %s", *call.Hash, resolverErr.Error())
-		// natsutil.AttemptNack(msg, natsSiaAPIUsageEventTimeout)
 		return
 	}
 
 	call.AccountID = &account.ID
 	common.Log.Debugf("Resolved responsible account %d for API call event: %s", *call.AccountID, *call.Hash)
-
-	result := db.Create(&call)
-	rowsAffected := result.RowsAffected
-	errors := result.GetErrors()
-	if len(errors) > 0 {
-		for _, err := range errors {
-			common.Log.Warningf("Failed to insert API call event: %s; %s", *call.Sha256, err.Error())
-		}
-	}
-	if rowsAffected == 0 {
-		common.Log.Warning("Failed to persist API call event")
-		// natsutil.AttemptNack(msg, natsSiaAPIUsageEventTimeout)
-		return
-	}
-
-	common.Log.Debugf("call API call event persisted: %s", *call.Sha256)
-	// msg.Ack()
 }

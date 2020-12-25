@@ -12,7 +12,6 @@ import (
 
 	"github.com/jinzhu/gorm"
 	"github.com/provideapp/ident/common"
-	// gormbulk "github.com/t-tiger/gorm-bulk-insert"
 )
 
 const identAPIAccountingListenAddressEnvVar = "API_ACCOUNTING_LISTEN_ADDRESS"
@@ -134,9 +133,8 @@ func (a *accountant) flush() error {
 				var apiCall *siaAPICall
 				err := json.Unmarshal(packet, &apiCall)
 				if err != nil {
-					common.Log.Warningf("failed to resolve %d-byte api call accounting packet to accountable user; %s: ", len(packet), err.Error())
+					common.Log.Warningf("failed to resolve %d-byte api call accounting packet to accountable party; %s: ", len(packet), err.Error())
 				} else if apiCall != nil {
-					common.Log.Debugf("resolved %d-byte api call accounting packet to accountable user: %s: ", len(packet), apiCall.IdentUserID)
 					apiCall.CalculateHash(&packet)
 					apiCall.Raw = json.RawMessage(packet)
 					apiCall.Hash = apiCall.Sha256 // HACK
@@ -148,8 +146,23 @@ func (a *accountant) flush() error {
 			}
 		default:
 			if len(a.q) == 0 {
+				for _, pkt := range packets {
+					result := a.db.Create(&pkt)
+					rowsAffected := result.RowsAffected
+					errors := result.GetErrors()
+					if len(errors) > 0 {
+						for _, err := range errors {
+							common.Log.Warningf("failed to insert API call event: %s; %s", *pkt.(*siaAPICall).Sha256, err.Error())
+						}
+					}
+					if rowsAffected == 0 {
+						common.Log.Warning("failed to persist API call event")
+					}
+					common.Log.Debugf("call API call event persisted: %s", *pkt.(*siaAPICall).Sha256)
+				}
+
 				// common.Log.Debugf("batching insert of %d flushed api call accounting packets", len(packets))
-				//err := gormbulk.BulkInsert(a.db, packets, identAPIAccountingInsertBatchSize)
+				// err := gormbulk.BulkInsert(a.db, packets, identAPIAccountingInsertBatchSize)
 				// if err != nil {
 				// 	common.Log.Warningf("failed to execute batch insert of %d flushed api call accounting packets; %s", len(packets), err.Error())
 				// 	return err

@@ -75,17 +75,21 @@ func newAPICall(c *gin.Context) *APICall {
 		remoteAddr = c.Request.RemoteAddr
 	}
 
+	var userAgent string
+	userAgentHeader := c.GetHeader("user-agent")
+	if userAgentHeader != "" {
+		userAgent = userAgentHeader
+	}
+
 	appID := c.GetString("application_id")
 	userID := c.GetString("user_id")
 	orgID := c.GetString("organization_id")
-	sub := c.GetString("sub")
 
 	if appID != "" || userID != "" {
 		return &APICall{
 			ApplicationID:  appID,
 			UserID:         userID,
 			OrganizationID: orgID,
-			Sub:            sub,
 			Method:         c.Request.Method,
 			Host:           c.Request.Host,
 			Path:           c.Request.URL.Path,
@@ -93,6 +97,7 @@ func newAPICall(c *gin.Context) *APICall {
 			Timestamp:      time.Now(),
 			ContentLength:  contentLength,
 			StatusCode:     c.Writer.Status(),
+			UserAgent:      StringOrNil(userAgent),
 		}
 	}
 
