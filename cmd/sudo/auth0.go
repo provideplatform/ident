@@ -10,6 +10,7 @@ import (
 	"github.com/provideapp/ident/user"
 )
 
+const auth0ConnectionTypeUsernamePassword = "Username-Password-Authentication"
 const identUserIDKey = "ident_user_id"
 
 // syncAuth0 synchronizes data in Auth0 with local Postgres by

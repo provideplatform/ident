@@ -26,6 +26,7 @@ const createUserCmd = "createuser"
 const deleteUserCmd = "deleteuser"
 const natsPublishCmd = "natspublish"
 const syncAuth0Cmd = "syncauth0"
+const syncIdentCmd = "syncident"
 const vendTokenCmd = "vendtoken"
 const vendApplicationTokenCmd = "vendapptoken"
 
@@ -81,6 +82,8 @@ func main() {
 		natsPublish(subject, payload, streaming)
 	case syncAuth0Cmd:
 		syncAuth0()
+	case syncIdentCmd:
+		syncIdent()
 	case vendTokenCmd:
 		email := strings.ToLower(argv[1])
 
@@ -197,6 +200,15 @@ func syncAuth0() {
 		exit(fmt.Sprintf("failed to sync auth0 users; %s", err.Error()), 1)
 	}
 	common.Log.Debug("auth0 sync completed successfully")
+}
+
+func syncIdent() {
+	common.Log.Debugf("attempting to sync ident users in auth0")
+	err := syncIdentUsers(dbconf.DatabaseConnection())
+	if err != nil {
+		exit(fmt.Sprintf("failed to sync ident users; %s", err.Error()), 1)
+	}
+	common.Log.Debug("ident -> auth0 sync completed successfully")
 }
 
 func vendToken(email string, ttl *int) {
