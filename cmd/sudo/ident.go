@@ -9,7 +9,6 @@ import (
 	dbconf "github.com/kthomas/go-db-config"
 	"github.com/provideapp/ident/common"
 	identuser "github.com/provideapp/ident/user"
-	"github.com/provideservices/provide-go/api/ident"
 )
 
 var siaDB *gorm.DB
@@ -18,7 +17,7 @@ var siaConfigOnce sync.Once
 var siaDBOnce sync.Once
 
 func syncIdentUsers(db *gorm.DB) error {
-	var users []*ident.User
+	var users []*identuser.User
 	db.Where("application_id IS NULL").Find(&users)
 
 	common.Log.Debugf("synchronizing %d ident users with auth0...", len(users))
