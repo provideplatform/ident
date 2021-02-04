@@ -13,22 +13,24 @@ const auth0ConnectionTypeUsernamePassword = "Username-Password-Authentication"
 
 // EphemeralUserMetadata are passed through ident during auth0 user creation
 type EphemeralUserMetadata struct {
-	ID           *string                `json:"user_id,omitempty"`
-	Name         *string                `json:"name"`
-	Email        string                 `json:"email"`
-	Password     *string                `json:"password,omitempty"`
-	AppMetadata  map[string]interface{} `json:"app_metadata"`
-	UserMetadata map[string]interface{} `json:"user_metadata"`
+	ID            *string                `json:"user_id,omitempty"`
+	Name          *string                `json:"name"`
+	Email         string                 `json:"email"`
+	EmailVerified bool                   `json:"email_verified"`
+	Password      *string                `json:"password,omitempty"`
+	AppMetadata   map[string]interface{} `json:"app_metadata"`
+	UserMetadata  map[string]interface{} `json:"user_metadata"`
 }
 
 // createAuth0User creates a Username-Password-Authentication connection in auth0
 func createAuth0User(userParams *EphemeralUserMetadata) error {
 	params := map[string]interface{}{
-		"connection":    auth0ConnectionTypeUsernamePassword,
-		"email":         userParams.Email,
-		"password":      userParams.Password,
-		"user_metadata": map[string]interface{}{},
-		"app_metadata":  map[string]interface{}{},
+		"connection":     auth0ConnectionTypeUsernamePassword,
+		"email":          userParams.Email,
+		"email_verified": userParams.EmailVerified,
+		"password":       userParams.Password,
+		"user_metadata":  map[string]interface{}{},
+		"app_metadata":   map[string]interface{}{},
 	}
 	if userParams.Name != nil {
 		params["name"] = userParams.Name
