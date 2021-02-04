@@ -23,7 +23,7 @@ func syncIdentUsers(db *gorm.DB) error {
 
 	common.Log.Debugf("synchronizing %d ident users with auth0...", len(users))
 	for _, usr := range users {
-		err := createAuth0User(usr)
+		err := createAuth0User(usr, db)
 		if err != nil {
 			common.Log.Warningf("failed to synchronize user within auth0: %s", usr.ID.String())
 			return err
@@ -33,15 +33,15 @@ func syncIdentUsers(db *gorm.DB) error {
 }
 
 // createAuth0User attempts to create an auth0 user for the given ident user; ephemeral params are passed through
-func createAuth0User(u *ident.User) error {
+func createAuth0User(u *identuser.User, db *gorm.DB) error {
 	// params := u.Metadata
 	params := &identuser.EphemeralUserMetadata{
-		Name:  common.StringOrNil(u.Email),
-		Email: u.Email,
+		Name:  common.StringOrNil(*u.Email),
+		Email: *u.Email,
 	}
 
 	if params.Email == "" {
-		params.Email = u.Email
+		params.Email = *u.Email
 	}
 
 	if params.Password == nil {
@@ -72,6 +72,8 @@ func createAuth0User(u *ident.User) error {
 	_, err := auth0.CreateUser(_params)
 	if err != nil {
 		// HACK!!
+		u.Password = params.Password
+		db.Save(&u)
 		_, err := auth0.AuthenticateUser(params.Email, *params.Password)
 		if err != nil {
 			return fmt.Errorf("failed to create auth0 user: %s; %s", params.Email, err.Error())
