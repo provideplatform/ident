@@ -15,7 +15,7 @@ require (
 	github.com/google/go-cmp v0.5.2 // indirect
 	github.com/jinzhu/gorm v1.9.16
 	github.com/joho/godotenv v1.3.0
-	github.com/kthomas/go-auth0 v0.0.0-20200602063018-d45ad85a2325
+	github.com/kthomas/go-auth0 v0.0.0-20210204093824-c20e9a5e5d2f
 	github.com/kthomas/go-db-config v0.0.0-20200612131637-ec0436a9685e
 	github.com/kthomas/go-logger v0.0.0-20200602072946-d7d72dfc2531
 	github.com/kthomas/go-natsutil v0.0.0-20200602073459-388e1f070b05
