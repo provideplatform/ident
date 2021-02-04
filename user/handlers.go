@@ -267,15 +267,23 @@ func createUserHandler(c *gin.Context) {
 		return
 	}
 
+	var db *gorm.DB
+	createAuth0User := !common.IsAuth0(c) && common.Auth0IntegrationEnabled
+
 	if Exists(*user.Email, user.ApplicationID, nil) {
+		if createAuth0User {
+			db = dbconf.DatabaseConnection()
+			usr := &User{}
+			db.Where("email = ? AND application_id IS NULL", *user.Email).Find(&usr)
+			usr.createAuth0User()
+		}
+
 		msg := fmt.Sprintf("user exists: %s", *user.Email)
 		provide.RenderError(msg, 409, c)
 		return
 	}
 
-	createAuth0User := !common.IsAuth0(c) && common.Auth0IntegrationEnabled
-
-	db := dbconf.DatabaseConnection()
+	db = dbconf.DatabaseConnection()
 	tx := db.Begin()
 
 	success := user.Create(tx, createAuth0User)

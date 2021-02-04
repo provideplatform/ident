@@ -120,7 +120,11 @@ func (u *User) createAuth0User() error {
 	}
 
 	if params.Password == nil {
-		params.Password = common.StringOrNil(common.RandomString(20)) // require password reset
+		if u.Password != nil {
+			params.Password = u.Password
+		} else {
+			params.Password = common.StringOrNil(common.RandomString(20)) // require password reset
+		}
 	}
 
 	if params.AppMetadata == nil {
