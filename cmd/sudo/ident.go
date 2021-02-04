@@ -35,7 +35,7 @@ func syncIdentUsers(db *gorm.DB) error {
 func createAuth0User(u *identuser.User, db *gorm.DB) error {
 	// params := u.Metadata
 	params := &identuser.EphemeralUserMetadata{
-		Name:  common.StringOrNil(*u.Email),
+		Name:  common.StringOrNil(*u.Name),
 		Email: *u.Email,
 	}
 
