@@ -71,7 +71,11 @@ func createAuth0User(u *ident.User) error {
 	}
 	_, err := auth0.CreateUser(_params)
 	if err != nil {
-		return fmt.Errorf("failed to create auth0 user: %s; %s", params.Email, err.Error())
+		// HACK!!
+		_, err := auth0.AuthenticateUser(params.Email, *params.Password)
+		if err != nil {
+			return fmt.Errorf("failed to create auth0 user: %s; %s", params.Email, err.Error())
+		}
 	}
 
 	return nil
