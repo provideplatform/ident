@@ -57,7 +57,10 @@ func AuthMiddleware() gin.HandlerFunc {
 // given bearer token is a valid, non-expired JWT, the returned Token instance
 // is ephemeral. If the authorization attempt fails, nil is returned.
 func authorize(c *gin.Context) *Token {
-	authorization := strings.Split(c.GetHeader("authorization"), "bearer ")
+	authorization := strings.Split(c.GetHeader("authorization"), "Bearer ")
+	if len(authorization) < 2 {
+		authorization = strings.Split(c.GetHeader("authorization"), "bearer ")
+	}
 	token, err := Parse(authorization[len(authorization)-1])
 	if err != nil {
 		common.Log.Warningf("bearer token authorization failed; %s", err.Error())
