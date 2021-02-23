@@ -139,7 +139,7 @@ func usersListHandler(c *gin.Context) {
 	query := dbconf.DatabaseConnection()
 
 	if c.Query("email") != "" {
-		query = query.Where("email = ?", strings.ToLower(c.Query("email")))
+		query = query.Where("email = ? AND application_id IS NULL", strings.ToLower(c.Query("email")))
 	}
 
 	if bearer.ApplicationID != nil {
