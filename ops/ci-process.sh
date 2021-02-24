@@ -42,8 +42,8 @@ setup_go()
     export GOBIN=$GOPATH/bin
     export PATH=~/.local/bin:$GOBIN:$PATH
     echo "PATH is: '$PATH'"
-    mkdir -p $GOPATH/src/github.com/provideapp
-    mkdir -p $GOBIN
+    # mkdir -p $GOPATH/src/github.com/provideapp
+    # mkdir -p $GOBIN
 
     go env
 }
@@ -68,8 +68,8 @@ bootstrap_environment
 
 make mod
 
-(cd vendor/ && tar c .) | (cd src/ && tar xf -)
-rm -rf vendor/
+# (cd vendor/ && tar c .) | (cd src/ && tar xf -)
+# rm -rf vendor/
 
 make lint > reports/linters/golint.txt # TODO: add -set_exit_status once we clean current issues up. 
 
