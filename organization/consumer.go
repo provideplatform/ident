@@ -694,7 +694,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 			"params": []interface{}{
 				orgAddress,
 				*organization.Name,
-				*organization.Domain,
+				orgDomain,
 				*orgMessagingEndpoint,
 				*orgZeroKnowledgePublicKey,
 				"{}",
