@@ -511,7 +511,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 
 	var orgAddress *string
 	var orgMessagingEndpoint *string
-	var orgDomain *string
+	var orgWhisperKey *string
 	var orgZeroKnowledgePublicKey *string
 
 	orgToken := &token.Token{
@@ -545,6 +545,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 	for _, key := range keys {
 		if key.Spec != nil && *key.Spec == "secp256k1" && key.Address != nil {
 			orgAddress = common.StringOrNil(*key.Address)
+			orgWhisperKey = common.StringOrNil("0x")
 		}
 
 		if key.Spec != nil && *key.Spec == "babyJubJub" {
@@ -557,21 +558,12 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 	}
 
 	metadata := organization.ParseMetadata()
-	if domain, domainOk := metadata["domain"].(string); domainOk {
-		orgDomain = common.StringOrNil(domain)
-	}
 	if messagingEndpoint, messagingEndpointOk := metadata["messaging_endpoint"].(string); messagingEndpointOk {
 		orgMessagingEndpoint = common.StringOrNil(messagingEndpoint)
 	}
 
 	if orgAddress == nil {
 		common.Log.Warningf("failed to resolve organization public address for storage in the public org registry; organization id: %s", organizationID)
-		natsutil.AttemptNack(msg, organizationRegistrationTimeout)
-		return
-	}
-
-	if orgDomain == nil {
-		common.Log.Warningf("failed to resolve organization domain for storage in the public org registry; organization id: %s", organizationID)
 		natsutil.AttemptNack(msg, organizationRegistrationTimeout)
 		return
 	}
@@ -694,8 +686,8 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 			"params": []interface{}{
 				orgAddress,
 				*organization.Name,
-				*organization.Domain,
 				*orgMessagingEndpoint,
+				*orgWhisperKey,
 				*orgZeroKnowledgePublicKey,
 				"{}",
 			},
