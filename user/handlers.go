@@ -268,7 +268,8 @@ func createUserHandler(c *gin.Context) {
 	}
 
 	var db *gorm.DB
-	createAuth0User := !common.IsAuth0(c) && common.Auth0IntegrationEnabled
+	isVirtualApplicationUser := user.ApplicationID != nil && user.Password == nil
+	createAuth0User := !common.IsAuth0(c) && common.Auth0IntegrationEnabled && !isVirtualApplicationUser
 
 	if Exists(*user.Email, user.ApplicationID, nil) {
 		if createAuth0User {

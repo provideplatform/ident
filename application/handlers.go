@@ -602,6 +602,11 @@ func createApplicationUserHandler(c *gin.Context) {
 		userID = &usrID
 	}
 
+	if userID == nil || *userID == uuid.Nil {
+		provide.RenderError("user_id required", 400, c)
+		return
+	}
+
 	var permissions common.Permission
 	appPermissions, permissionsOk := params["permissions"].(common.Permission)
 	if permissionsOk && !bearer.HasAnyExtendedPermission(applicationResourceKey, common.CreateResource, common.GrantResourceAuthorization) {
