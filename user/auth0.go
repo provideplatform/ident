@@ -154,6 +154,10 @@ func (u *User) deleteAuth0User() error {
 
 // fetchAuth0User attempts to fetch the associated auth0 user
 func (u *User) fetchAuth0User() (*EphemeralUserMetadata, error) {
+	if u.Email == nil {
+		return nil, errors.New("failed to enrich auth0 user; no email address")
+	}
+
 	auth0User, err := fetchAuth0User(*u.Email)
 	if err != nil {
 		err := fmt.Errorf("failed to enrich auth0 user: %s; %s", *u.Email, err.Error())
