@@ -11,6 +11,7 @@ import (
 
 	nchain "github.com/provideservices/provide-go/api/nchain"
 	vault "github.com/provideservices/provide-go/api/vault"
+
 	// providecrypto "github.com/provideservices/provide-go/crypto"
 
 	dbconf "github.com/kthomas/go-db-config"
@@ -586,8 +587,8 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 	if len(tokens) > 0 {
 		jwtToken := tokens[0].Token
 
-		status, resp, err := nchain.ListContracts(*jwtToken, map[string]interface{}{})
-		if err != nil || status != 200 {
+		contracts, err := nchain.ListContracts(*jwtToken, map[string]interface{}{})
+		if err != nil {
 			common.Log.Warningf("failed to resolve organization registry contract to which the organization registration tx should be sent; organization id: %s", organizationID)
 			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
 			return
@@ -613,48 +614,34 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 			return
 		}
 
-		status, orgWalletResp, err := nchain.CreateWallet(*orgToken.Token, map[string]interface{}{
+		orgWalletResp, err := nchain.CreateWallet(*orgToken.Token, map[string]interface{}{
 			"purpose": 44,
 		})
-		if err != nil || status != 201 {
+		if err != nil {
 			common.Log.Warningf("failed to create organization HD wallet for organization registration tx should be sent; organization id: %s", organizationID)
 			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
 			return
 		}
 
-		if orgWallet, orgWalletOk := orgWalletResp.(map[string]interface{}); orgWalletOk {
-			if orgWlltID, orgWlltIDOk := orgWallet["id"].(string); orgWlltIDOk {
-				orgWalletID = common.StringOrNil(orgWlltID)
-				common.Log.Debugf("created HD wallet %s for organization %s", *orgWalletID, organization.ID)
+		orgWalletID = common.StringOrNil(orgWalletResp.ID.String())
+		common.Log.Debugf("created HD wallet %s for organization %s", *orgWalletID, organization.ID)
+
+		for _, c := range contracts {
+			resp, err := nchain.GetContractDetails(*jwtToken, c.ID.String(), map[string]interface{}{})
+			if err != nil {
+				common.Log.Warningf("failed to resolve organization registry contract to which the organization registration tx should be sent; organization id: %s", organizationID)
+				natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+				return
 			}
-		}
 
-		if cntrcts, contractsOk := resp.([]interface{}); contractsOk {
-			for _, c := range cntrcts {
-				if cntrct, contractOk := c.(map[string]interface{}); contractOk {
-					if cntrctID, contractIDOk := cntrct["id"].(string); contractIDOk {
-						status, resp, err = nchain.GetContractDetails(*jwtToken, cntrctID, map[string]interface{}{})
-						if err != nil || status != 200 {
-							common.Log.Warningf("failed to resolve organization registry contract to which the organization registration tx should be sent; organization id: %s", organizationID)
-							natsutil.AttemptNack(msg, organizationRegistrationTimeout)
-							return
-						}
-
-						contract, _ := resp.(map[string]interface{})
-						contractAddress, _ := contract["address"].(string)
-						contractType, contractTypeOk := contract["type"].(string)
-
-						if contractTypeOk {
-							switch contractType {
-							case contractTypeERC1820Registry:
-								erc1820RegistryContractID = common.StringOrNil(cntrctID)
-								erc1820RegistryContractAddress = common.StringOrNil(contractAddress)
-							case contractTypeOrgRegistry:
-								orgRegistryContractID = common.StringOrNil(cntrctID)
-								orgRegistryContractAddress = common.StringOrNil(contractAddress)
-							}
-						}
-					}
+			if resp.Type != nil {
+				switch *resp.Type {
+				case contractTypeERC1820Registry:
+					erc1820RegistryContractID = common.StringOrNil(resp.ID.String())
+					erc1820RegistryContractAddress = resp.Address
+				case contractTypeOrgRegistry:
+					orgRegistryContractID = common.StringOrNil(resp.ID.String())
+					orgRegistryContractAddress = resp.Address
 				}
 			}
 		}
@@ -680,7 +667,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 		// registerOrg
 
 		common.Log.Debugf("attempting to register organization with on-chain registry contract: %s", *orgRegistryContractAddress)
-		registerOrgStatus, _, err := nchain.ExecuteContract(*jwtToken, *orgRegistryContractID, map[string]interface{}{
+		_, err = nchain.ExecuteContract(*jwtToken, *orgRegistryContractID, map[string]interface{}{
 			"wallet_id": orgWalletID,
 			"method":    organizationRegistrationMethod,
 			"params": []interface{}{
@@ -693,7 +680,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 			},
 			"value": 0,
 		})
-		if err != nil || registerOrgStatus != 202 {
+		if err != nil {
 			common.Log.Warningf("organization registry transaction broadcast failed on behalf of organization: %s; %s", organizationID, err.Error())
 			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
 			return

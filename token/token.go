@@ -21,6 +21,7 @@ const authorizationGrantRefreshToken = "refresh_token"
 const authorizationScopeOfflineAccess = "offline_access"
 
 const authorizationSubjectApplication = "application"
+const authorizationSubjectAuth0 = "auth0"
 const authorizationSubjectInvite = "invite"
 const authorizationSubjectOrganization = "organization"
 const authorizationSubjectToken = "token"
@@ -128,6 +129,11 @@ func Parse(token string) (*Token, error) {
 			kid = &kidhdr
 		}
 
+		if kid != nil {
+			common.Log.Debugf("jwt kid header: %s", *kid)
+
+		}
+
 		publicKey, _, _ := util.ResolveJWTKeypair(kid)
 		if publicKey == nil {
 			msg := "failed to resolve a valid JWT verification key"
@@ -172,7 +178,10 @@ func Parse(token string) (*Token, error) {
 
 	subprts := strings.Split(sub, ":")
 	if len(subprts) != 2 {
-		return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s", sub)
+		subprts = strings.Split(sub, "|")
+		if len(subprts) != 2 {
+			return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s", sub)
+		}
 	}
 
 	subUUID, err := uuid.FromString(subprts[1])
@@ -190,6 +199,8 @@ func Parse(token string) (*Token, error) {
 	switch subprts[0] {
 	case authorizationSubjectApplication:
 		appID = &subUUID
+	case authorizationSubjectAuth0:
+		userID = &subUUID
 	case authorizationSubjectInvite:
 		// this is an invitation token and can only authorize certain actions within a user creation or authentication transaction;
 		// such actions may be made on behalf of an application_id and/or organization_id specified in the invitation application claims
@@ -334,6 +345,11 @@ func (t *Token) CalculateHash() {
 // FindLegacyToken - lookup a legacy token
 func FindLegacyToken(token string) *Token {
 	db := dbconf.DatabaseConnection()
+	if db == nil {
+		common.Log.Tracef("no ident db instance configured; not attempting legacy authorization for token: %s", token)
+		return nil
+	}
+
 	tkn := &Token{}
 	if db.HasTable(&tkn) {
 		db.Where("hash = ?", common.SHA256(token)).Find(&tkn)

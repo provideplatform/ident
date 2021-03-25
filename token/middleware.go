@@ -21,12 +21,11 @@ func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := authorize(c)
 		if common.IsAuth0(c) {
-			common.Log.Debugf("authorizing whitelisted auth0 IP address request with CreateUser permission")
-			c.Set(contextTokenKey, &Token{
-				Permissions: common.DefaultAuth0RequestPermission,
-			})
-			c.Set(contextPermissionsKey, common.DefaultAuth0RequestPermission)
-		} else if common.IsBanned(c) {
+			common.Log.Debugf("authorizing request by whitelisted auth0 IP address")
+			token.Permissions = common.DefaultAuth0RequestPermission
+		}
+
+		if common.IsBanned(c) {
 			provide.RenderError(common.BannedErrorMessage, 429, c)
 			return
 		} else if token != nil && (token.UserID != nil || token.ApplicationID != nil || token.OrganizationID != nil) {
@@ -63,7 +62,7 @@ func authorize(c *gin.Context) *Token {
 	}
 	token, err := Parse(authorization[len(authorization)-1])
 	if err != nil {
-		common.Log.Warningf("bearer token authorization failed; %s", err.Error())
+		common.Log.Debugf("bearer token authorization failed; %s", err.Error())
 		return nil
 	}
 	if token.UserID == nil && token.ApplicationID == nil && token.OrganizationID == nil && !token.IsRefreshToken {
@@ -71,7 +70,7 @@ func authorize(c *gin.Context) *Token {
 		if token.Subject != nil {
 			subject = fmt.Sprintf("%s", *token.Subject)
 		}
-		common.Log.Warningf("bearer token authorization failed; invalid authorization subject: %s", subject)
+		common.Log.Tracef("bearer token authorization failed; invalid authorization subject: %s", subject)
 		return nil
 	}
 	return token
