@@ -17,7 +17,7 @@ if [[ -z "${AUTH0_CLIENT_SECRET}" ]]; then
 fi
 
 if [[ -z "${AUTH0_DOMAIN}" ]]; then
-  AUTH0_DOMAIN=https://prvd-staging.auth0.com
+  AUTH0_DOMAIN=prvd-staging.auth0.com
 fi
 
 if [[ -z "${AUTH0_AUDIENCE}" ]]; then

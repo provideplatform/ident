@@ -32,7 +32,7 @@ type Application struct {
 	Status          *string          `sql:"-" json:"status,omitempty"` // this is for enrichment purposes only
 	Type            *string          `json:"type"`
 	Config          *json.RawMessage `sql:"type:json" json:"config"`
-	EncryptedConfig *string          `sql:"type:bytea" json:"-"`
+	EncryptedConfig *string          `sql:"type:bytea" json:"-"`                  // FIXME-- store as secret in vault and persist `SecretID`
 	Hidden          bool             `sql:"not null;default:false" json:"hidden"` // soft-delete mechanism
 
 	Organizations []*organization.Organization `gorm:"many2many:applications_organizations" json:"-"`

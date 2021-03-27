@@ -1,6 +1,7 @@
 package token
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/ident/common"
 	provide "github.com/provideservices/provide-go/api"
+	"github.com/provideservices/provide-go/api/vault"
 	util "github.com/provideservices/provide-go/common/util"
 )
 
@@ -134,8 +136,8 @@ func Parse(token string) (*Token, error) {
 
 		}
 
-		publicKey, _, _ := util.ResolveJWTKeypair(kid)
-		if publicKey == nil {
+		publicKey, _, key, _ := util.ResolveJWTKeypair(kid)
+		if publicKey == nil && key == nil {
 			msg := "failed to resolve a valid JWT verification key"
 			if kid != nil {
 				msg = fmt.Sprintf("%s; invalid kid specified in header: %s", msg, *kid)
@@ -143,6 +145,8 @@ func Parse(token string) (*Token, error) {
 				msg = fmt.Sprintf("%s; no default verification key configured", msg)
 			}
 			return nil, fmt.Errorf(msg)
+		} else if key != nil {
+			// publicKey =
 		}
 
 		return publicKey, nil
@@ -648,8 +652,8 @@ func (t *Token) validate() bool {
 		}
 
 		if t.Kid == nil {
-			_, privateKey, fingerprint := util.ResolveJWTKeypair(nil) // FIXME-- resolve subject-specific kid when applicable
-			if privateKey != nil {
+			_, privateKey, key, fingerprint := util.ResolveJWTKeypair(nil) // FIXME-- resolve subject-specific kid when applicable
+			if privateKey != nil || key != nil {
 				t.Kid = fingerprint
 			} else {
 				common.Log.Warning("no JWT signing key resolved")
@@ -806,14 +810,51 @@ func (t *Token) encodeJWT() error {
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims(claims))
 	jwtToken.Header["kid"] = t.Kid
 
-	_, privateKey, _ := util.ResolveJWTKeypair(t.Kid)
-	token, err := jwtToken.SignedString(privateKey)
-	if err != nil {
-		common.Log.Warningf("failed to sign JWT; %s", err.Error())
-		return nil
+	var token *string
+	_, privateKey, key, _ := util.ResolveJWTKeypair(t.Kid)
+
+	if key != nil {
+		strToSign, err := jwtToken.SigningString()
+		if err != nil {
+			common.Log.Warningf("failed to generate JWT string for signing; %s", err.Error())
+			return nil
+		}
+
+		opts := map[string]interface{}{}
+		if strings.HasPrefix(*key.Spec, "RSA-") {
+			opts["algorithm"] = "RS256"
+		}
+
+		resp, err := vault.SignMessage(
+			util.DefaultVaultAccessJWT,
+			util.Vault.ID.String(),
+			key.ID.String(),
+			hex.EncodeToString([]byte(strToSign)),
+			opts,
+		)
+		if err != nil {
+			msg := fmt.Sprintf("failed to sign JWT using vault key: %s; %s", key.ID, err.Error())
+			common.Log.Warning(msg)
+			return errors.New(msg)
+		}
+
+		token = common.StringOrNil(strings.Join([]string{strToSign, *resp.Signature}, "."))
+		common.Log.Tracef("signed JWT using vault key: %s", key.ID)
+	} else if privateKey != nil {
+		_token, err := jwtToken.SignedString(privateKey)
+		if err != nil {
+			msg := fmt.Sprintf("failed to sign JWT; %s", err.Error())
+			common.Log.Warning(msg)
+			return errors.New(msg)
+		}
+		token = common.StringOrNil(_token)
+	} else {
+		msg := "failed to sign JWT; no key material resolved for signing"
+		common.Log.Warning(msg)
+		return errors.New(msg)
 	}
 
-	t.Token = common.StringOrNil(token)
+	t.Token = token
 	t.AccessToken = t.Token
 
 	return nil
