@@ -102,6 +102,7 @@ func TestGetOrganizationDetailsWithAuthorizedUserToken(t *testing.T) {
 		t.Errorf("user authentication failed for user %s. error: %s", authUser.email, err.Error())
 	}
 
+	t.Logf("auth response: %+v", auth)
 	// create an org...
 	provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
 		"name":        "organiation name 1",
