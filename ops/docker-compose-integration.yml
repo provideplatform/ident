@@ -310,9 +310,7 @@ services:
       start_period: 10s
     hostname: statsdaemon
     networks:
-      - provide
-    ports:
-      - 8084:8080      
+      - provide  
     restart: always
 
 networks:
