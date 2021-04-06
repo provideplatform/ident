@@ -3,20 +3,22 @@ on:
   schedule:
     - cron: '0 * * * *'  # every hour on the hour     
 jobs:
-  integration-test:
+  scheduled_test:
     runs-on: ubuntu-latest
     timeout-minutes: 10    
     env:
       SLACK_WEBHOOK_URL: ${{ secrets.INTEGRATION_SLACK_WEBHOOK }}
     steps:
-      - name: Setup go
+      - name: set_up_environment
+        id: setup
         uses: actions/setup-go@v2
         with:
           go-version: '1.15.1'
-      - name: Checkout ident
+      - name: checkout_and_run_tests
+        id: tests
         uses: actions/checkout@v2
         with:
-          path: 'ident'                      
+          path: 'ident'                  
       - run: docker-compose -f ./ops/docker-compose-integration.yml build --no-cache ident
         working-directory: ident
       - run: docker-compose -f ./ops/docker-compose-integration.yml up -d
@@ -26,8 +28,8 @@ jobs:
       - run: docker-compose -f ./ops/docker-compose.yml logs
         working-directory: ident
       - name: slack channel update
+        if: always()  
         uses: act10ns/slack@v1
         with:
           status: ${{ job.status }}
           steps: ${{ toJson(steps) }}
-        if: always()    
