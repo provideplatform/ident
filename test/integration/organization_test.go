@@ -200,6 +200,8 @@ func TestOrganizationDetailsWithOrgToken(t *testing.T) {
 		{"org4" + testId.String(), "org1 desc" + testId.String(), nil},
 	}
 
+	t.Logf("authy auth: %+v", auth)
+
 	for counter, tc := range tt {
 		// create the orgs all at once, because if we create them one at a time, we might not catch the bug (always returning latest org, maybe)
 		org, err := provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
@@ -209,6 +211,8 @@ func TestOrganizationDetailsWithOrgToken(t *testing.T) {
 		if err != nil {
 			t.Errorf("error creation organization for user id %s", user.ID)
 		}
+		t.Logf("orgy orgy: %+v", org)
+
 		//assign the returned identifier to the test table
 		tt[counter].identifier = &org.ID
 	}

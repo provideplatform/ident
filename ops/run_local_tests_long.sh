@@ -223,9 +223,9 @@ echo waiting for ident to be ready
 timeout 300 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' '${IDENT_API_SCHEME}"://"${IDENT_API_HOST}'/status)" != "200" ]]; do sleep 5; done' || false
 echo ident ready
 
-echo waiting for nchain to be ready
-timeout 300 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' '${NCHAIN_API_SCHEME}"://"${NCHAIN_API_HOST}'/status)" != "204" ]]; do sleep 5; done' || false
-echo nchain ready
+# echo waiting for nchain to be ready
+# timeout 300 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' '${NCHAIN_API_SCHEME}"://"${NCHAIN_API_HOST}'/status)" != "204" ]]; do sleep 5; done' || false
+# echo nchain ready
 
 export NATS_TOKEN=testtoken
 export NATS_URL=nats://localhost:${NATS_SERVER_PORT}
@@ -236,7 +236,7 @@ export LOG_LEVEL=DEBUG
 
 # go get gotest.tools/gotestsum
 
-go test "./test/..." -v \
+GOFLAGS="-count=1" go test "./test/..." -v \
                     -race \
                     -timeout 1800s \
                     -parallel 1 \
