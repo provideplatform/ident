@@ -216,15 +216,7 @@ func Parse(token string) (*Token, error) {
 
 		// this is a refresh token and can only authorize new access tokens on behalf of an app, org or user specified in the application claims
 		if appclaimsOk {
-			if claimedUserID, claimedUserIDOk := appclaims["user_id"].(string); claimedUserIDOk {
-				subUUID, err := uuid.FromString(claimedUserID)
-				if err != nil {
-					return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
-				}
-
-				userID = &subUUID
-				common.Log.Debugf("authorized refresh token for creation of new access token on behalf of user: %s", userID)
-			} else if claimedAppID, claimedAppIDOk := appclaims["application_id"].(string); claimedAppIDOk {
+			if claimedAppID, claimedAppIDOk := appclaims["application_id"].(string); claimedAppIDOk {
 				subUUID, err := uuid.FromString(claimedAppID)
 				if err != nil {
 					return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
@@ -240,6 +232,14 @@ func Parse(token string) (*Token, error) {
 
 				orgID = &subUUID
 				common.Log.Debugf("authorized refresh token for creation of new access token on behalf of organization: %s", orgID)
+			} else if claimedUserID, claimedUserIDOk := appclaims["user_id"].(string); claimedUserIDOk {
+				subUUID, err := uuid.FromString(claimedUserID)
+				if err != nil {
+					return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
+				}
+
+				userID = &subUUID
+				common.Log.Debugf("authorized refresh token for creation of new access token on behalf of user: %s", userID)
 			}
 		}
 	case authorizationSubjectUser:
