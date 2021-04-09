@@ -139,7 +139,11 @@ func createTokenHandler(c *gin.Context) {
 	}
 
 	if !tkn.Vend() {
-		provide.RenderError(*tkn.Errors[0].Message, 401, c)
+		if len(tkn.Errors) > 0 {
+			provide.RenderError(*tkn.Errors[0].Message, 401, c)
+		} else {
+			provide.RenderError("failed to vend token", 401, c)
+		}
 		return
 	}
 
