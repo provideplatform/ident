@@ -1,6 +1,7 @@
 package token
 
 import (
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -837,8 +838,15 @@ func (t *Token) encodeJWT() error {
 			common.Log.Warning(msg)
 			return errors.New(msg)
 		}
-
-		token = common.StringOrNil(strings.Join([]string{strToSign, *resp.Signature}, "."))
+		//vault signature is hex encoded, but must be base64-encoded for JWT
+		sigAsBytes, err := hex.DecodeString(*resp.Signature)
+		if err != nil {
+			msg := fmt.Sprintf("failed to decode signature from hex; %s", err.Error())
+			common.Log.Warning(msg)
+			return errors.New(msg)
+		}
+		encodedSignature := strings.TrimRight(base64.URLEncoding.EncodeToString(sigAsBytes), "=")
+		token = common.StringOrNil(strings.Join([]string{strToSign, encodedSignature}, "."))
 		common.Log.Tracef("signed JWT using vault key: %s", key.ID)
 	} else if privateKey != nil {
 		_token, err := jwtToken.SignedString(privateKey)
