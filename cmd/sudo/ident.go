@@ -71,12 +71,16 @@ func createAuth0User(u *identuser.User, db *gorm.DB) error {
 	}
 	_, err := auth0.CreateUser(_params)
 	if err != nil {
+		if err != nil {
+			return fmt.Errorf("failed to create auth0 user: %s; %s", params.Email, err.Error())
+		}
+
 		// HACK!!
 		u.Password = params.Password
 		db.Save(&u)
 		_, err := auth0.AuthenticateUser(params.Email, *params.Password)
 		if err != nil {
-			return fmt.Errorf("failed to create auth0 user: %s; %s", params.Email, err.Error())
+			return fmt.Errorf("failed to authenticate auth0 user: %s; %s", params.Email, err.Error())
 		}
 	}
 

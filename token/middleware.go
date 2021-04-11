@@ -22,6 +22,9 @@ func AuthMiddleware() gin.HandlerFunc {
 		token := authorize(c)
 		if common.IsAuth0(c) {
 			common.Log.Debugf("authorizing request by whitelisted auth0 IP address")
+			if token == nil {
+				token = &Token{}
+			}
 			token.Permissions = common.DefaultAuth0RequestPermission
 		}
 
