@@ -46,7 +46,7 @@ func init() {
 	}
 
 	auth0.RequireAuth0()
-	util.RequireJWT()
+	common.JWTKeypairs = util.RequireJWT()
 	util.RequireGin()
 	pgputil.RequirePGP()
 	redisutil.RequireRedis()
@@ -101,6 +101,7 @@ func runAPI() {
 	r.Use(gin.Recovery())
 	r.Use(provide.CORSMiddleware())
 
+	r.GET("/.well-known/jwks.json", token.FetchJWKsHandler)
 	r.GET("/status", statusHandler)
 	r.GET("/legal/privacy_policy", privacyPolicyHandler)
 	r.GET("/legal/terms_of_service", termsOfServiceHandler)

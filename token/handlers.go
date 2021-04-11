@@ -10,6 +10,7 @@ import (
 
 	// "github.com/provideapp/ident/application"
 	"github.com/provideapp/ident/common"
+	"github.com/provideservices/provide-go/api/ident"
 	provide "github.com/provideservices/provide-go/common"
 	util "github.com/provideservices/provide-go/common/util"
 )
@@ -21,6 +22,29 @@ func InstallTokenAPI(r *gin.Engine) {
 	r.DELETE("/api/v1/tokens/:id", deleteTokenHandler)
 
 	// r.GET("/api/v1/applications/:id/tokens", applicationTokensListHandler)
+}
+
+// FetchJWKsHandler returns a list of JWKs suitable for public consumption under a well-known path
+func FetchJWKsHandler(c *gin.Context) {
+	jwks := make([]*ident.JSONWebKey, 0)
+	for kid := range common.JWTKeypairs {
+		keypair := common.JWTKeypairs[kid]
+
+		var publicKey string
+		if keypair.VaultKey != nil && keypair.VaultKey.PublicKey != nil {
+			publicKey = *keypair.VaultKey.PublicKey
+		}
+
+		jwks = append(jwks, &ident.JSONWebKey{
+			E:           fmt.Sprintf("%x", keypair.PublicKey.E),
+			Fingerprint: keypair.Fingerprint,
+			Kid:         kid,
+			N:           keypair.PublicKey.N.String(),
+			PublicKey:   publicKey,
+		})
+	}
+
+	provide.Render(jwks, 200, c)
 }
 
 func tokensListHandler(c *gin.Context) {

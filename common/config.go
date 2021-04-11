@@ -11,6 +11,7 @@ import (
 
 	"github.com/joho/godotenv"
 	logger "github.com/kthomas/go-logger"
+	"github.com/provideservices/provide-go/common/util"
 )
 
 const apiAccountingAddressEnvVar = "API_ACCOUNTING_ADDRESS"
@@ -56,6 +57,9 @@ var (
 
 	// EmailVerificationTimeout is the timeout upon which deliverability verification will fail
 	EmailVerificationTimeout time.Duration
+
+	// JWTKeypairs holds a reference to the configured keypairs
+	JWTKeypairs map[string]*util.JWTKeypair
 
 	// Log is the configured logger
 	Log *logger.Logger
