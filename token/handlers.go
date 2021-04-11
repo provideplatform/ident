@@ -33,6 +33,8 @@ func FetchJWKsHandler(c *gin.Context) {
 		var publicKey string
 		if keypair.VaultKey != nil && keypair.VaultKey.PublicKey != nil {
 			publicKey = *keypair.VaultKey.PublicKey
+		} else if keypair.PublicKeyPEM != nil {
+			publicKey = *keypair.PublicKeyPEM
 		}
 
 		jwks = append(jwks, &ident.JSONWebKey{
