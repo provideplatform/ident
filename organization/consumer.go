@@ -582,7 +582,10 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 	}
 
 	var tokens []*token.Token
-	db.Where("tokens.application_id = ?", applicationID).Find(&tokens) // FIXME-- if the org registry contract moves away from onlyOwner, this needs to be resolved to the organization instead of the application
+	db.Where("tokens.application_id = ?", applicationID).Find(&tokens)
+	if len(tokens) == 0 {
+		tokens = append(tokens, orgToken)
+	}
 
 	if len(tokens) > 0 {
 		jwtToken := tokens[0].Token
