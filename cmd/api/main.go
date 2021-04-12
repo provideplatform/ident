@@ -140,10 +140,10 @@ func statusHandler(c *gin.Context) {
 		"terms_of_service_updated_at": termsOfServiceUpdatedAt,
 	}
 
-	if util.Vault == nil || len(common.JWTKeypairs) == 0 {
-		provide.Render(status, 503, c)
-		return
-	}
+	// if util.Vault == nil {
+	// 	provide.Render(status, 503, c)
+	// 	return
+	// }
 
 	provide.Render(status, 200, c)
 }
