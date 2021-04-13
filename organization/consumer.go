@@ -584,7 +584,16 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 	var tokens []*token.Token
 	db.Where("tokens.application_id = ?", applicationID).Find(&tokens)
 	if len(tokens) == 0 {
-		tokens = append(tokens, orgToken)
+		tkn := &token.Token{
+			ApplicationID: &applicationUUID,
+			Scope:         common.StringOrNil("offline_access"),
+		}
+		if !tkn.Vend() {
+			common.Log.Warningf("failed to vend signed JWT for application with offline access; organization id: %s", applicationID)
+			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+			return
+		}
+		tokens = append(tokens, tkn)
 	}
 
 	if len(tokens) > 0 {
