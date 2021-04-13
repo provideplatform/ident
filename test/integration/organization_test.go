@@ -4,15 +4,10 @@ package integration
 
 import (
 	"testing"
-	"time"
 
 	uuid "github.com/kthomas/go.uuid"
 	provide "github.com/provideservices/provide-go/api/ident"
 )
-
-func init() {
-	time.Sleep(time.Second * 5)
-}
 
 func TestCreateOrganization(t *testing.T) {
 	t.Parallel()

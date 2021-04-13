@@ -135,17 +135,17 @@ func runAPI() {
 }
 
 func statusHandler(c *gin.Context) {
+
 	status := map[string]interface{}{
 		"privacy_policy_updated_at":   privacyPolicyUpdatedAt,
 		"terms_of_service_updated_at": termsOfServiceUpdatedAt,
 	}
 
-	// if util.Vault == nil {
-	// 	provide.Render(status, 503, c)
-	// 	return
-	// }
-
-	provide.Render(status, 200, c)
+	if util.VaultSigningKeyActive {
+		provide.Render(status, 200, c)
+	} else {
+		provide.Render(status, 204, c)
+	}
 }
 
 func privacyPolicyHandler(c *gin.Context) {

@@ -728,7 +728,7 @@ func TestApplicationOrganizationList(t *testing.T) {
 
 		orgFound := false
 		for _, apporg := range listAppOrgs {
-			if apporg.Name == *org.Name {
+			if *apporg.Name == *org.Name {
 				orgFound = true
 			}
 		}
