@@ -132,11 +132,6 @@ func Parse(token string) (*Token, error) {
 			kid = &kidhdr
 		}
 
-		if kid != nil {
-			common.Log.Debugf("jwt kid header: %s", *kid)
-
-		}
-
 		publicKey, _, key, _ := util.ResolveJWTKeypair(kid)
 		if publicKey == nil && key == nil {
 			msg := "failed to resolve a valid JWT verification key"
@@ -146,8 +141,6 @@ func Parse(token string) (*Token, error) {
 				msg = fmt.Sprintf("%s; no default verification key configured", msg)
 			}
 			return nil, fmt.Errorf(msg)
-		} else if key != nil {
-			// publicKey =
 		}
 
 		return publicKey, nil
