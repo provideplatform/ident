@@ -54,7 +54,7 @@ func ApplicationsByOrganizationID(organizationID uuid.UUID, hidden bool) []Appli
 	db := dbconf.DatabaseConnection()
 	var apps []Application
 	query := db.Where("applications.hidden = ? AND ao.organization_id = ?", hidden, organizationID.String())
-	query.Joins("JOIN applications_organizations as ao ON ao.organization_id = organizations.id").Find(&apps)
+	query.Joins("JOIN applications_organizations as ao ON ao.application_id = applications.id").Find(&apps)
 	return apps
 }
 
