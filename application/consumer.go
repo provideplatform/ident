@@ -158,7 +158,7 @@ func consumeApplicationOrganizationUpdatedMsg(msg *stan.Msg) {
 		payload, _ := json.Marshal(map[string]interface{}{
 			"application_id":  app.ID.String(),
 			"organization_id": orgUUID.String(),
-			"update":          true,
+			"update_registry": true,
 		})
 		natsutil.NatsStreamingPublish(natsOrganizationRegistrationSubject, payload)
 		return

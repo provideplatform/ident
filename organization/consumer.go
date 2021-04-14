@@ -500,7 +500,10 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 		return
 	}
 
-	updateRegistry := params["update_registry"].(bool)
+	updateRegistry := false
+	if update, updateOk := params["update_registry"].(bool); updateOk {
+		updateRegistry = update
+	}
 
 	db := dbconf.DatabaseConnection()
 
