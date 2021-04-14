@@ -161,7 +161,6 @@ func consumeApplicationOrganizationUpdatedMsg(msg *stan.Msg) {
 			"update_registry": true,
 		})
 		natsutil.NatsStreamingPublish(natsOrganizationRegistrationSubject, payload)
-		return
 	}
 
 	msg.Ack()
