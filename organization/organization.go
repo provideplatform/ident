@@ -15,6 +15,7 @@ import (
 )
 
 const natsApplicationImplicitKeyExchangeInitSubject = "ident.application.keys.exchange.init"
+const natsOrganizationUpdatedInitSubject = "ident.organization.updated"
 const organizationResourceKey = "organization"
 
 // Organization model
@@ -249,8 +250,17 @@ func (o *Organization) Update() bool {
 		}
 	}
 
-	if success && common.Auth0IntegrationEnabled {
+	if success {
 		common.Log.Debugf("updated organization: %s", *o.Name)
+
+		common.Log.Debugf("dispatching async organization update message for organization: %s", o.ID)
+		payload, _ := json.Marshal(map[string]interface{}{
+			"organization_id": o.ID.String(),
+		})
+		natsutil.NatsStreamingPublish(natsOrganizationUpdatedInitSubject, payload)
+
+		if common.Auth0IntegrationEnabled {
+		}
 	}
 
 	tx.Commit()

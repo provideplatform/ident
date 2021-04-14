@@ -42,6 +42,7 @@ const natsOrganizationRegistrationMaxInFlight = 2048
 const natsOrganizationRegistrationAckWait = time.Second * 60
 const organizationRegistrationTimeout = int64(natsOrganizationRegistrationAckWait * 10)
 const organizationRegistrationMethod = "registerOrg"
+const organizationUpdateRegistrationMethod = "updateOrg"
 const organizationSetInterfaceImplementerMethod = "setInterfaceImplementer"
 
 const contractTypeRegistry = "registry"
@@ -499,6 +500,8 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 		return
 	}
 
+	updateRegistry := params["update_registry"].(bool)
+
 	db := dbconf.DatabaseConnection()
 
 	organization := &Organization{}
@@ -676,12 +679,17 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 			return
 		}
 
-		// registerOrg
+		// registerOrg/updateOrg
+
+		method := organizationRegistrationMethod
+		if updateRegistry {
+			method = organizationUpdateRegistrationMethod
+		}
 
 		common.Log.Debugf("attempting to register organization with on-chain registry contract: %s", *orgRegistryContractAddress)
 		_, err = nchain.ExecuteContract(*jwtToken, *orgRegistryContractID, map[string]interface{}{
 			"wallet_id": orgWalletID,
-			"method":    organizationRegistrationMethod,
+			"method":    method,
 			"params": []interface{}{
 				orgAddress,
 				*organization.Name,

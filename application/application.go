@@ -48,6 +48,16 @@ func ApplicationsByUserID(userID *uuid.UUID, hidden bool) []Application {
 	return apps
 }
 
+// ApplicationsByOrganizationID returns a list of applications which are associated
+// with the given organization id
+func ApplicationsByOrganizationID(organizationID uuid.UUID, hidden bool) []Application {
+	db := dbconf.DatabaseConnection()
+	var apps []Application
+	query := db.Where("applications.hidden = ? AND ao.organization_id = ?", hidden, organizationID.String())
+	query.Joins("JOIN applications_organizations as ao ON ao.organization_id = organizations.id").Find(&apps)
+	return apps
+}
+
 // FindByID retrieves an application by id
 func FindByID(appID uuid.UUID) *Application {
 	db := dbconf.DatabaseConnection()
