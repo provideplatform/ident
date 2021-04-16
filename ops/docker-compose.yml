@@ -101,6 +101,7 @@ services:
       - nats-streaming
       - postgres
       - redis
+      - vault
     environment:
       - API_ACCOUNTING_ADDRESS=api-accountant:8889
       - DATABASE_HOST=postgres
@@ -123,10 +124,10 @@ services:
       - VAULT_SEAL_UNSEAL_KEY=corn domain lonely owner media grape hard rough arena knock uncover goddess cinnamon wing actress spring dizzy skill alter pistol funny bind rapid soap
     healthcheck:
       test: ["CMD", "curl", "-f", "http://ident:8080/status"]
-      interval: 1m
+      interval: 5s
       timeout: 1s
-      retries: 2
-      start_period: 10s
+      retries: 5
+      start_period: 5s
     hostname: ident
     networks:
       - ident
@@ -166,10 +167,10 @@ services:
       - VAULT_SEAL_UNSEAL_KEY=corn domain lonely owner media grape hard rough arena knock uncover goddess cinnamon wing actress spring dizzy skill alter pistol funny bind rapid soap
     healthcheck:
       test: ["CMD", "curl", "-f", "http://ident:8080/status"]
-      interval: 1m
+      interval: 5s
       timeout: 1s
-      retries: 2
-      start_period: 10s
+      retries: 5
+      start_period: 5s
     hostname: ident-consumer
     networks:
       - ident
@@ -202,10 +203,10 @@ services:
       - VAULT_SEAL_UNSEAL_KEY=corn domain lonely owner media grape hard rough arena knock uncover goddess cinnamon wing actress spring dizzy skill alter pistol funny bind rapid soap
     healthcheck:
       test: ["CMD", "curl", "-f", "http://ident:8080/status"]
-      interval: 1m
+      interval: 5s
       timeout: 1s
-      retries: 2
-      start_period: 10s
+      retries: 5
+      start_period: 5s
     hostname: api-accountant
     networks:
       - ident
@@ -226,13 +227,13 @@ services:
       - LOG_LEVEL=DEBUG
       - PORT=8080
       - SEAL_UNSEAL_VALIDATION_HASH=0x05598175ac56c919ca39be16fdbb4335f755e53c27aca03717dc1b89e206aad1
-      - VAULT_SEAL_UNSEAL_KEY=corn domain lonely owner media grape hard rough arena knock uncover goddess cinnamon wing actress spring dizzy skill alter pistol funny bind rapid soap
+      - SEAL_UNSEAL_KEY=corn domain lonely owner media grape hard rough arena knock uncover goddess cinnamon wing actress spring dizzy skill alter pistol funny bind rapid soap
     healthcheck:
       test: ["CMD", "curl", "-f", "http://vault:8080/status"]
-      interval: 1m
+      interval: 5s
       timeout: 1s
-      retries: 2
-      start_period: 10s
+      retries: 5
+      start_period: 5s
     hostname: vault
     networks:
       - ident
