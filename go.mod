@@ -30,7 +30,7 @@ require (
 	github.com/onsi/gomega v1.10.1
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/provideservices/provide-go v0.0.0-20210413174337-6fc12bd7c879
+	github.com/provideservices/provide-go v0.0.0-20210416055329-ad573dbe2064
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	google.golang.org/protobuf v1.25.0 // indirect
 )
