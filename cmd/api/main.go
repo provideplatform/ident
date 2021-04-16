@@ -141,11 +141,7 @@ func statusHandler(c *gin.Context) {
 		"terms_of_service_updated_at": termsOfServiceUpdatedAt,
 	}
 
-	if util.VaultSigningKeyActive {
-		provide.Render(status, 200, c)
-	} else {
-		provide.Render(status, 204, c)
-	}
+	provide.Render(status, 200, c)
 }
 
 func privacyPolicyHandler(c *gin.Context) {
