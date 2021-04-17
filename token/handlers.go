@@ -38,7 +38,7 @@ func FetchJWKsHandler(c *gin.Context) {
 		}
 
 		jwks = append(jwks, &ident.JSONWebKey{
-			E:           fmt.Sprintf("%x", keypair.PublicKey.E),
+			E:           fmt.Sprintf("%X", keypair.PublicKey.E),
 			Fingerprint: keypair.Fingerprint,
 			Kid:         kid,
 			N:           keypair.PublicKey.N.String(),
