@@ -137,7 +137,6 @@ func Parse(token string) (*Token, error) {
 			msg := "failed to resolve a valid JWT verification key"
 			if kid != nil {
 				msg = fmt.Sprintf("%s; invalid kid specified in header: %s", msg, *kid)
-				util.RequireJWTVerifiers()
 			} else {
 				msg = fmt.Sprintf("%s; no default verification key configured", msg)
 			}
