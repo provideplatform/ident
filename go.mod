@@ -15,7 +15,7 @@ require (
 	github.com/google/go-cmp v0.5.2 // indirect
 	github.com/jinzhu/gorm v1.9.16
 	github.com/joho/godotenv v1.3.0
-	github.com/kthomas/go-auth0 v0.0.0-20210417040958-1bc08b5654a7
+	github.com/kthomas/go-auth0 v0.0.0-20210417042937-27d1d2dadf19
 	github.com/kthomas/go-db-config v0.0.0-20200612131637-ec0436a9685e
 	github.com/kthomas/go-logger v0.0.0-20210411034702-66a0af9aee2c
 	github.com/kthomas/go-natsutil v0.0.0-20200602073459-388e1f070b05
@@ -30,7 +30,7 @@ require (
 	github.com/onsi/gomega v1.10.1
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/provideservices/provide-go v0.0.0-20210417041157-1175e295f85a
+	github.com/provideservices/provide-go v0.0.0-20210417043331-634564da3772
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	google.golang.org/protobuf v1.25.0 // indirect
 )
