@@ -342,6 +342,12 @@ func (t *Token) CalculateHash() {
 
 // FindLegacyToken - lookup a legacy token
 func FindLegacyToken(token string) *Token {
+	defer func() {
+		if r := recover(); r != nil {
+			common.Log.Tracef("recovered from ident db connection falure; %s", r)
+		}
+	}()
+
 	db := dbconf.DatabaseConnection()
 	if db == nil {
 		common.Log.Tracef("no ident db instance configured; not attempting legacy authorization for token: %s", token)
