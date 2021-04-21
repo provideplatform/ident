@@ -20,9 +20,9 @@ jobs:
         with:
           ref: dev
           path: 'ident'                  
-      - run: docker-compose -f ./ops/docker-compose-integration.yml build --no-cache ident
+      - run: docker-compose -f ./ops/docker-compose.yml build --no-cache ident
         working-directory: ident
-      - run: docker-compose -f ./ops/docker-compose-integration.yml up -d
+      - run: docker-compose -f ./ops/docker-compose.yml up -d
         working-directory: ident
       - run: TAGS=integration ./ops/run_local_tests_long.sh
         working-directory: ident      
