@@ -571,7 +571,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 		orgMessagingEndpoint = common.StringOrNil(messagingEndpoint)
 	}
 
-	if addr, addrOk := metadata["address"].(string); !addrOk {
+	if _, addrOk := metadata["address"].(string); !addrOk {
 		metadata["address"] = orgAddress
 		updateOrgMetadata = true
 	}
