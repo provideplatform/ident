@@ -569,6 +569,12 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 		orgMessagingEndpoint = common.StringOrNil(messagingEndpoint)
 	}
 
+	updateOrgMetadata := false
+	if addr, addrOk := metadata["address"].(string); addrOk {
+		orgAddress = common.StringOrNil(addr)
+		updateOrgMetadata = true
+	}
+
 	if orgAddress == nil {
 		common.Log.Warningf("failed to resolve organization public address for storage in the public org registry; organization id: %s", organizationID)
 		natsutil.AttemptNack(msg, organizationRegistrationTimeout)
@@ -727,6 +733,11 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 		// 	natsutil.AttemptNack(msg, organizationRegistrationTimeout)
 		// 	return
 		// }
+
+		if updateOrgMetadata {
+			organization.setMetadata(metadata)
+			db.Save(&organization)
+		}
 
 		common.Log.Debugf("broadcast organization registry and interface impl transactions on behalf of organization: %s", organizationID)
 		msg.Ack()
