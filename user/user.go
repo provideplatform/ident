@@ -455,11 +455,11 @@ func (u *User) Enrich() error {
 	}
 
 	auth0User, err := u.fetchAuth0User()
-	if err != nil {
-		return err
-	}
+	// if err != nil {
+	// 	return err
+	// }
 
-	if auth0User.AppMetadata != nil && auth0User.AppMetadata[identUserIDKey] == nil {
+	if auth0User != nil && auth0User.AppMetadata != nil && auth0User.AppMetadata[identUserIDKey] == nil {
 		auth0User.AppMetadata[identUserIDKey] = u.ID
 	}
 
