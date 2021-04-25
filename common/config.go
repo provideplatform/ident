@@ -31,6 +31,9 @@ var (
 	// Auth0IntegrationEnabled is a flag that indicates if the configured Auth0 integration should be used; this is a temporary config item and will be removed in the future
 	Auth0IntegrationEnabled bool
 
+	// Auth0IntegrationCustomDatabase is a flag that indicates if the configured Auth0 integration uses the ident instance as a custom database
+	Auth0IntegrationCustomDatabase bool
+
 	// Auth0WhitelistedIPs are the list of IPs that are used by Auth0 when invoking our callbacks
 	Auth0WhitelistedIPs []string
 
@@ -76,6 +79,7 @@ func init() {
 	requireIPLists()
 
 	Auth0IntegrationEnabled = strings.ToLower(os.Getenv("AUTH0_INTEGRATION_ENABLED")) == "true"
+	Auth0IntegrationCustomDatabase = strings.ToLower(os.Getenv("AUTH0_INTEGRATION_CUSTOM_DATABASE")) == "true"
 
 	ConsumeNATSStreamingSubscriptions = strings.ToLower(os.Getenv("CONSUME_NATS_STREAMING_SUBSCRIPTIONS")) == "true"
 
