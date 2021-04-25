@@ -454,7 +454,7 @@ func (u *User) Enrich() error {
 		return nil
 	}
 
-	auth0User, err := u.fetchAuth0User()
+	auth0User, _ := u.fetchAuth0User()
 	// if err != nil {
 	// 	return err
 	// }
