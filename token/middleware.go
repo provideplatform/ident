@@ -31,7 +31,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		if common.IsBanned(c) {
 			provide.RenderError(common.BannedErrorMessage, 429, c)
 			return
-		} else if token != nil && (token.UserID != nil || token.ApplicationID != nil || token.OrganizationID != nil) {
+		} else if token != nil && (token.UserID != nil || token.ApplicationID != nil || token.OrganizationID != nil || token.HasPermission(common.DefaultAuth0RequestPermission)) {
 			c.Set(contextSubjectKey, token.Subject)
 			c.Set(contextTokenKey, token)
 			c.Set(contextPermissionsKey, token.Permissions)

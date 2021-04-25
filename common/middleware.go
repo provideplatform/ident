@@ -8,6 +8,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const defaultAccessControlAllowCredentials = "true"
+const defaultAccessControlAllowOrigin = "*"
+const defaultAccessControlAllowHeaders = "Accept, Accept-Encoding, Authorization, Cache-Control, Content-Length, Content-Type, Origin, User-Agent, X-CSRF-Token, X-Requested-With"
+const defaultAccessControlAllowMethods = "GET, POST, PUT, DELETE, OPTIONS"
+const defaultAccessControlExposeHeaders = "X-Total-Results-Count"
+
 // AccountingMiddleware returns gin middleware for API call accounting
 func AccountingMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -32,11 +38,11 @@ func AccountingMiddleware() gin.HandlerFunc {
 // CORSMiddleware is gin middleware that returns permissive CORS headers
 func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Accept, Accept-Encoding, Authorization, Cache-Control, Content-Length, Content-Type, Origin, User-Agent, X-CSRF-Token, X-Requested-With")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Expose-Headers", "X-Total-Results-Count")
+		c.Writer.Header().Set("Access-Control-Allow-Origin", defaultAccessControlAllowOrigin)
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", defaultAccessControlAllowCredentials)
+		c.Writer.Header().Set("Access-Control-Allow-Headers", defaultAccessControlAllowHeaders)
+		c.Writer.Header().Set("Access-Control-Allow-Methods", defaultAccessControlAllowMethods)
+		c.Writer.Header().Set("Access-Control-Expose-Headers", defaultAccessControlExposeHeaders)
 
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
@@ -85,7 +91,7 @@ func newAPICall(c *gin.Context) *APICall {
 	userID := c.GetString("user_id")
 	orgID := c.GetString("organization_id")
 
-	if appID != "" || userID != "" {
+	if appID != "" || userID != "" || orgID != "" {
 		return &APICall{
 			ApplicationID:  appID,
 			UserID:         userID,
