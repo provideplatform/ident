@@ -737,7 +737,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 
 		if updateOrgMetadata {
 			organization.setMetadata(metadata)
-			db.Save(&organization)
+			organization.Update()
 		}
 
 		common.Log.Debugf("broadcast organization registry and interface impl transactions on behalf of organization: %s", organizationID)
