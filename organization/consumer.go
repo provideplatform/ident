@@ -711,7 +711,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 			"value": 0,
 		})
 		if err != nil {
-			common.Log.Warningf("organization registry transaction broadcast failed on behalf of organization: %s; %s", organizationID, err.Error())
+			common.Log.Warningf("organization registry transaction broadcast failed on behalf of organization: %s; org registry contract id: %s; %s", organizationID, *orgRegistryContractID, err.Error())
 			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
 			return
 		}
