@@ -518,7 +518,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 
 	var orgAddress *string
 	var orgMessagingEndpoint *string
-	var orgWhisperKey *string
+	var orgDomain *string
 	var orgZeroKnowledgePublicKey *string
 
 	orgToken := &token.Token{
@@ -552,7 +552,6 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 	for _, key := range keys {
 		if key.Spec != nil && *key.Spec == "secp256k1" && key.Address != nil {
 			orgAddress = common.StringOrNil(*key.Address)
-			orgWhisperKey = common.StringOrNil("0x")
 		}
 
 		if key.Spec != nil && *key.Spec == "babyJubJub" {
@@ -576,8 +575,18 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 		updateOrgMetadata = true
 	}
 
+	if domain, domainOk := metadata["domain"].(string); domainOk {
+		orgDomain = common.StringOrNil(domain)
+	}
+
 	if orgAddress == nil {
 		common.Log.Warningf("failed to resolve organization public address for storage in the public org registry; organization id: %s", organizationID)
+		natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+		return
+	}
+
+	if orgDomain == nil {
+		common.Log.Warningf("failed to resolve organization domain for storage in the public org registry; organization id: %s", organizationID)
 		natsutil.AttemptNack(msg, organizationRegistrationTimeout)
 		return
 	}
@@ -696,15 +705,15 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 			method = organizationUpdateRegistrationMethod
 		}
 
-		common.Log.Debugf("attempting to register organization with on-chain registry contract: %s", *orgRegistryContractAddress)
+		common.Log.Debugf("attempting to register organization %s, with on-chain registry contract: %s", organizationID, *orgRegistryContractAddress)
 		_, err = nchain.ExecuteContract(*jwtToken, *orgRegistryContractID, map[string]interface{}{
 			"wallet_id": orgWalletID,
 			"method":    method,
 			"params": []interface{}{
 				orgAddress,
 				*organization.Name,
+				*orgDomain,
 				*orgMessagingEndpoint,
-				*orgWhisperKey,
 				*orgZeroKnowledgePublicKey,
 				"{}",
 			},
@@ -715,25 +724,6 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
 			return
 		}
-
-		// setInterfaceImplementer -- IOrgRegistry
-
-		// setOrgRegistryInterfaceImplStatus, _, err := nchain.ExecuteContract(*orgToken.Token, *erc1820RegistryContractID, map[string]interface{}{
-		// 	"wallet_id":          orgWalletID,
-		// 	"hd_derivation_path": orgHDDerivationPath,
-		// 	"method":             organizationSetInterfaceImplementerMethod,
-		// 	"params": []interface{}{
-		// 		orgAddress,
-		// 		string(providecrypto.Keccak256("IOrgRegistry")),
-		// 		*orgRegistryContractAddress,
-		// 	},
-		// 	"value": 0,
-		// })
-		// if err != nil || setOrgRegistryInterfaceImplStatus != 202 {
-		// 	common.Log.Warningf("organization IOrgRegistry impl transaction broadcast failed on behalf of organization: %s; %s", organizationID, err.Error())
-		// 	natsutil.AttemptNack(msg, organizationRegistrationTimeout)
-		// 	return
-		// }
 
 		if updateOrgMetadata {
 			organization.setMetadata(metadata)
