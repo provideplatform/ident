@@ -101,7 +101,10 @@ func runAPI() {
 	r.Use(gin.Recovery())
 	r.Use(provide.CORSMiddleware())
 
-	r.GET("/.well-known/jwks", token.FetchJWKsHandler)
+	r.GET("/.well-known/jwks.json", token.FetchJWKsHandler) // deprecated
+	r.GET("/.well-known/jwks", token.FetchJWKsHandler)      // deprecated
+
+	r.GET("/.well-known/keys", token.FetchJWKsHandler)
 	r.GET("/.well-known/openid-configuration", openIDConfigurationHandler)
 
 	r.GET("/status", statusHandler)
