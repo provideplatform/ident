@@ -1,10 +1,12 @@
 package common
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
-	"net/url"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -12,7 +14,6 @@ import (
 
 	"github.com/joho/godotenv"
 	logger "github.com/kthomas/go-logger"
-	"github.com/provideservices/provide-go/api"
 	"github.com/provideservices/provide-go/common/util"
 )
 
@@ -199,20 +200,20 @@ func requireIPLists() {
 func requireOpenIDConfiguration() {
 	openIDConfigURL := os.Getenv("OPENID_CONFIGURATION_URL")
 	if openIDConfigURL != "" {
-		configURL, err := url.Parse(openIDConfigURL)
+		resp, err := http.Get(openIDConfigURL)
 		if err != nil {
-			Log.Panicf("failed to parse OPENID_CONFIGURATION_URL; %s", err.Error())
+			Log.Panicf("failed to fetch openid configuration; %s", err.Error())
 		}
-		client := &api.Client{
-			Host:   configURL.Host,
-			Scheme: configURL.Scheme,
-			Path:   configURL.Path,
-		}
-		_, configuration, err := client.Get("", map[string]interface{}{})
+		defer resp.Body.Close()
+
+		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			Log.Panicf("failed to fetch openid configuration; %s", err.Error())
 		}
 
-		OpenIDConfiguration = configuration.(map[string]interface{})
+		err = json.Unmarshal(body, &OpenIDConfiguration)
+		if err != nil {
+			Log.Panicf("failed to parse openid configuration; %s", err.Error())
+		}
 	}
 }
