@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/joho/godotenv"
 	logger "github.com/kthomas/go-logger"
+	"github.com/provideservices/provide-go/api"
 	"github.com/provideservices/provide-go/common/util"
 )
 
@@ -69,6 +71,9 @@ var (
 
 	// PerformEmailVerification flag indicates if email deliverability should be verified when creating new users
 	PerformEmailVerification bool
+
+	// OpenIDConfiguration is the openid configuration JSON which is served from .well-known/openid-configuration
+	OpenIDConfiguration map[string]interface{}
 )
 
 func init() {
@@ -77,6 +82,7 @@ func init() {
 	requireLogger()
 	requireEmailVerification()
 	requireIPLists()
+	requireOpenIDConfiguration()
 
 	Auth0IntegrationEnabled = strings.ToLower(os.Getenv("AUTH0_INTEGRATION_ENABLED")) == "true"
 	Auth0IntegrationCustomDatabase = strings.ToLower(os.Getenv("AUTH0_INTEGRATION_CUSTOM_DATABASE")) == "true"
@@ -188,4 +194,25 @@ func requireIPLists() {
 
 	// FIXME-- remove these hardcoded values and make an API/CLI integration to manage them
 	BannedIPs = []string{}
+}
+
+func requireOpenIDConfiguration() {
+	openIDConfigURL := os.Getenv("OPENID_CONFIGURATION_URL")
+	if openIDConfigURL != "" {
+		configURL, err := url.Parse(openIDConfigURL)
+		if err != nil {
+			Log.Panicf("failed to parse OPENID_CONFIGURATION_URL; %s", err.Error())
+		}
+		client := &api.Client{
+			Host:   configURL.Host,
+			Scheme: configURL.Scheme,
+			Path:   configURL.Path,
+		}
+		_, configuration, err := client.Get("", map[string]interface{}{})
+		if err != nil {
+			Log.Panicf("failed to fetch openid configuration; %s", err.Error())
+		}
+
+		OpenIDConfiguration = configuration.(map[string]interface{})
+	}
 }

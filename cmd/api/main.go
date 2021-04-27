@@ -101,7 +101,9 @@ func runAPI() {
 	r.Use(gin.Recovery())
 	r.Use(provide.CORSMiddleware())
 
-	r.GET("/.well-known/jwks.json", token.FetchJWKsHandler)
+	r.GET("/.well-known/jwks", token.FetchJWKsHandler)
+	r.GET("/.well-known/openid-configuration", openIDConfigurationHandler)
+
 	r.GET("/status", statusHandler)
 	r.GET("/legal/privacy_policy", privacyPolicyHandler)
 	r.GET("/legal/terms_of_service", termsOfServiceHandler)
@@ -132,6 +134,11 @@ func runAPI() {
 	}
 
 	common.Log.Debugf("listening on %s", util.ListenAddr)
+}
+
+// openIDConfigurationHandler returns the openid configuration under the well-known path
+func openIDConfigurationHandler(c *gin.Context) {
+	provide.Render(common.OpenIDConfiguration, 200, c)
 }
 
 func statusHandler(c *gin.Context) {
