@@ -335,7 +335,7 @@ func applicationOrganizationsListHandler(c *gin.Context) {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
-	if orgID != nil && !app.HasOrganization(db, orgID) {
+	if orgID != nil && !app.HasOrganization(db, *orgID) {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
