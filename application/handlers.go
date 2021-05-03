@@ -311,8 +311,9 @@ func applicationOrganizationsListHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 	userID := bearer.UserID
 	appID := bearer.ApplicationID
+	orgID := bearer.OrganizationID
 
-	if (userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) {
+	if (userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) && (orgID == nil || *orgID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -331,6 +332,10 @@ func applicationOrganizationsListHandler(c *gin.Context) {
 		return
 	}
 	if userID != nil && *userID != app.UserID {
+		provide.RenderError("forbidden", 403, c)
+		return
+	}
+	if orgID != nil && !app.HasOrganization(db, orgID) {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}

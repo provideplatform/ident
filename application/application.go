@@ -69,6 +69,15 @@ func FindByID(appID uuid.UUID) *Application {
 	return app
 }
 
+// HasOrganization returns true if the application instance has the given organization
+func (app *Application) HasOrganization(db *gorm.DB, organizationID uuid.UUID) bool {
+	var orgs []*organization.Organization
+	query := db.Select("organizations.id")
+	query = query.Joins("JOIN applications_organizations as ao ON ao.organization_id = organizations.id")
+	query.Where("ao.application_id = ? AND ao.organization_id = ?", app.ID, organizationID).Find(&orgs)
+	return orgs != nil && len(orgs) == 1
+}
+
 // OrganizationsListQuery returns a db query which joins the organization applications and returns the query for pagination
 func (app *Application) OrganizationsListQuery(db *gorm.DB) *gorm.DB {
 	query := db.Select("organizations.id, organizations.created_at, organizations.user_id, organizations.name, organizations.description, organizations.metadata, ao.permissions as permissions")
