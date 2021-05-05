@@ -240,7 +240,7 @@ func consumeOrganizationImplicitKeyExchangeInitMsg(msg *stan.Msg) {
 		return
 	}
 
-	if len(vaults) == 1 {
+	if len(vaults) > 0  {
 		orgVault := vaults[0]
 		keys, err := vault.ListKeys(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{})
 		if err != nil {
@@ -398,7 +398,7 @@ func consumeOrganizationImplicitKeyExchangeCompleteMsg(msg *stan.Msg) {
 		return
 	}
 
-	if len(vaults) == 1 {
+	if len(vaults) > 0 {
 		orgVault := vaults[0]
 
 		keys, err := vault.ListKeys(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{})
@@ -539,7 +539,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 
 	var keys []*vault.Key
 
-	if len(vaults) == 1 {
+	if len(vaults) > 0 {
 		orgVault := vaults[0]
 		keys, err = vault.ListKeys(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{})
 		if err != nil {
@@ -639,7 +639,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 		// org api token & hd wallet
 
 		orgToken := &token.Token{
-			ApplicationID:  &applicationUUID,
+			// ApplicationID:  &applicationUUID,
 			OrganizationID: &organization.ID,
 		}
 		if !orgToken.Vend() {
