@@ -65,7 +65,7 @@ func authorize(c *gin.Context) *Token {
 	}
 	token, err := Parse(authorization[len(authorization)-1])
 	if err != nil {
-		common.Log.Debugf("bearer token authorization failed; %s", err.Error())
+		common.Log.Tracef("bearer token authorization failed; %s", err.Error())
 		return nil
 	}
 	if token.UserID == nil && token.ApplicationID == nil && token.OrganizationID == nil && !token.IsRefreshToken {
