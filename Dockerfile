@@ -6,7 +6,7 @@ WORKDIR /go/src/github.com/provideapp/ident
 
 RUN make build
 
-FROM golang:1.15
+FROM alpine
 
 RUN mkdir -p /ident
 WORKDIR /ident
