@@ -8,7 +8,7 @@ RUN make build
 
 FROM alpine
 
-RUN apk add --no-cache bash
+RUN apk add --no-cache bash libc6-compat
 
 RUN mkdir -p /ident
 WORKDIR /ident
