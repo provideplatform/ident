@@ -177,9 +177,16 @@ func (u *User) fetchAuth0User() (*EphemeralUserMetadata, error) {
 func (u *User) updateAuth0User() error {
 	params := u.EphemeralMetadata
 	if params == nil {
-		err := errors.New("not updating auth0 user without ephemeral params")
-		common.Log.Debug(err.Error())
-		return err
+		if !common.Auth0IntegrationCustomDatabase {
+			err := errors.New("not updating auth0 user without ephemeral params")
+			common.Log.Debug(err.Error())
+			return err
+		} else {
+			params = &EphemeralUserMetadata{
+				Name:  u.Email,
+				Email: *u.Email,
+			}
+		}
 	}
 
 	if params.AppMetadata == nil {
