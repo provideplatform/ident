@@ -262,7 +262,7 @@ func (u *User) Create(tx *gorm.DB, createAuth0User bool) bool {
 			if success {
 				common.Log.Debugf("created user: %s", *u.Email)
 
-				if createAuth0User && common.Auth0IntegrationEnabled {
+				if createAuth0User && common.Auth0IntegrationEnabled && !common.Auth0IntegrationCustomDatabase {
 					err := u.createAuth0User()
 					if err != nil {
 						u.Errors = append(u.Errors, &provide.Error{
