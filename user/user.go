@@ -311,9 +311,7 @@ func (u *User) Update() bool {
 		}
 	}
 
-	if success && common.Auth0IntegrationEnabled {
-		common.Log.Debugf("updated user: %s", *u.Email)
-
+	if success && common.Auth0IntegrationEnabled && !common.Auth0IntegrationCustomDatabase {
 		err := u.updateAuth0User()
 		if err != nil {
 			u.Errors = append(u.Errors, &provide.Error{
@@ -324,6 +322,7 @@ func (u *User) Update() bool {
 		}
 	}
 
+	common.Log.Debugf("updated user: %s", *u.Email)
 	tx.Commit()
 	return success
 }
