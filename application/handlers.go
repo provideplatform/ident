@@ -331,7 +331,7 @@ func applicationOrganizationsListHandler(c *gin.Context) {
 		provide.RenderError("application not found", 404, c)
 		return
 	}
-	if userID != nil && *userID != app.UserID {
+	if userID != nil && *userID != app.UserID && orgID == nil {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
