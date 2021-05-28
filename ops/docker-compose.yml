@@ -171,12 +171,13 @@ services:
     restart: always
 
   vault:
-    image: provide/vault:dev
-    entrypoint: ./ops/run_api.sh    
+    image: provide/vault
+    entrypoint: ./ops/run_api.sh
     container_name: vault
     depends_on:
       - ident
       - postgres
+      - redis
     environment:
       - DATABASE_HOST=postgres
       - DATABASE_NAME=vault_dev
@@ -188,6 +189,7 @@ services:
       - IDENT_API_SCHEME=http
       - LOG_LEVEL=DEBUG
       - PORT=8080
+      - REDIS_HOSTS=redis:6379
       - SEAL_UNSEAL_KEY=traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day
       - SEAL_UNSEAL_VALIDATION_HASH=0x7cff64a2d2b709dd9df196000be6237875bafe0a92873fd9fd9f35c00808f309
     healthcheck:
