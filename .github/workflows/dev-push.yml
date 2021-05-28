@@ -20,7 +20,7 @@ jobs:
         id: tests
         uses: actions/checkout@v2
         with:
-          path: 'ident'                  
+          path: 'ident'
       - run: docker-compose -f ./ops/docker-compose.yml build --no-cache ident
         working-directory: ident
       - run: docker-compose -f ./ops/docker-compose.yml up -d

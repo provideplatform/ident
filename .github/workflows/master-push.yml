@@ -20,13 +20,13 @@ jobs:
         id: tests
         uses: actions/checkout@v2
         with:
-          path: 'ident'                  
-      - run: docker-compose -f ./ops/docker-compose-master.yml build --no-cache ident
+          path: 'ident'
+      - run: docker-compose -f ./ops/docker-compose.yml build --no-cache ident
         working-directory: ident
-      - run: docker-compose -f ./ops/docker-compose-master.yml up -d
+      - run: docker-compose -f ./ops/docker-compose.yml up -d
         working-directory: ident
       - run: TAGS=integration ./ops/run_local_tests_long.sh
-        working-directory: ident      
+        working-directory: ident
       - run: docker-compose -f ./ops/docker-compose.yml logs
         working-directory: ident
       - name: push_to_docker_hub
