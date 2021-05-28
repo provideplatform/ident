@@ -1,5 +1,4 @@
-name: Ident
-
+name: Ident (master)
 on: 
   push:
     branches:
@@ -45,4 +44,3 @@ jobs:
         with:
           status: ${{ job.status }}
           steps: ${{ toJson(steps) }}
-        
