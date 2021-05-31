@@ -28,7 +28,7 @@ jobs:
         working-directory: ident      
       - run: docker-compose -f ./ops/docker-compose.yml logs
         working-directory: ident
-      - name: slack channel update
+      - name: Send Slack Notification
         if: failure()  
         uses: act10ns/slack@v1
         with:

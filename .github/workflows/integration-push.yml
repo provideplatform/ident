@@ -29,7 +29,7 @@ jobs:
         working-directory: ident      
       - run: docker-compose -f ./ops/docker-compose.yml logs
         working-directory: ident
-      - name: push_to_docker_hub
+      - name: Push Docker Image
         if: success()
         uses: docker/build-push-action@v1
         with:
@@ -38,7 +38,7 @@ jobs:
           repository: provide/ident
           tags: integration
           path: 'ident'
-      - name: slack channel update
+      - name: Send Slack Notification
         if: failure()  
         uses: act10ns/slack@v1
         with:
