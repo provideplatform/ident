@@ -9,7 +9,7 @@ Provide is proud to announce the initial release of Ident - v.0.9.9. Ident is an
 ### New Features
 
 - **REST API** - Use Ident in virtually any ecosystem through the Ident API
-- Authorize, modify, or revoke permissions on the fly with Authentication `Tokens`
+- Authorize, modify, or revoke permissions on the fly with `Token` based authentication
 - **User management** - Create, list, update & delete `User` records
 - Native access controls with [Permissions](https://app.gitbook.com/@provide/s/ident/authorization/permissions#generic-permissions)
 - **Applications** - Collaborate with other users, organizations and even Applications in a network-connected shared ecosystem. 
