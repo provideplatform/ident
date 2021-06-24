@@ -67,7 +67,7 @@ func TestDeleteOrganizationUser(t *testing.T) {
 		return
 	}
 	//t.Logf("authenticated organizing user %s", organizingUser.ID.String())
-	ouToken := ouAuth.Token.Token
+	ouToken := ouAuth.Token.AccessToken
 
 	// create application
 	Application, err := appFactory(*ouToken, app.name, app.description)
@@ -149,7 +149,7 @@ func TestDeleteOrganizationUser(t *testing.T) {
 		return
 	}
 
-	err = provide.DeleteOrganizationUser(*delAuth.Token.Token, Organization.ID.String(), users[2].userID.String())
+	err = provide.DeleteOrganizationUser(*delAuth.Token.AccessToken, Organization.ID.String(), users[2].userID.String())
 	if err != nil {
 		t.Errorf("error deleting organization user %s with org token. Error: %s", users[2].userID.String(), err.Error())
 		return
@@ -190,7 +190,7 @@ func TestListOrganizationUsersWithNoUsersInOrg(t *testing.T) {
 		return
 	}
 	//t.Logf("authenticated organizing user %s", organizingUser.ID.String())
-	ouToken := ouAuth.Token.Token
+	ouToken := ouAuth.Token.AccessToken
 
 	// create organization
 	Organization, err := orgFactory(*ouToken, org.name, org.description)
@@ -260,7 +260,7 @@ func TestListOrganizationUsersUsingOrganizingUser(t *testing.T) {
 		return
 	}
 	//t.Logf("authenticated organizing user %s", organizingUser.ID.String())
-	ouToken := ouAuth.Token.Token
+	ouToken := ouAuth.Token.AccessToken
 
 	// create organization
 	Organization, err := orgFactory(*ouToken, org.name, org.description)
@@ -341,7 +341,7 @@ func TestListOrganizationUsers(t *testing.T) {
 
 		// Create an Organization if it doesn't exist
 		if org == nil {
-			org, err = provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
+			org, err = provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
 				"name":        userOrg.name,
 				"description": userOrg.description,
 			})
@@ -351,7 +351,7 @@ func TestListOrganizationUsers(t *testing.T) {
 			}
 		} else {
 			// let's add this user to the organization as the creating user is automatically added...
-			err := provide.CreateOrganizationUser(*organizingUserToken.Token, org.ID.String(), map[string]interface{}{
+			err := provide.CreateOrganizationUser(*organizingUserToken.AccessToken, org.ID.String(), map[string]interface{}{
 				"user_id": user.ID.String(),
 			})
 			if err != nil {
@@ -361,7 +361,7 @@ func TestListOrganizationUsers(t *testing.T) {
 		}
 	}
 
-	users, err := provide.ListOrganizationUsers(string(*organizingUserToken.Token), org.ID.String(), map[string]interface{}{})
+	users, err := provide.ListOrganizationUsers(string(*organizingUserToken.AccessToken), org.ID.String(), map[string]interface{}{})
 	if err != nil {
 		t.Errorf("error getting organization users list %s", err.Error())
 		return

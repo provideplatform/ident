@@ -29,8 +29,8 @@ func TestInviteUserFailsWithoutEmail(t *testing.T) {
 		return
 	}
 
-	// create an invite
-	err = provide.CreateInvitation(*auth.Token.Token, map[string]interface{}{})
+	// create an invite¡
+	err = provide.CreateInvitation(*auth.Token.AccessToken, map[string]interface{}{})
 	if err == nil {
 		t.Error("creating invitation should fail without an email address")
 		return
@@ -57,7 +57,7 @@ func TestInviteUserFailsWithInvalidEmail(t *testing.T) {
 	}
 
 	// create an invite
-	err = provide.CreateInvitation(*auth.Token.Token, map[string]interface{}{
+	err = provide.CreateInvitation(*auth.Token.AccessToken, map[string]interface{}{
 		"email": "not.a.valid.email.addr",
 	})
 	if err == nil {
@@ -89,7 +89,7 @@ func TestInviteUserByUserWithoutSudoFailsWithArbitraryPermission(t *testing.T) {
 	inviteEmail := fmt.Sprintf("%s@example.local", inviteTestId.String())
 
 	// create an invite
-	err = provide.CreateInvitation(*auth.Token.Token, map[string]interface{}{
+	err = provide.CreateInvitation(*auth.Token.AccessToken, map[string]interface{}{
 		"email":       inviteEmail,
 		"first_name":  "A",
 		"last_name":   "User",
@@ -129,7 +129,7 @@ func TestInviteUserFailsWithExistingUserEmail(t *testing.T) {
 	}
 
 	// create an invite for the existing user
-	err = provide.CreateInvitation(*auth.Token.Token, map[string]interface{}{
+	err = provide.CreateInvitation(*auth.Token.AccessToken, map[string]interface{}{
 		"email":      inviteEmail,
 		"first_name": "Joe",
 		"last_name":  "User",
@@ -163,7 +163,7 @@ func TestInviteUserWithUserAPIToken(t *testing.T) {
 	inviteEmail := fmt.Sprintf("%s@example.local", inviteTestId.String())
 
 	// create an invite
-	err = provide.CreateInvitation(*auth.Token.Token, map[string]interface{}{
+	err = provide.CreateInvitation(*auth.Token.AccessToken, map[string]interface{}{
 		"email":      inviteEmail,
 		"first_name": "A",
 		"last_name":  "User",
@@ -174,7 +174,7 @@ func TestInviteUserWithUserAPIToken(t *testing.T) {
 	}
 
 	// second invite should also work
-	err = provide.CreateInvitation(*auth.Token.Token, map[string]interface{}{
+	err = provide.CreateInvitation(*auth.Token.AccessToken, map[string]interface{}{
 		"email":      inviteEmail,
 		"first_name": "A",
 		"last_name":  "User",
@@ -205,14 +205,14 @@ func TestInviteApplicationUserWithApplicationAPIToken(t *testing.T) {
 	}
 
 	// create the app
-	app, err := appFactory(*auth.Token.Token, "test app", "baseline workgroup")
+	app, err := appFactory(*auth.Token.AccessToken, "test app", "baseline workgroup")
 	if err != nil {
 		t.Errorf("app creaton failed; %s", err.Error())
 		return
 	}
 
 	// create a token for the application
-	apptkn, err := appTokenFactory(*auth.Token.Token, app.ID)
+	apptkn, err := appTokenFactory(*auth.Token.AccessToken, app.ID)
 	if err != nil {
 		t.Errorf("token creation failed for application id %s; %s", app.ID, err.Error())
 		return
@@ -263,14 +263,14 @@ func TestInviteOrganizationUserWithOrganizationAPIToken(t *testing.T) {
 	}
 
 	// create the org
-	org, err := orgFactory(*auth.Token.Token, "test org", "ABC Corp")
+	org, err := orgFactory(*auth.Token.AccessToken, "test org", "ABC Corp")
 	if err != nil {
 		t.Errorf("org creaton failed; %s", err.Error())
 		return
 	}
 
 	// create a token for the organization
-	orgtkn, err := orgTokenFactory(*auth.Token.Token, org.ID)
+	orgtkn, err := orgTokenFactory(*auth.Token.AccessToken, org.ID)
 	if err != nil {
 		t.Errorf("token creation failed for organization id %s; %s", org.ID, err.Error())
 		return

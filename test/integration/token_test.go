@@ -126,7 +126,7 @@ func TestAppRevocableToken(t *testing.T) {
 	}
 
 	// create an app
-	app, err := provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+	app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 		"name": "DeFi Unicornz",
 	})
 	if err != nil {
@@ -135,7 +135,7 @@ func TestAppRevocableToken(t *testing.T) {
 	}
 
 	// create a revocable api token
-	token, err := provide.CreateToken(string(*auth.Token.Token), map[string]interface{}{
+	token, err := provide.CreateToken(string(*auth.Token.AccessToken), map[string]interface{}{
 		"application_id": app.ID.String(),
 	})
 	if err != nil {
@@ -187,7 +187,7 @@ func TestAppAccessRefreshToken(t *testing.T) {
 	}
 
 	// create an app
-	app, err := provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+	app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 		"name": "DeFi Unicornz",
 	})
 	if err != nil {
@@ -196,7 +196,7 @@ func TestAppAccessRefreshToken(t *testing.T) {
 	}
 
 	// create an access/refresh token
-	accessRefreshToken, err := provide.CreateToken(string(*auth.Token.Token), map[string]interface{}{
+	accessRefreshToken, err := provide.CreateToken(string(*auth.Token.AccessToken), map[string]interface{}{
 		"application_id": app.ID.String(),
 		"scope":          "offline_access",
 	})
@@ -278,7 +278,7 @@ func TestOrgAccessRefreshToken(t *testing.T) {
 	}
 
 	// create an org
-	org, err := provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
+	org, err := provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
 		"name": "ABC Corp",
 	})
 	if err != nil {
@@ -287,7 +287,7 @@ func TestOrgAccessRefreshToken(t *testing.T) {
 	}
 
 	// create an access/refresh token
-	accessRefreshToken, err := provide.CreateToken(string(*auth.Token.Token), map[string]interface{}{
+	accessRefreshToken, err := provide.CreateToken(string(*auth.Token.AccessToken), map[string]interface{}{
 		"organization_id": org.ID.String(),
 		"scope":           "offline_access",
 	})

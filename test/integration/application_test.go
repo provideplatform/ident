@@ -46,7 +46,7 @@ func TestCreateApplication(t *testing.T) {
 		}
 
 		// Create an Application for that org
-		app, err := provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+		app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 			"name":        userApp.name,
 			"description": userApp.description,
 			"user_id":     user.ID,
@@ -116,7 +116,7 @@ func TestListApplicationUsers(t *testing.T) {
 
 		// Create an Application if it doesn't exist
 		if app == nil {
-			app, err = provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+			app, err = provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 				"name":        userApp.name,
 				"description": userApp.description,
 			})
@@ -127,7 +127,7 @@ func TestListApplicationUsers(t *testing.T) {
 
 			if appToken == nil {
 				// create a token for the application
-				apptkn, err := appTokenFactory(*auth.Token.Token, app.ID)
+				apptkn, err := appTokenFactory(*auth.Token.AccessToken, app.ID)
 				if err != nil {
 					t.Errorf("token creation failed for application id %s. error: %s", app.ID, err.Error())
 					return
@@ -146,7 +146,7 @@ func TestListApplicationUsers(t *testing.T) {
 		}
 	}
 
-	users, err := provide.ListApplicationUsers(string(*userToken.Token), app.ID.String(), map[string]interface{}{})
+	users, err := provide.ListApplicationUsers(string(*userToken.AccessToken), app.ID.String(), map[string]interface{}{})
 	if err != nil { // the user who created the application is *currently* allowed to operate on the application. probably needs a permissions update.
 		t.Errorf("error getting users list %s", err.Error())
 		return
@@ -198,7 +198,7 @@ func TestGetApplicationDetails(t *testing.T) {
 	for _, tc := range tt {
 
 		// Create an Application for that org
-		app, err := provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+		app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 			"name":        tc.name,
 			"description": tc.description,
 			"user_id":     user.ID,
@@ -212,7 +212,7 @@ func TestGetApplicationDetails(t *testing.T) {
 			return
 		}
 
-		deets, err := provide.GetApplicationDetails(*auth.Token.Token, app.ID.String(), map[string]interface{}{})
+		deets, err := provide.GetApplicationDetails(*auth.Token.AccessToken, app.ID.String(), map[string]interface{}{})
 		if err != nil {
 			t.Errorf("error getting application details. Error: %s", err.Error())
 			return
@@ -271,7 +271,7 @@ func TestUpdateApplicationDetails(t *testing.T) {
 	for _, tc := range tt {
 
 		// Create an Application for that org
-		app, err := provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+		app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 			"name":        tc.name,
 			"description": tc.description,
 			"user_id":     user.ID,
@@ -288,7 +288,7 @@ func TestUpdateApplicationDetails(t *testing.T) {
 		updatedName := tc.name + testId.String()
 		updatedDescription := tc.description + testId.String()
 
-		err = provide.UpdateApplication(string(*auth.Token.Token), app.ID.String(), map[string]interface{}{
+		err = provide.UpdateApplication(string(*auth.Token.AccessToken), app.ID.String(), map[string]interface{}{
 			"name":        updatedName,
 			"description": updatedDescription,
 		})
@@ -296,7 +296,7 @@ func TestUpdateApplicationDetails(t *testing.T) {
 			t.Errorf("error updating application details. Error: %s", err.Error())
 		}
 
-		deets, err := provide.GetApplicationDetails(*auth.Token.Token, app.ID.String(), map[string]interface{}{})
+		deets, err := provide.GetApplicationDetails(*auth.Token.AccessToken, app.ID.String(), map[string]interface{}{})
 		if err != nil {
 			t.Errorf("error getting application details. Error: %s", err.Error())
 			return
@@ -375,7 +375,7 @@ func TestFetchAppDetailsFailsWithUnauthorizedUser(t *testing.T) {
 	for _, tc := range tt {
 
 		// Create an Application for that user
-		app, err := provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+		app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 			"name":        tc.name,
 			"description": tc.description,
 		})
@@ -391,7 +391,7 @@ func TestFetchAppDetailsFailsWithUnauthorizedUser(t *testing.T) {
 		t.Logf("about to check app details with unauthorized user")
 		t.Logf("app id: %s", app.ID)
 		t.Logf("user id: %+v", notAuthorizedUser)
-		_, err = provide.GetApplicationDetails(*nonAuth.Token.Token, app.ID.String(), map[string]interface{}{})
+		_, err = provide.GetApplicationDetails(*nonAuth.Token.AccessToken, app.ID.String(), map[string]interface{}{})
 		if err == nil {
 			t.Errorf("expected error getting application details by a user not associated with the application")
 			return
@@ -455,7 +455,7 @@ func TestUserUpdateAppDetailsAccess(t *testing.T) {
 	for _, tc := range tt {
 
 		// Create an Application for that org
-		app, err := provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+		app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 			"name":        tc.name,
 			"description": tc.description,
 			"user_id":     user.ID,
@@ -472,7 +472,7 @@ func TestUserUpdateAppDetailsAccess(t *testing.T) {
 		updatedName := tc.name + testId.String()
 		updatedDescription := tc.description + testId.String()
 
-		err = provide.UpdateApplication(*nonAuth.Token.Token, app.ID.String(), map[string]interface{}{
+		err = provide.UpdateApplication(*nonAuth.Token.AccessToken, app.ID.String(), map[string]interface{}{
 			"name":        updatedName,
 			"description": updatedDescription,
 			"user_id":     nonUser.ID,
@@ -481,7 +481,7 @@ func TestUserUpdateAppDetailsAccess(t *testing.T) {
 			t.Errorf("expected error updating application details by a user not associated with the application")
 		}
 
-		deets, err := provide.GetApplicationDetails(*auth.Token.Token, app.ID.String(), map[string]interface{}{})
+		deets, err := provide.GetApplicationDetails(*auth.Token.AccessToken, app.ID.String(), map[string]interface{}{})
 		if err != nil {
 			t.Errorf("error getting application details. Error: %s", err.Error())
 			return
@@ -541,7 +541,7 @@ func TestDeleteApplication(t *testing.T) {
 		}
 
 		// Create an Application for that org
-		app, err := provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+		app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 			"name":        userApp.name,
 			"description": userApp.description,
 			"user_id":     user.ID,
@@ -556,12 +556,12 @@ func TestDeleteApplication(t *testing.T) {
 		}
 
 		// start the actual tests... lol... we gotta hire someone to DRY up this suite someday :D
-		err = provide.DeleteApplication(string(*auth.Token.Token), app.ID.String())
+		err = provide.DeleteApplication(string(*auth.Token.AccessToken), app.ID.String())
 		if err != nil {
 			t.Errorf("error soft-deleting application %s", app.ID)
 			return
 		}
-		deets, err := provide.GetApplicationDetails(*auth.Token.Token, app.ID.String(), map[string]interface{}{})
+		deets, err := provide.GetApplicationDetails(*auth.Token.AccessToken, app.ID.String(), map[string]interface{}{})
 		if err != nil {
 			t.Errorf("failed retrieving application details for soft-deleted app %s", app.ID)
 			return
@@ -603,7 +603,7 @@ func TestListApplicationTokens(t *testing.T) {
 		t.Errorf("user authentication failed for user %s. error: %s", authUser.email, err.Error())
 	}
 
-	app, err := provide.CreateApplication(*auth.Token.Token, map[string]interface{}{
+	app, err := provide.CreateApplication(*auth.Token.AccessToken, map[string]interface{}{
 		"name":        testApp.name,
 		"description": testApp.description,
 	})
@@ -616,7 +616,7 @@ func TestListApplicationTokens(t *testing.T) {
 	var createdTokens [tokenCount]provide.Token
 
 	for looper := 0; looper < tokenCount; looper++ {
-		token, err := appTokenFactory(*auth.Token.Token, app.ID)
+		token, err := appTokenFactory(*auth.Token.AccessToken, app.ID)
 		if err != nil {
 			t.Errorf("error creating app token")
 			return
@@ -624,7 +624,7 @@ func TestListApplicationTokens(t *testing.T) {
 		createdTokens[looper] = *token
 	}
 
-	listOfTokens, err := provide.ListApplicationTokens(*auth.Token.Token, app.ID.String(), map[string]interface{}{})
+	listOfTokens, err := provide.ListApplicationTokens(*auth.Token.AccessToken, app.ID.String(), map[string]interface{}{})
 	if err != nil {
 		t.Errorf("error getting list of application tokens. Error: %s", err.Error())
 		return
@@ -666,7 +666,7 @@ func TestApplicationOrganizationList(t *testing.T) {
 		"testApp1" + testId.String(), "testApp1Desc" + testId.String(),
 	}
 
-	app, err := provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+	app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 		"name":        userApp.name,
 		"description": userApp.description,
 		"user_id":     user.ID,
@@ -690,7 +690,7 @@ func TestApplicationOrganizationList(t *testing.T) {
 
 	for _, tc := range tt {
 
-		org, err := provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
+		org, err := provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
 			"name":        tc.name,
 			"description": tc.description,
 			"user_id":     user.ID,
@@ -704,7 +704,7 @@ func TestApplicationOrganizationList(t *testing.T) {
 			return
 		}
 
-		appToken, err := appTokenFactory(string(*auth.Token.Token), app.ID)
+		appToken, err := appTokenFactory(string(*auth.Token.AccessToken), app.ID)
 		if err != nil {
 			t.Errorf("error getting app token. Error: %s", err.Error())
 		}
@@ -767,7 +767,7 @@ func TestCreateApplicationOrganization(t *testing.T) {
 		"testApp1" + testId.String(), "testApp1Desc" + testId.String(),
 	}
 
-	app, err := provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+	app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 		"name":        userApp.name,
 		"description": userApp.description,
 		"user_id":     user.ID,
@@ -791,7 +791,7 @@ func TestCreateApplicationOrganization(t *testing.T) {
 
 	for _, tc := range tt {
 
-		org, err := provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
+		org, err := provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
 			"name":        tc.name,
 			"description": tc.description,
 			"user_id":     user.ID,
@@ -805,7 +805,7 @@ func TestCreateApplicationOrganization(t *testing.T) {
 			return
 		}
 
-		appToken, err := appTokenFactory(string(*auth.Token.Token), app.ID)
+		appToken, err := appTokenFactory(string(*auth.Token.AccessToken), app.ID)
 		if err != nil {
 			t.Errorf("error getting app token. Error: %s", err.Error())
 		}
@@ -852,7 +852,7 @@ func UpdateApplicationOrganization(t *testing.T) {
 		"testApp1" + testId.String(), "testApp1Desc" + testId.String(),
 	}
 
-	app, err := provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+	app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 		"name":        userApp.name,
 		"description": userApp.description,
 		"user_id":     user.ID,
@@ -876,7 +876,7 @@ func UpdateApplicationOrganization(t *testing.T) {
 
 	for _, tc := range tt {
 
-		org, err := provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
+		org, err := provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
 			"name":        tc.name,
 			"description": tc.description,
 			"user_id":     user.ID,
@@ -890,7 +890,7 @@ func UpdateApplicationOrganization(t *testing.T) {
 			return
 		}
 
-		appToken, err := appTokenFactory(string(*auth.Token.Token), app.ID)
+		appToken, err := appTokenFactory(string(*auth.Token.AccessToken), app.ID)
 		if err != nil {
 			t.Errorf("error getting app token. Error: %s", err.Error())
 		}
@@ -950,7 +950,7 @@ func TestDeleteApplicationOrganizationWithApplicationAPIToken(t *testing.T) {
 		"testApp1" + testId.String(), "testApp1Desc" + testId.String(),
 	}
 
-	app, err := provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+	app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 		"name":        userApp.name,
 		"description": userApp.description,
 		"user_id":     user.ID,
@@ -974,7 +974,7 @@ func TestDeleteApplicationOrganizationWithApplicationAPIToken(t *testing.T) {
 
 	for _, tc := range tt {
 
-		org, err := provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
+		org, err := provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
 			"name":        tc.name,
 			"description": tc.description,
 			"user_id":     user.ID,
@@ -988,7 +988,7 @@ func TestDeleteApplicationOrganizationWithApplicationAPIToken(t *testing.T) {
 			return
 		}
 
-		appToken, err := appTokenFactory(string(*auth.Token.Token), app.ID)
+		appToken, err := appTokenFactory(string(*auth.Token.AccessToken), app.ID)
 		if err != nil {
 			t.Errorf("error getting app token. Error: %s", err.Error())
 		}
@@ -1061,7 +1061,7 @@ func TestCreateApplicationUser(t *testing.T) {
 
 		// Create an Application if it doesn't exist
 		if app == nil {
-			app, err = provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+			app, err = provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 				"name":        userApp.name,
 				"description": userApp.description,
 			})
@@ -1072,7 +1072,7 @@ func TestCreateApplicationUser(t *testing.T) {
 
 			if appToken == nil {
 				// create a token for the application
-				apptkn, err := appTokenFactory(*auth.Token.Token, app.ID)
+				apptkn, err := appTokenFactory(*auth.Token.AccessToken, app.ID)
 				if err != nil {
 					t.Errorf("token creation failed for application id %s. error: %s", app.ID, err.Error())
 					return
@@ -1123,7 +1123,7 @@ func TestDeleteApplicationUserWithApplicationAPIToken(t *testing.T) {
 		return
 	}
 
-	app, err := provide.CreateApplication(string(*auth.Token.Token), map[string]interface{}{
+	app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 		"name":        userApp.name,
 		"description": userApp.description,
 	})
@@ -1133,7 +1133,7 @@ func TestDeleteApplicationUserWithApplicationAPIToken(t *testing.T) {
 	}
 
 	// create a token for the application
-	apptkn, err := appTokenFactory(*auth.Token.Token, app.ID)
+	apptkn, err := appTokenFactory(*auth.Token.AccessToken, app.ID)
 	if err != nil {
 		t.Errorf("token creation failed for application id %s. error: %s", app.ID, err.Error())
 		return
