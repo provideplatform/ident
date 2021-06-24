@@ -14,14 +14,14 @@ import (
 	"github.com/kthomas/go-pgputil"
 	"github.com/kthomas/go-redisutil"
 
-	"github.com/provideapp/ident/application"
-	"github.com/provideapp/ident/common"
-	"github.com/provideapp/ident/organization"
-	"github.com/provideapp/ident/token"
-	"github.com/provideapp/ident/user"
+	"github.com/provideplatform/ident/application"
+	"github.com/provideplatform/ident/common"
+	"github.com/provideplatform/ident/organization"
+	"github.com/provideplatform/ident/token"
+	"github.com/provideplatform/ident/user"
 
-	provide "github.com/provideservices/provide-go/common"
-	util "github.com/provideservices/provide-go/common/util"
+	provide "github.com/provideplatform/provide-go/common"
+	util "github.com/provideplatform/provide-go/common/util"
 )
 
 const privacyPolicyUpdatedAt = "2018-10-19T00:00:00.000000"

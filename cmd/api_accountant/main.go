@@ -12,9 +12,9 @@ import (
 	"github.com/gin-gonic/gin"
 
 	dbconf "github.com/kthomas/go-db-config"
-	"github.com/provideapp/ident/common"
-	provide "github.com/provideservices/provide-go/common"
-	util "github.com/provideservices/provide-go/common/util"
+	"github.com/provideplatform/ident/common"
+	provide "github.com/provideplatform/provide-go/common"
+	util "github.com/provideplatform/provide-go/common/util"
 )
 
 const runloopSleepInterval = 100 * time.Millisecond

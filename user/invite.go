@@ -10,9 +10,9 @@ import (
 	natsutil "github.com/kthomas/go-natsutil"
 	"github.com/kthomas/go-redisutil"
 	uuid "github.com/kthomas/go.uuid"
-	"github.com/provideapp/ident/common"
-	"github.com/provideapp/ident/token"
-	provide "github.com/provideservices/provide-go/api"
+	"github.com/provideplatform/ident/common"
+	"github.com/provideplatform/ident/token"
+	provide "github.com/provideplatform/provide-go/api"
 )
 
 const defaultInvitationTokenTimeout = time.Hour * 48

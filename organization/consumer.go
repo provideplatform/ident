@@ -9,17 +9,17 @@ import (
 	"sync"
 	"time"
 
-	nchain "github.com/provideservices/provide-go/api/nchain"
-	vault "github.com/provideservices/provide-go/api/vault"
+	nchain "github.com/provideplatform/provide-go/api/nchain"
+	vault "github.com/provideplatform/provide-go/api/vault"
 
-	// providecrypto "github.com/provideservices/provide-go/crypto"
+	// providecrypto "github.com/provideplatform/provide-go/crypto"
 
 	dbconf "github.com/kthomas/go-db-config"
 	natsutil "github.com/kthomas/go-natsutil"
 	uuid "github.com/kthomas/go.uuid"
 	stan "github.com/nats-io/stan.go"
-	"github.com/provideapp/ident/common"
-	"github.com/provideapp/ident/token"
+	"github.com/provideplatform/ident/common"
+	"github.com/provideplatform/ident/token"
 )
 
 const natsCreatedOrganizationCreatedSubject = "ident.organization.created"
@@ -240,7 +240,7 @@ func consumeOrganizationImplicitKeyExchangeInitMsg(msg *stan.Msg) {
 		return
 	}
 
-	if len(vaults) > 0  {
+	if len(vaults) > 0 {
 		orgVault := vaults[0]
 		keys, err := vault.ListKeys(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{})
 		if err != nil {

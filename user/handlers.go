@@ -11,11 +11,11 @@ import (
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
-	"github.com/provideapp/ident/common"
-	"github.com/provideapp/ident/token"
-	api "github.com/provideservices/provide-go/api"
-	provide "github.com/provideservices/provide-go/common"
-	util "github.com/provideservices/provide-go/common/util"
+	"github.com/provideplatform/ident/common"
+	"github.com/provideplatform/ident/token"
+	api "github.com/provideplatform/provide-go/api"
+	provide "github.com/provideplatform/provide-go/common"
+	util "github.com/provideplatform/provide-go/common/util"
 )
 
 // InstallPublicUserAPI installs unauthenticated API handlers using the given gin Engine

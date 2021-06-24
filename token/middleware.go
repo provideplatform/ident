@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/provideapp/ident/common"
-	provide "github.com/provideservices/provide-go/common"
+	"github.com/provideplatform/ident/common"
+	provide "github.com/provideplatform/provide-go/common"
 )
 
 const contextApplicationIDKey = "application_id"

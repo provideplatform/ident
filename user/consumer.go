@@ -7,8 +7,8 @@ import (
 
 	natsutil "github.com/kthomas/go-natsutil"
 	stan "github.com/nats-io/stan.go"
-	"github.com/provideapp/ident/common"
-	"github.com/provideapp/ident/token"
+	"github.com/provideplatform/ident/common"
+	"github.com/provideplatform/ident/token"
 )
 
 const natsDispatchInvitationSubject = "ident.invitation.dispatch"

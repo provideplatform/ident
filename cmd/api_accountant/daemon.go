@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
-	"github.com/provideapp/ident/common"
+	"github.com/provideplatform/ident/common"
 )
 
 const identAPIAccountingListenAddressEnvVar = "API_ACCOUNTING_LISTEN_ADDRESS"

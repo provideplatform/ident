@@ -1,4 +1,4 @@
-module github.com/provideapp/ident
+module github.com/provideplatform/ident
 
 go 1.15
 
@@ -30,7 +30,7 @@ require (
 	github.com/onsi/gomega v1.10.1
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/provideservices/provide-go v0.0.0-20210528064845-41b80b9b02b9
+	github.com/provideplatform/provide-go v0.0.0-20210624064849-d7328258f0d8
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	google.golang.org/protobuf v1.25.0 // indirect
 )

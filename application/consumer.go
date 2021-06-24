@@ -9,7 +9,7 @@ import (
 	natsutil "github.com/kthomas/go-natsutil"
 	uuid "github.com/kthomas/go.uuid"
 	stan "github.com/nats-io/stan.go"
-	"github.com/provideapp/ident/common"
+	"github.com/provideplatform/ident/common"
 )
 
 const natsApplicationImplicitKeyExchangeInitSubject = "ident.application.keys.exchange.init"

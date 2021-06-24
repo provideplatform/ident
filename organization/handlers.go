@@ -7,12 +7,12 @@ import (
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
-	"github.com/provideapp/ident/common"
-	"github.com/provideapp/ident/token"
-	"github.com/provideapp/ident/user"
+	"github.com/provideplatform/ident/common"
+	"github.com/provideplatform/ident/token"
+	"github.com/provideplatform/ident/user"
 
-	vault "github.com/provideservices/provide-go/api/vault"
-	provide "github.com/provideservices/provide-go/common"
+	vault "github.com/provideplatform/provide-go/api/vault"
+	provide "github.com/provideplatform/provide-go/common"
 )
 
 // InstallOrganizationAPI installs handlers using the given gin Engine

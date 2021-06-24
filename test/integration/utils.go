@@ -5,9 +5,9 @@ package integration
 import (
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
-	identcommon "github.com/provideapp/ident/common"
-	identuser "github.com/provideapp/ident/user"
-	provide "github.com/provideservices/provide-go/api/ident"
+	identcommon "github.com/provideplatform/ident/common"
+	identuser "github.com/provideplatform/ident/user"
+	provide "github.com/provideplatform/provide-go/api/ident"
 )
 
 type User struct {

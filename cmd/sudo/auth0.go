@@ -6,8 +6,8 @@ import (
 
 	"github.com/jinzhu/gorm"
 	"github.com/kthomas/go-auth0"
-	"github.com/provideapp/ident/common"
-	"github.com/provideapp/ident/user"
+	"github.com/provideplatform/ident/common"
+	"github.com/provideplatform/ident/user"
 )
 
 const auth0ConnectionTypeUsernamePassword = "Username-Password-Authentication"

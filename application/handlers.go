@@ -7,11 +7,11 @@ import (
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
-	"github.com/provideapp/ident/common"
-	"github.com/provideapp/ident/organization"
-	"github.com/provideapp/ident/token"
-	"github.com/provideapp/ident/user"
-	provide "github.com/provideservices/provide-go/common"
+	"github.com/provideplatform/ident/common"
+	"github.com/provideplatform/ident/organization"
+	"github.com/provideplatform/ident/token"
+	"github.com/provideplatform/ident/user"
+	provide "github.com/provideplatform/provide-go/common"
 )
 
 // InstallApplicationAPI installs the handlers using the given gin Engine

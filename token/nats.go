@@ -3,8 +3,8 @@ package token
 import (
 	"fmt"
 
-	prvdcommon "github.com/provideservices/provide-go/common"
-	util "github.com/provideservices/provide-go/common/util"
+	prvdcommon "github.com/provideplatform/provide-go/common"
+	util "github.com/provideplatform/provide-go/common/util"
 )
 
 // VendNatsBearerAuthorization vends a signed NATS authorization on behalf of the caller

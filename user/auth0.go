@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/kthomas/go-auth0"
-	"github.com/provideapp/ident/common"
+	"github.com/provideplatform/ident/common"
 )
 
 const auth0ConnectionTypeUsernamePassword = "Username-Password-Authentication"

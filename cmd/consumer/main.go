@@ -10,11 +10,11 @@ import (
 
 	"github.com/kthomas/go-pgputil"
 	"github.com/kthomas/go-redisutil"
-	_ "github.com/provideapp/ident/application" // Application package
-	"github.com/provideapp/ident/common"
-	_ "github.com/provideapp/ident/organization" // Organization package
-	_ "github.com/provideapp/ident/user"         // User package
-	util "github.com/provideservices/provide-go/common/util"
+	_ "github.com/provideplatform/ident/application" // Application package
+	"github.com/provideplatform/ident/common"
+	_ "github.com/provideplatform/ident/organization" // Organization package
+	_ "github.com/provideplatform/ident/user"         // User package
+	util "github.com/provideplatform/provide-go/common/util"
 )
 
 const natsStreamingSubscriptionStatusTickerInterval = 5 * time.Second

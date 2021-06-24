@@ -7,8 +7,8 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/kthomas/go-auth0"
 	dbconf "github.com/kthomas/go-db-config"
-	"github.com/provideapp/ident/common"
-	identuser "github.com/provideapp/ident/user"
+	"github.com/provideplatform/ident/common"
+	identuser "github.com/provideplatform/ident/user"
 )
 
 var siaDB *gorm.DB

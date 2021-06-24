@@ -14,7 +14,7 @@ import (
 
 	"github.com/joho/godotenv"
 	logger "github.com/kthomas/go-logger"
-	"github.com/provideservices/provide-go/common/util"
+	"github.com/provideplatform/provide-go/common/util"
 )
 
 const apiAccountingAddressEnvVar = "API_ACCOUNTING_ADDRESS"

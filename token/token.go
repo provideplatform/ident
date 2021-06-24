@@ -14,10 +14,10 @@ import (
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
-	"github.com/provideapp/ident/common"
-	provide "github.com/provideservices/provide-go/api"
-	"github.com/provideservices/provide-go/api/vault"
-	util "github.com/provideservices/provide-go/common/util"
+	"github.com/provideplatform/ident/common"
+	provide "github.com/provideplatform/provide-go/api"
+	"github.com/provideplatform/provide-go/api/vault"
+	util "github.com/provideplatform/provide-go/common/util"
 )
 
 const authorizationGrantRefreshToken = "refresh_token"

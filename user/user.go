@@ -14,10 +14,10 @@ import (
 	natsutil "github.com/kthomas/go-natsutil"
 	uuid "github.com/kthomas/go.uuid"
 	trumail "github.com/kthomas/trumail/verifier"
-	"github.com/provideapp/ident/common"
-	"github.com/provideapp/ident/token"
-	provide "github.com/provideservices/provide-go/api"
-	util "github.com/provideservices/provide-go/common/util"
+	"github.com/provideplatform/ident/common"
+	"github.com/provideplatform/ident/token"
+	provide "github.com/provideplatform/provide-go/api"
+	util "github.com/provideplatform/provide-go/common/util"
 	"golang.org/x/crypto/bcrypt"
 )
 

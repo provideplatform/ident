@@ -10,8 +10,8 @@ import (
 
 	"github.com/jinzhu/gorm"
 	uuid "github.com/kthomas/go.uuid"
-	"github.com/provideapp/ident/common"
-	api "github.com/provideservices/provide-go/api"
+	"github.com/provideplatform/ident/common"
+	api "github.com/provideplatform/provide-go/api"
 )
 
 type siaAPICall struct {

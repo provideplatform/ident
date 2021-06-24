@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	uuid "github.com/kthomas/go.uuid"
-	provide "github.com/provideservices/provide-go/api/ident"
+	provide "github.com/provideplatform/provide-go/api/ident"
 )
 
 func TestUserAccessRefreshToken(t *testing.T) {
