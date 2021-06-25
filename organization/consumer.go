@@ -541,25 +541,37 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 
 	if len(vaults) > 0 {
 		orgVault := vaults[0]
-		keys, err = vault.ListKeys(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{})
+
+		// secp256k1
+		keys, err = vault.ListKeys(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{
+			"spec": "secp256k1",
+		})
 		if err != nil {
-			common.Log.Warningf("failed to fetch keys from vault during implicit key exchange message handler; organization id: %s; %s", organizationID, err.Error())
+			common.Log.Warningf("failed to fetch secp256k1 keys from vault during implicit key exchange message handler; organization id: %s; %s", organizationID, err.Error())
 			natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
 			return
 		}
-	}
-
-	for _, key := range keys {
-		if key.Spec != nil && *key.Spec == "secp256k1" && key.Address != nil {
-			orgAddress = common.StringOrNil(*key.Address)
+		if len(keys) > 0 {
+			key := keys[0]
+			if key.Address != nil {
+				orgAddress = common.StringOrNil(*key.Address)
+			}
 		}
 
-		if key.Spec != nil && *key.Spec == "babyJubJub" {
-			orgZeroKnowledgePublicKey = common.StringOrNil(*key.PublicKey)
+		// babyJubJub
+		keys, err = vault.ListKeys(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{
+			"spec": "babyJubJub",
+		})
+		if err != nil {
+			common.Log.Warningf("failed to fetch babyJubJub keys from vault during implicit key exchange message handler; organization id: %s; %s", organizationID, err.Error())
+			natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
+			return
 		}
-
-		if orgAddress != nil && orgZeroKnowledgePublicKey != nil {
-			break
+		if len(keys) > 0 {
+			key := keys[0]
+			if key.PublicKey != nil {
+				orgZeroKnowledgePublicKey = common.StringOrNil(*key.PublicKey)
+			}
 		}
 	}
 
