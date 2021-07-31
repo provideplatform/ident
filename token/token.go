@@ -672,7 +672,7 @@ func (t *Token) validate() bool {
 			var sub *string
 			if t.OrganizationID != nil {
 				sub = common.StringOrNil(fmt.Sprintf("%s:%s", authorizationSubjectOrganization, t.OrganizationID.String()))
-			} else if t.ApplicationID != nil {
+			} else if t.ApplicationID != nil && t.UserID == nil {
 				sub = common.StringOrNil(fmt.Sprintf("%s:%s", authorizationSubjectApplication, t.ApplicationID.String()))
 			} else if t.UserID != nil {
 				sub = common.StringOrNil(fmt.Sprintf("%s:%s", authorizationSubjectUser, t.UserID.String()))
