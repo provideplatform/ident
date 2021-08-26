@@ -965,12 +965,13 @@ func (t *Token) encodeJWTNatsClaims() (map[string]interface{}, error) {
 		}
 	} else {
 		// FIXME-- put these defaults in configuration and read them from there...
+		publishAllow = append(publishAllow, "baseline.>")
+
+		subscribeAllow = append(subscribeAllow, "baseline.>")
 		subscribeAllow = append(subscribeAllow, "network.*.connector.*")
+		subscribeAllow = append(subscribeAllow, "network.*.contracts.*")
 		subscribeAllow = append(subscribeAllow, "network.*.status")
 		subscribeAllow = append(subscribeAllow, "platform.>")
-		subscribeAllow = append(subscribeAllow, "baseline.>")
-
-		publishAllow = append(publishAllow, "baseline.>")
 	}
 
 	var publishPermissions map[string]interface{}
