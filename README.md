@@ -1,5 +1,7 @@
 # ident
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/provideplatform/ident)](https://goreportcard.com/report/github.com/provideplatform/ident)
+
 Microservice for authn, authz and identity.
 
 ## Documentation
