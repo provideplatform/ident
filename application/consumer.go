@@ -31,7 +31,7 @@ func init() {
 
 	natsutil.EstablishSharedNatsConnection(nil)
 	natsutil.NatsCreateStream(defaultNatsStream, []string{
-		fmt.Sprintf("%s.*", defaultNatsStream),
+		fmt.Sprintf("%s.>", defaultNatsStream),
 	})
 
 	var waitGroup sync.WaitGroup
