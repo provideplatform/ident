@@ -339,7 +339,7 @@ func (i *Invite) vendToken() (*token.Token, error) {
 	}
 
 	payload, _ := json.Marshal(token)
-	natsutil.NatsStreamingPublish(natsDispatchInvitationSubject, payload)
+	natsutil.NatsJetstreamPublish(natsDispatchInvitationSubject, payload)
 
 	return token, nil
 }

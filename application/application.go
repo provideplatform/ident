@@ -11,6 +11,7 @@ import (
 	"github.com/kthomas/go-pgputil"
 	redisutil "github.com/kthomas/go-redisutil"
 	uuid "github.com/kthomas/go.uuid"
+	"github.com/nats-io/nats.go"
 	"github.com/provideplatform/ident/common"
 	"github.com/provideplatform/ident/organization"
 	"github.com/provideplatform/ident/user"
@@ -200,13 +201,13 @@ func (app *Application) initImplicitDiffieHellmanKeyExchange(db *gorm.DB, organi
 			"organization_id":      organizationID.String(),
 			"peer_organization_id": peerOrg.ID.String(),
 		})
-		natsutil.NatsStreamingPublish(natsOrganizationImplicitKeyExchangeInitSubject, payload)
+		natsutil.NatsJetstreamPublish(natsOrganizationImplicitKeyExchangeInitSubject, payload)
 
 		payload, _ = json.Marshal(map[string]interface{}{
 			"organization_id":      peerOrg.ID.String(),
 			"peer_organization_id": organizationID.String(),
 		})
-		natsutil.NatsStreamingPublish(natsOrganizationImplicitKeyExchangeInitSubject, payload)
+		natsutil.NatsJetstreamPublish(natsOrganizationImplicitKeyExchangeInitSubject, payload)
 	}
 
 	return nil
@@ -214,13 +215,13 @@ func (app *Application) initImplicitDiffieHellmanKeyExchange(db *gorm.DB, organi
 
 // initOrgRegistration dispatches a NATS message to attempt async registration of the org;
 // this is an opaque method; subscriber implementations define all business rules
-func (app *Application) initOrgRegistration(db *gorm.DB, organizationID uuid.UUID) error {
+func (app *Application) initOrgRegistration(db *gorm.DB, organizationID uuid.UUID) (*nats.PubAck, error) {
 	common.Log.Debugf("dispatching async org registration for application: %s; new organization: %s", app.ID, organizationID)
 	payload, _ := json.Marshal(map[string]interface{}{
 		"application_id":  app.ID.String(),
 		"organization_id": organizationID.String(),
 	})
-	return natsutil.NatsStreamingPublish(natsOrganizationRegistrationSubject, payload)
+	return natsutil.NatsJetstreamPublish(natsOrganizationRegistrationSubject, payload)
 }
 
 func (app *Application) addOrganization(tx *gorm.DB, org organization.Organization, permissions common.Permission) bool {
@@ -390,7 +391,7 @@ func (app *Application) Create(tx *gorm.DB) bool {
 					payload, _ := json.Marshal(map[string]interface{}{
 						"id": app.ID.String(),
 					})
-					natsutil.NatsStreamingPublish(natsSiaApplicationNotificationSubject, payload)
+					natsutil.NatsJetstreamPublish(natsSiaApplicationNotificationSubject, payload)
 				}
 			}
 		}

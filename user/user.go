@@ -280,7 +280,7 @@ func (u *User) Create(tx *gorm.DB, createAuth0User bool) bool {
 					payload, _ := json.Marshal(map[string]interface{}{
 						"id": u.ID.String(),
 					})
-					natsutil.NatsStreamingPublish(natsSiaUserNotificationSubject, payload)
+					natsutil.NatsJetstreamPublish(natsSiaUserNotificationSubject, payload)
 				}
 
 				return success
@@ -542,7 +542,7 @@ func (u *User) Delete() bool {
 			payload, _ := json.Marshal(map[string]interface{}{
 				"user_id": u.ID.String(),
 			})
-			natsutil.NatsStreamingPublish(natsSiaUserDeleteNotificationSubject, payload)
+			natsutil.NatsJetstreamPublish(natsSiaUserDeleteNotificationSubject, payload)
 		}
 	}
 	tx.Commit()

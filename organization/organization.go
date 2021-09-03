@@ -63,7 +63,7 @@ func (o *Organization) addApplicationAssociation(tx *gorm.DB, appID uuid.UUID, p
 			"application_id":  appID.String(),
 			"organization_id": o.ID.String(),
 		})
-		natsutil.NatsStreamingPublish(natsApplicationImplicitKeyExchangeInitSubject, payload)
+		natsutil.NatsJetstreamPublish(natsApplicationImplicitKeyExchangeInitSubject, payload)
 	} else {
 		common.Log.Warningf("failed to add organization %s to application: %s", o.ID, appID)
 	}
@@ -204,7 +204,7 @@ func (o *Organization) Create(tx *gorm.DB) bool {
 					payload, _ := json.Marshal(map[string]interface{}{
 						"organization_id": o.ID.String(),
 					})
-					natsutil.NatsStreamingPublish(natsCreatedOrganizationCreatedSubject, payload)
+					natsutil.NatsJetstreamPublish(natsCreatedOrganizationCreatedSubject, payload)
 				}
 
 				return success
@@ -257,7 +257,7 @@ func (o *Organization) Update() bool {
 		payload, _ := json.Marshal(map[string]interface{}{
 			"organization_id": o.ID.String(),
 		})
-		natsutil.NatsStreamingPublish(natsOrganizationUpdatedInitSubject, payload)
+		natsutil.NatsJetstreamPublish(natsOrganizationUpdatedInitSubject, payload)
 
 		if common.Auth0IntegrationEnabled {
 		}

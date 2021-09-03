@@ -184,7 +184,7 @@ func natsPublish(subject, payload string, streaming bool) {
 			common.Log.Debugf("published %d-byte NATS streaming message on subject: %s", len(payload), subject)
 		}
 	} else {
-		err := natsutil.NatsStreamingPublish(subject, []byte(payload))
+		_, err := natsutil.NatsJetstreamPublish(subject, []byte(payload))
 		if err != nil {
 			common.Log.Warningf("failed to publish %d-byte NATS streaming message on subject: %s; %s", len(payload), subject, err.Error())
 		} else {

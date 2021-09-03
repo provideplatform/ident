@@ -8,7 +8,7 @@ import (
 	dbconf "github.com/kthomas/go-db-config"
 	natsutil "github.com/kthomas/go-natsutil"
 	uuid "github.com/kthomas/go.uuid"
-	stan "github.com/nats-io/stan.go"
+	"github.com/nats-io/nats.go"
 	"github.com/provideplatform/ident/common"
 )
 
@@ -28,7 +28,7 @@ func init() {
 		return
 	}
 
-	natsutil.EstablishSharedNatsStreamingConnection(nil)
+	natsutil.EstablishSharedNatsConnection(nil)
 
 	var waitGroup sync.WaitGroup
 
@@ -38,7 +38,7 @@ func init() {
 
 func createNatsApplicationImplicitKeyExchangeSubscriptions(wg *sync.WaitGroup) {
 	for i := uint64(0); i < natsutil.GetNatsConsumerConcurrency(); i++ {
-		natsutil.RequireNatsStreamingSubscription(wg,
+		natsutil.RequireNatsJetstreamSubscription(wg,
 			natsApplicationImplicitKeyExchangeInitAckWait,
 			natsApplicationImplicitKeyExchangeInitSubject,
 			natsApplicationImplicitKeyExchangeInitSubject,
@@ -52,7 +52,7 @@ func createNatsApplicationImplicitKeyExchangeSubscriptions(wg *sync.WaitGroup) {
 
 func createNatsApplicationOrganizationUpdatedSubscriptions(wg *sync.WaitGroup) {
 	for i := uint64(0); i < natsutil.GetNatsConsumerConcurrency(); i++ {
-		natsutil.RequireNatsStreamingSubscription(wg,
+		natsutil.RequireNatsJetstreamSubscription(wg,
 			natsOrganizationUpdatedAckWait,
 			natsOrganizationUpdatedSubject,
 			natsOrganizationUpdatedSubject,
@@ -64,40 +64,40 @@ func createNatsApplicationOrganizationUpdatedSubscriptions(wg *sync.WaitGroup) {
 	}
 }
 
-func consumeApplicationImplicitKeyExchangeInitMsg(msg *stan.Msg) {
+func consumeApplicationImplicitKeyExchangeInitMsg(msg *nats.Msg) {
 	defer func() {
 		if r := recover(); r != nil {
-			natsutil.AttemptNack(msg, applicationImplicitKeyExchangeInitTimeout)
+			msg.Nak()
 		}
 	}()
 
-	common.Log.Debugf("consuming %d-byte NATS application implicit key exchange message on subject: %s", msg.Size(), msg.Subject)
+	common.Log.Debugf("consuming %d-byte NATS application implicit key exchange message on subject: %s", len(msg.Data), msg.Subject)
 
 	params := map[string]interface{}{}
 	err := json.Unmarshal(msg.Data, &params)
 	if err != nil {
 		common.Log.Warningf("failed to unmarshal organization implicit key exchange message; %s", err.Error())
-		natsutil.Nack(msg)
+		msg.Nak()
 		return
 	}
 
 	applicationID, applicationIDOk := params["application_id"].(string)
 	if !applicationIDOk {
 		common.Log.Warning("failed to parse application_id during application implicit key exchange message handler")
-		natsutil.Nack(msg)
+		msg.Nak()
 		return
 	}
 
 	organizationID, organizationIDOk := params["organization_id"].(string)
 	if !organizationIDOk {
 		common.Log.Warning("failed to parse organization_id during application implicit key exchange message handler")
-		natsutil.Nack(msg)
+		msg.Nak()
 		return
 	}
 	orgUUID, err := uuid.FromString(organizationID)
 	if err != nil {
 		common.Log.Warning("failed to parse organization_id during application implicit key exchange message handler")
-		natsutil.Nack(msg)
+		msg.Nak()
 		return
 	}
 
@@ -108,7 +108,7 @@ func consumeApplicationImplicitKeyExchangeInitMsg(msg *stan.Msg) {
 
 	if app == nil || app.ID == uuid.Nil {
 		common.Log.Warningf("failed to resolve application during application implicit key exchange message handler; organization id: %s", applicationID)
-		natsutil.AttemptNack(msg, applicationImplicitKeyExchangeInitTimeout)
+		msg.Nak()
 		return
 	}
 
@@ -117,37 +117,37 @@ func consumeApplicationImplicitKeyExchangeInitMsg(msg *stan.Msg) {
 		msg.Ack()
 	} else {
 		common.Log.Warningf("failed to initialize implicit Diffie-Hellman key exchange between app organizations; app id: %s; organization id: %s; %s", applicationID, organizationID, err.Error())
-		natsutil.AttemptNack(msg, applicationImplicitKeyExchangeInitTimeout)
+		msg.Nak()
 	}
 }
 
-func consumeApplicationOrganizationUpdatedMsg(msg *stan.Msg) {
+func consumeApplicationOrganizationUpdatedMsg(msg *nats.Msg) {
 	defer func() {
 		if r := recover(); r != nil {
-			natsutil.AttemptNack(msg, organizationUpdatedTimeout)
+			msg.Nak()
 		}
 	}()
 
-	common.Log.Debugf("consuming %d-byte NATS application organization updated message on subject: %s", msg.Size(), msg.Subject)
+	common.Log.Debugf("consuming %d-byte NATS application organization updated message on subject: %s", len(msg.Data), msg.Subject)
 
 	params := map[string]interface{}{}
 	err := json.Unmarshal(msg.Data, &params)
 	if err != nil {
 		common.Log.Warningf("failed to unmarshal organization updated message; %s", err.Error())
-		natsutil.Nack(msg)
+		msg.Nak()
 		return
 	}
 
 	organizationID, organizationIDOk := params["organization_id"].(string)
 	if !organizationIDOk {
 		common.Log.Warning("failed to parse organization_id during organization updated message handler")
-		natsutil.Nack(msg)
+		msg.Nak()
 		return
 	}
 	orgUUID, err := uuid.FromString(organizationID)
 	if err != nil {
 		common.Log.Warning("failed to parse organization_id during organization updated message handler")
-		natsutil.Nack(msg)
+		msg.Nak()
 		return
 	}
 
@@ -160,7 +160,7 @@ func consumeApplicationOrganizationUpdatedMsg(msg *stan.Msg) {
 			"organization_id": orgUUID.String(),
 			"update_registry": true,
 		})
-		natsutil.NatsStreamingPublish(natsOrganizationRegistrationSubject, payload)
+		natsutil.NatsJetstreamPublish(natsOrganizationRegistrationSubject, payload)
 	}
 
 	msg.Ack()

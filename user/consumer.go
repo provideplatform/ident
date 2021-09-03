@@ -6,7 +6,7 @@ import (
 	"time"
 
 	natsutil "github.com/kthomas/go-natsutil"
-	stan "github.com/nats-io/stan.go"
+	"github.com/nats-io/nats.go"
 	"github.com/provideplatform/ident/common"
 	"github.com/provideplatform/ident/token"
 )
@@ -22,7 +22,7 @@ func init() {
 		return
 	}
 
-	natsutil.EstablishSharedNatsStreamingConnection(nil)
+	natsutil.EstablishSharedNatsConnection(nil)
 
 	var waitGroup sync.WaitGroup
 
@@ -31,7 +31,7 @@ func init() {
 
 func createNatsDispatchInvitationSubscriptions(wg *sync.WaitGroup) {
 	for i := uint64(0); i < natsutil.GetNatsConsumerConcurrency(); i++ {
-		natsutil.RequireNatsStreamingSubscription(wg,
+		natsutil.RequireNatsJetstreamSubscription(wg,
 			dispatchInvitationAckWait,
 			natsDispatchInvitationSubject,
 			natsDispatchInvitationSubject,
@@ -43,29 +43,29 @@ func createNatsDispatchInvitationSubscriptions(wg *sync.WaitGroup) {
 	}
 }
 
-func consumeDispatchInvitationSubscriptionsMsg(msg *stan.Msg) {
-	common.Log.Debugf("consuming %d-byte NATS invitation dispatch message on subject: %s", msg.Size(), msg.Subject)
+func consumeDispatchInvitationSubscriptionsMsg(msg *nats.Msg) {
+	common.Log.Debugf("consuming %d-byte NATS invitation dispatch message on subject: %s", len(msg.Data), msg.Subject)
 
 	var params map[string]interface{}
 
 	err := json.Unmarshal(msg.Data, &params)
 	if err != nil {
 		common.Log.Warningf("failed to umarshal invitation dispatch message; %s", err.Error())
-		natsutil.Nack(msg)
+		msg.Nak()
 		return
 	}
 
 	rawToken, rawTokenOk := params["token"].(string)
 	if !rawTokenOk {
 		common.Log.Warningf("failed to umarshal token during invitation dispatch message; %s", err.Error())
-		natsutil.Nack(msg)
+		msg.Nak()
 		return
 	}
 
 	token, err := token.Parse(rawToken)
 	if err != nil {
 		common.Log.Warningf("failed to parse token during attempted invitation dispatch; %s", err.Error())
-		natsutil.Nack(msg)
+		msg.Nak()
 		return
 	}
 

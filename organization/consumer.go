@@ -17,7 +17,7 @@ import (
 	dbconf "github.com/kthomas/go-db-config"
 	natsutil "github.com/kthomas/go-natsutil"
 	uuid "github.com/kthomas/go.uuid"
-	stan "github.com/nats-io/stan.go"
+	"github.com/nats-io/nats.go"
 	"github.com/provideplatform/ident/common"
 	"github.com/provideplatform/ident/token"
 )
@@ -57,7 +57,7 @@ func init() {
 		return
 	}
 
-	natsutil.EstablishSharedNatsStreamingConnection(nil)
+	natsutil.EstablishSharedNatsConnection(nil)
 
 	var waitGroup sync.WaitGroup
 
@@ -69,7 +69,7 @@ func init() {
 
 func createNatsOrganizationCreatedSubscriptions(wg *sync.WaitGroup) {
 	for i := uint64(0); i < natsutil.GetNatsConsumerConcurrency(); i++ {
-		natsutil.RequireNatsStreamingSubscription(wg,
+		natsutil.RequireNatsJetstreamSubscription(wg,
 			createOrganizationAckWait,
 			natsCreatedOrganizationCreatedSubject,
 			natsCreatedOrganizationCreatedSubject,
@@ -83,7 +83,7 @@ func createNatsOrganizationCreatedSubscriptions(wg *sync.WaitGroup) {
 
 func createNatsOrganizationImplicitKeyExchangeCompleteSubscriptions(wg *sync.WaitGroup) {
 	for i := uint64(0); i < natsutil.GetNatsConsumerConcurrency(); i++ {
-		natsutil.RequireNatsStreamingSubscription(wg,
+		natsutil.RequireNatsJetstreamSubscription(wg,
 			natsOrganizationImplicitKeyExchangeCompleteAckWait,
 			natsOrganizationImplicitKeyExchangeCompleteSubject,
 			natsOrganizationImplicitKeyExchangeCompleteSubject,
@@ -97,7 +97,7 @@ func createNatsOrganizationImplicitKeyExchangeCompleteSubscriptions(wg *sync.Wai
 
 func createNatsOrganizationImplicitKeyExchangeSubscriptions(wg *sync.WaitGroup) {
 	for i := uint64(0); i < natsutil.GetNatsConsumerConcurrency(); i++ {
-		natsutil.RequireNatsStreamingSubscription(wg,
+		natsutil.RequireNatsJetstreamSubscription(wg,
 			natsOrganizationImplicitKeyExchangeInitAckWait,
 			natsOrganizationImplicitKeyExchangeInitSubject,
 			natsOrganizationImplicitKeyExchangeInitSubject,
@@ -111,7 +111,7 @@ func createNatsOrganizationImplicitKeyExchangeSubscriptions(wg *sync.WaitGroup) 
 
 func createNatsOrganizationRegistrationSubscriptions(wg *sync.WaitGroup) {
 	for i := uint64(0); i < natsutil.GetNatsConsumerConcurrency(); i++ {
-		natsutil.RequireNatsStreamingSubscription(wg,
+		natsutil.RequireNatsJetstreamSubscription(wg,
 			natsOrganizationRegistrationAckWait,
 			natsOrganizationRegistrationSubject,
 			natsOrganizationRegistrationSubject,
@@ -123,27 +123,27 @@ func createNatsOrganizationRegistrationSubscriptions(wg *sync.WaitGroup) {
 	}
 }
 
-func consumeCreatedOrganizationMsg(msg *stan.Msg) {
+func consumeCreatedOrganizationMsg(msg *nats.Msg) {
 	defer func() {
 		if r := recover(); r != nil {
-			natsutil.AttemptNack(msg, createOrganizationTimeout)
+			msg.Nak()
 		}
 	}()
 
-	common.Log.Debugf("consuming %d-byte NATS created organization message on subject: %s", msg.Size(), msg.Subject)
+	common.Log.Debugf("consuming %d-byte NATS created organization message on subject: %s", len(msg.Data), msg.Subject)
 
 	params := map[string]interface{}{}
 	err := json.Unmarshal(msg.Data, &params)
 	if err != nil {
 		common.Log.Warningf("failed to unmarshal organization created message; %s", err.Error())
-		natsutil.Nack(msg)
+		msg.Nak()
 		return
 	}
 
 	organizationID, organizationIDOk := params["organization_id"].(string)
 	if !organizationIDOk {
 		common.Log.Warning("failed to unmarshal organization_id during created message handler")
-		natsutil.Nack(msg)
+		msg.Nak()
 		return
 	}
 
@@ -154,7 +154,7 @@ func consumeCreatedOrganizationMsg(msg *stan.Msg) {
 
 	if organization == nil || organization.ID == uuid.Nil {
 		common.Log.Warningf("failed to resolve organization during created message handler; organization id: %s", organizationID)
-		natsutil.AttemptNack(msg, createOrganizationTimeout)
+		msg.Nak()
 		return
 	}
 
@@ -163,7 +163,7 @@ func consumeCreatedOrganizationMsg(msg *stan.Msg) {
 	}
 	if !orgToken.Vend() {
 		common.Log.Warningf("failed to vend signed JWT for organization registration tx signing; organization id: %s", organizationID)
-		natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+		msg.Nak()
 		return
 	}
 
@@ -178,38 +178,38 @@ func consumeCreatedOrganizationMsg(msg *stan.Msg) {
 		msg.Ack()
 	} else {
 		common.Log.Warningf("failed to create default vault for organization: %s; %s", *organization.Name, err.Error())
-		natsutil.AttemptNack(msg, createOrganizationTimeout)
+		msg.Nak()
 	}
 }
 
-func consumeOrganizationImplicitKeyExchangeInitMsg(msg *stan.Msg) {
+func consumeOrganizationImplicitKeyExchangeInitMsg(msg *nats.Msg) {
 	defer func() {
 		if r := recover(); r != nil {
-			natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
+			msg.Nak()
 		}
 	}()
 
-	common.Log.Debugf("consuming %d-byte NATS organization implicit key exchange message on subject: %s", msg.Size(), msg.Subject)
+	common.Log.Debugf("consuming %d-byte NATS organization implicit key exchange message on subject: %s", len(msg.Data), msg.Subject)
 
 	params := map[string]interface{}{}
 	err := json.Unmarshal(msg.Data, &params)
 	if err != nil {
 		common.Log.Warningf("failed to unmarshal organization implicit key exchange message; %s", err.Error())
-		natsutil.Nack(msg)
+		msg.Nak()
 		return
 	}
 
 	organizationID, organizationIDOk := params["organization_id"].(string)
 	if !organizationIDOk {
 		common.Log.Warning("failed to parse organization_id during implicit key exchange message handler")
-		natsutil.Nack(msg)
+		msg.Nak()
 		return
 	}
 
 	peerOrganizationID, peerOrganizationIDOk := params["peer_organization_id"].(string)
 	if !peerOrganizationIDOk {
 		common.Log.Warning("failed to parse peer_organization_id during implicit key exchange message handler")
-		natsutil.Nack(msg)
+		msg.Nak()
 		return
 	}
 
@@ -220,7 +220,7 @@ func consumeOrganizationImplicitKeyExchangeInitMsg(msg *stan.Msg) {
 
 	if organization == nil || organization.ID == uuid.Nil {
 		common.Log.Warningf("failed to resolve organization during implicit key exchange message handler; organization id: %s", organizationID)
-		natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
+		msg.Nak()
 		return
 	}
 
@@ -229,14 +229,14 @@ func consumeOrganizationImplicitKeyExchangeInitMsg(msg *stan.Msg) {
 	}
 	if !orgToken.Vend() {
 		common.Log.Warningf("failed to vend signed JWT for organization implicit key exchange; organization id: %s", organizationID)
-		natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+		msg.Nak()
 		return
 	}
 
 	vaults, err := vault.ListVaults(*orgToken.Token, map[string]interface{}{})
 	if err != nil {
 		common.Log.Warningf("failed to fetch vaults during implicit key exchange message handler; organization id: %s", organizationID)
-		natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
+		msg.Nak()
 		return
 	}
 
@@ -245,7 +245,7 @@ func consumeOrganizationImplicitKeyExchangeInitMsg(msg *stan.Msg) {
 		keys, err := vault.ListKeys(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{})
 		if err != nil {
 			common.Log.Warningf("failed to fetch keys from vault during implicit key exchange message handler; organization id: %s", organizationID)
-			natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
+			msg.Nak()
 			return
 		}
 
@@ -268,7 +268,7 @@ func consumeOrganizationImplicitKeyExchangeInitMsg(msg *stan.Msg) {
 			})
 			if err != nil {
 				common.Log.Warningf("failed to generate single-use c25519 public key for implicit key exchange; organization id: %s", organizationID)
-				natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
+				msg.Nak()
 				return
 			}
 
@@ -283,7 +283,7 @@ func consumeOrganizationImplicitKeyExchangeInitMsg(msg *stan.Msg) {
 
 			if err != nil {
 				common.Log.Warningf("failed to sign single-use c25519 public key for implicit key exchange; organization id: %s; %s", organizationID, err.Error())
-				natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
+				msg.Nak()
 				return
 			}
 
@@ -298,76 +298,76 @@ func consumeOrganizationImplicitKeyExchangeInitMsg(msg *stan.Msg) {
 				"signing_key":          *signingKey.PublicKey,
 				"signing_spec":         *signingKey.Spec,
 			})
-			natsutil.NatsStreamingPublish(natsOrganizationImplicitKeyExchangeCompleteSubject, payload)
+			natsutil.NatsJetstreamPublish(natsOrganizationImplicitKeyExchangeCompleteSubject, payload)
 
 			common.Log.Debugf("published %s implicit key exchange message for peer organization id: %s", natsOrganizationImplicitKeyExchangeCompleteSubject, peerOrganizationID)
 			msg.Ack()
 		} else {
 			common.Log.Warningf("failed to resolve signing key during implicit key exchange message handler; organization id: %s", organizationID)
-			natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
+			msg.Nak()
 		}
 	} else {
 		common.Log.Warningf("failed to resolve signing key during implicit key exchange message handler; organization id: %s; %d associated vaults", organizationID, len(vaults))
-		natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
+		msg.Nak()
 	}
 }
 
-func consumeOrganizationImplicitKeyExchangeCompleteMsg(msg *stan.Msg) {
+func consumeOrganizationImplicitKeyExchangeCompleteMsg(msg *nats.Msg) {
 	defer func() {
 		if r := recover(); r != nil {
-			natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
+			msg.Nak()
 		}
 	}()
 
-	common.Log.Debugf("consuming %d-byte NATS organization implicit key exchange message on subject: %s", msg.Size(), msg.Subject)
+	common.Log.Debugf("consuming %d-byte NATS organization implicit key exchange message on subject: %s", len(msg.Data), msg.Subject)
 
 	params := map[string]interface{}{}
 	err := json.Unmarshal(msg.Data, &params)
 	if err != nil {
 		common.Log.Warningf("failed to unmarshal organization implicit key exchange message; %s", err.Error())
-		natsutil.Nack(msg)
+		msg.Nak()
 		return
 	}
 
 	organizationID, organizationIDOk := params["organization_id"].(string)
 	if !organizationIDOk {
 		common.Log.Warning("failed to parse organization_id during implicit key exchange message handler")
-		natsutil.Nack(msg)
+		msg.Nak()
 		return
 	}
 
 	peerOrganizationID, peerOrganizationIDOk := params["peer_organization_id"].(string)
 	if !peerOrganizationIDOk {
 		common.Log.Warning("failed to parse peer_organization_id during implicit key exchange message handler")
-		natsutil.Nack(msg)
+		msg.Nak()
 		return
 	}
 
 	peerPublicKey, peerPublicKeyOk := params["public_key"].(string)
 	if !peerPublicKeyOk {
 		common.Log.Warning("failed to parse peer public key during implicit key exchange message handler")
-		natsutil.Nack(msg)
+		msg.Nak()
 		return
 	}
 
 	peerSigningKey, peerSigningKeyOk := params["signing_key"].(string)
 	if !peerSigningKeyOk {
 		common.Log.Warning("failed to parse peer signing key during implicit key exchange message handler")
-		natsutil.Nack(msg)
+		msg.Nak()
 		return
 	}
 
 	// peerSigningSpec, peerSigningSpecOk := params["signing_spec"].(string)
 	// if !peerSigningKeyOk {
 	// 	common.Log.Warning("failed to parse peer signing key spec during implicit key exchange message handler")
-	// 	natsutil.Nack(msg)
+	// 	msg.Nak()
 	// 	return
 	// }
 
 	signature, signatureOk := params["signature"].(string)
 	if !signatureOk {
 		common.Log.Warning("failed to parse signature during implicit key exchange message handler")
-		natsutil.Nack(msg)
+		msg.Nak()
 		return
 	}
 
@@ -378,7 +378,7 @@ func consumeOrganizationImplicitKeyExchangeCompleteMsg(msg *stan.Msg) {
 
 	if organization == nil || organization.ID == uuid.Nil {
 		common.Log.Warningf("failed to resolve organization during implicit key exchange message handler; organization id: %s", organizationID)
-		natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
+		msg.Nak()
 		return
 	}
 
@@ -387,14 +387,14 @@ func consumeOrganizationImplicitKeyExchangeCompleteMsg(msg *stan.Msg) {
 	}
 	if !orgToken.Vend() {
 		common.Log.Warningf("failed to vend signed JWT for organization implicit key exchange; organization id: %s", organizationID)
-		natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+		msg.Nak()
 		return
 	}
 
 	vaults, err := vault.ListVaults(*orgToken.Token, map[string]interface{}{})
 	if err != nil {
 		common.Log.Warningf("failed to fetch vaults during implicit key exchange message handler; organization id: %s", organizationID)
-		natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
+		msg.Nak()
 		return
 	}
 
@@ -404,7 +404,7 @@ func consumeOrganizationImplicitKeyExchangeCompleteMsg(msg *stan.Msg) {
 		keys, err := vault.ListKeys(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{})
 		if err != nil {
 			common.Log.Warningf("failed to fetch keys from vault during implicit key exchange message handler; organization id: %s", organizationID)
-			natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
+			msg.Nak()
 			return
 		}
 
@@ -419,14 +419,14 @@ func consumeOrganizationImplicitKeyExchangeCompleteMsg(msg *stan.Msg) {
 		peerPubKey, err := hex.DecodeString(peerPublicKey)
 		if err != nil {
 			common.Log.Warningf("failed to decode peer public key as hex during implicit key exchange message handler; organization id: %s; %s", organizationID, err.Error())
-			natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
+			msg.Nak()
 			return
 		}
 
 		sig, err := hex.DecodeString(signature)
 		if err != nil {
 			common.Log.Warningf("failed to decode signature as hex during implicit key exchange message handler; organization id: %s; %s", organizationID, err.Error())
-			natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
+			msg.Nak()
 			return
 		}
 
@@ -449,54 +449,54 @@ func consumeOrganizationImplicitKeyExchangeCompleteMsg(msg *stan.Msg) {
 				msg.Ack()
 			} else {
 				common.Log.Warningf("failed to encrypt shared secret during implicit key exchange message handler; organization id: %s; %s", organizationID, err.Error())
-				natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
+				msg.Nak()
 			}
 		} else {
 			common.Log.Warningf("failed to resolve signing key during implicit key exchange message handler; organization id: %s", organizationID)
-			natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
+			msg.Nak()
 		}
 	} else {
 		common.Log.Warningf("failed to resolve signing key during implicit key exchange message handler; organization id: %s; %d associated vaults", organizationID, len(vaults))
-		natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
+		msg.Nak()
 	}
 }
 
-func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
+func consumeOrganizationRegistrationMsg(msg *nats.Msg) {
 	defer func() {
 		if r := recover(); r != nil {
 			common.Log.Warningf("recovered in org registration message handler; %s", r)
-			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+			msg.Nak()
 		}
 	}()
 
-	common.Log.Debugf("consuming %d-byte NATS organization registration message on subject: %s", msg.Size(), msg.Subject)
+	common.Log.Debugf("consuming %d-byte NATS organization registration message on subject: %s", len(msg.Data), msg.Subject)
 
 	params := map[string]interface{}{}
 	err := json.Unmarshal(msg.Data, &params)
 	if err != nil {
 		common.Log.Warningf("failed to unmarshal organization registration message; %s", err.Error())
-		natsutil.Nack(msg)
+		msg.Nak()
 		return
 	}
 
 	organizationID, organizationIDOk := params["organization_id"].(string)
 	if !organizationIDOk {
 		common.Log.Warning("failed to parse organization_id during organization registration message handler")
-		natsutil.Nack(msg)
+		msg.Nak()
 		return
 	}
 
 	applicationID, applicationIDOk := params["application_id"].(string)
 	if !applicationIDOk {
 		common.Log.Warning("failed to parse application_id during organization registration message handler")
-		natsutil.Nack(msg)
+		msg.Nak()
 		return
 	}
 
 	applicationUUID, err := uuid.FromString(applicationID)
 	if err != nil {
 		common.Log.Warning("failed to parse application uuid during organization registration message handler")
-		natsutil.Nack(msg)
+		msg.Nak()
 		return
 	}
 
@@ -512,7 +512,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 
 	if organization == nil || organization.ID == uuid.Nil {
 		common.Log.Warningf("failed to resolve organization during registration message handler; organization id: %s", organizationID)
-		natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+		msg.Nak()
 		return
 	}
 
@@ -526,14 +526,14 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 	}
 	if !orgToken.Vend() {
 		common.Log.Warningf("failed to vend signed JWT for organization implicit key exchange; organization id: %s", organizationID)
-		natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+		msg.Nak()
 		return
 	}
 
 	vaults, err := vault.ListVaults(*orgToken.Token, map[string]interface{}{})
 	if err != nil {
 		common.Log.Warningf("failed to fetch vaults during implicit key exchange message handler; organization id: %s", organizationID)
-		natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
+		msg.Nak()
 		return
 	}
 
@@ -548,7 +548,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 		})
 		if err != nil {
 			common.Log.Warningf("failed to fetch secp256k1 keys from vault during implicit key exchange message handler; organization id: %s; %s", organizationID, err.Error())
-			natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
+			msg.Nak()
 			return
 		}
 		if len(keys) > 0 {
@@ -564,7 +564,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 		})
 		if err != nil {
 			common.Log.Warningf("failed to fetch babyJubJub keys from vault during implicit key exchange message handler; organization id: %s; %s", organizationID, err.Error())
-			natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
+			msg.Nak()
 			return
 		}
 		if len(keys) > 0 {
@@ -593,25 +593,25 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 
 	if orgAddress == nil {
 		common.Log.Warningf("failed to resolve organization public address for storage in the public org registry; organization id: %s", organizationID)
-		natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+		msg.Nak()
 		return
 	}
 
 	if orgDomain == nil {
 		common.Log.Warningf("failed to resolve organization domain for storage in the public org registry; organization id: %s", organizationID)
-		natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+		msg.Nak()
 		return
 	}
 
 	if orgMessagingEndpoint == nil {
 		common.Log.Warningf("failed to resolve organization messaging endpoint for storage in the public org registry; organization id: %s", organizationID)
-		natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+		msg.Nak()
 		return
 	}
 
 	if orgZeroKnowledgePublicKey == nil {
 		common.Log.Warningf("failed to resolve organization zero-knowledge public key for storage in the public org registry; organization id: %s", organizationID)
-		natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+		msg.Nak()
 		return
 	}
 
@@ -624,7 +624,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 		}
 		if !tkn.Vend() {
 			common.Log.Warningf("failed to vend signed JWT for application with offline access; organization id: %s", applicationID)
-			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+			msg.Nak()
 			return
 		}
 		tokens = append(tokens, tkn)
@@ -636,7 +636,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 		contracts, err := nchain.ListContracts(*jwtToken, map[string]interface{}{})
 		if err != nil {
 			common.Log.Warningf("failed to resolve organization registry contract to which the organization registration tx should be sent; organization id: %s", organizationID)
-			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+			msg.Nak()
 			return
 		}
 
@@ -656,7 +656,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 		}
 		if !orgToken.Vend() {
 			common.Log.Warningf("failed to vend signed JWT for organization registration tx signing; organization id: %s", organizationID)
-			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+			msg.Nak()
 			return
 		}
 
@@ -665,7 +665,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 		})
 		if err != nil {
 			common.Log.Warningf("failed to create organization HD wallet for organization registration tx should be sent; organization id: %s", organizationID)
-			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+			msg.Nak()
 			return
 		}
 
@@ -676,7 +676,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 			resp, err := nchain.GetContractDetails(*jwtToken, c.ID.String(), map[string]interface{}{})
 			if err != nil {
 				common.Log.Warningf("failed to resolve organization registry contract to which the organization registration tx should be sent; organization id: %s", organizationID)
-				natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+				msg.Nak()
 				return
 			}
 
@@ -694,19 +694,19 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 
 		if erc1820RegistryContractID == nil || erc1820RegistryContractAddress == nil {
 			common.Log.Warningf("failed to resolve ERC1820 registry contract; application id: %s", applicationID)
-			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+			msg.Nak()
 			return
 		}
 
 		if orgRegistryContractID == nil || orgRegistryContractAddress == nil {
 			common.Log.Warningf("failed to resolve organization registry contract; application id: %s", applicationID)
-			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+			msg.Nak()
 			return
 		}
 
 		if orgWalletID == nil {
 			common.Log.Warningf("failed to resolve organization HD wallet for signing organization impl transaction transaction; organization id: %s", organizationID)
-			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+			msg.Nak()
 			return
 		}
 
@@ -733,7 +733,7 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 		})
 		if err != nil {
 			common.Log.Warningf("organization registry transaction broadcast failed on behalf of organization: %s; org registry contract id: %s; %s", organizationID, *orgRegistryContractID, err.Error())
-			natsutil.AttemptNack(msg, organizationRegistrationTimeout)
+			msg.Nak()
 			return
 		}
 
@@ -746,6 +746,6 @@ func consumeOrganizationRegistrationMsg(msg *stan.Msg) {
 		msg.Ack()
 	} else {
 		common.Log.Warningf("failed to resolve API token during registration message handler; organization id: %s", organizationID)
-		natsutil.AttemptNack(msg, organizationImplicitKeyExchangeInitTimeout)
+		msg.Nak()
 	}
 }
