@@ -79,7 +79,7 @@ func init() {
 
 func createNatsOrganizationCreatedSubscriptions(wg *sync.WaitGroup) {
 	for i := uint64(0); i < natsutil.GetNatsConsumerConcurrency(); i++ {
-		natsutil.RequireNatsJetstreamSubscription(wg,
+		_, err := nnatsutil.RequireNatsJetstreamSubscription(wg,
 			createOrganizationAckWait,
 			natsCreatedOrganizationCreatedSubject,
 			natsCreatedOrganizationCreatedSubject,
@@ -88,12 +88,16 @@ func createNatsOrganizationCreatedSubscriptions(wg *sync.WaitGroup) {
 			natsCreatedOrganizationCreatedMaxInFlight,
 			nil,
 		)
+
+		if err != nil {
+			common.Log.Panicf("failed to subscribe to NATS stream via subject: %s; %s", natsDispatchInvitationSubject, err.Error())
+		}
 	}
 }
 
 func createNatsOrganizationImplicitKeyExchangeCompleteSubscriptions(wg *sync.WaitGroup) {
 	for i := uint64(0); i < natsutil.GetNatsConsumerConcurrency(); i++ {
-		natsutil.RequireNatsJetstreamSubscription(wg,
+		_, err := natsutil.RequireNatsJetstreamSubscription(wg,
 			natsOrganizationImplicitKeyExchangeCompleteAckWait,
 			natsOrganizationImplicitKeyExchangeCompleteSubject,
 			natsOrganizationImplicitKeyExchangeCompleteSubject,
@@ -102,12 +106,16 @@ func createNatsOrganizationImplicitKeyExchangeCompleteSubscriptions(wg *sync.Wai
 			natsOrganizationImplicitKeyExchangeCompleteMaxInFlight,
 			nil,
 		)
+
+		if err != nil {
+			common.Log.Panicf("failed to subscribe to NATS stream via subject: %s; %s", natsDispatchInvitationSubject, err.Error())
+		}
 	}
 }
 
 func createNatsOrganizationImplicitKeyExchangeSubscriptions(wg *sync.WaitGroup) {
 	for i := uint64(0); i < natsutil.GetNatsConsumerConcurrency(); i++ {
-		natsutil.RequireNatsJetstreamSubscription(wg,
+		_, err := natsutil.RequireNatsJetstreamSubscription(wg,
 			natsOrganizationImplicitKeyExchangeInitAckWait,
 			natsOrganizationImplicitKeyExchangeInitSubject,
 			natsOrganizationImplicitKeyExchangeInitSubject,
@@ -116,12 +124,16 @@ func createNatsOrganizationImplicitKeyExchangeSubscriptions(wg *sync.WaitGroup) 
 			natsOrganizationImplicitKeyExchangeMaxInFlight,
 			nil,
 		)
+
+		if err != nil {
+			common.Log.Panicf("failed to subscribe to NATS stream via subject: %s; %s", natsDispatchInvitationSubject, err.Error())
+		}
 	}
 }
 
 func createNatsOrganizationRegistrationSubscriptions(wg *sync.WaitGroup) {
 	for i := uint64(0); i < natsutil.GetNatsConsumerConcurrency(); i++ {
-		natsutil.RequireNatsJetstreamSubscription(wg,
+		_, err := natsutil.RequireNatsJetstreamSubscription(wg,
 			natsOrganizationRegistrationAckWait,
 			natsOrganizationRegistrationSubject,
 			natsOrganizationRegistrationSubject,
@@ -130,6 +142,10 @@ func createNatsOrganizationRegistrationSubscriptions(wg *sync.WaitGroup) {
 			natsOrganizationRegistrationMaxInFlight,
 			nil,
 		)
+
+		if err != nil {
+			common.Log.Panicf("failed to subscribe to NATS stream via subject: %s; %s", natsDispatchInvitationSubject, err.Error())
+		}
 	}
 }
 

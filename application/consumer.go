@@ -42,7 +42,7 @@ func init() {
 
 func createNatsApplicationImplicitKeyExchangeSubscriptions(wg *sync.WaitGroup) {
 	for i := uint64(0); i < natsutil.GetNatsConsumerConcurrency(); i++ {
-		natsutil.RequireNatsJetstreamSubscription(wg,
+		_, err := natsutil.RequireNatsJetstreamSubscription(wg,
 			natsApplicationImplicitKeyExchangeInitAckWait,
 			natsApplicationImplicitKeyExchangeInitSubject,
 			natsApplicationImplicitKeyExchangeInitSubject,
@@ -51,12 +51,16 @@ func createNatsApplicationImplicitKeyExchangeSubscriptions(wg *sync.WaitGroup) {
 			natsApplicationImplicitKeyExchangeMaxInFlight,
 			nil,
 		)
+
+		if err != nil {
+			common.Log.Panicf("failed to subscribe to NATS stream via subject: %s; %s", natsDispatchInvitationSubject, err.Error())
+		}
 	}
 }
 
 func createNatsApplicationOrganizationUpdatedSubscriptions(wg *sync.WaitGroup) {
 	for i := uint64(0); i < natsutil.GetNatsConsumerConcurrency(); i++ {
-		natsutil.RequireNatsJetstreamSubscription(wg,
+		_, err := natsutil.RequireNatsJetstreamSubscription(wg,
 			natsOrganizationUpdatedAckWait,
 			natsOrganizationUpdatedSubject,
 			natsOrganizationUpdatedSubject,
@@ -65,6 +69,10 @@ func createNatsApplicationOrganizationUpdatedSubscriptions(wg *sync.WaitGroup) {
 			natsOrganizationUpdatedMaxInFlight,
 			nil,
 		)
+
+		if err != nil {
+			common.Log.Panicf("failed to subscribe to NATS stream via subject: %s; %s", natsDispatchInvitationSubject, err.Error())
+		}
 	}
 }
 
