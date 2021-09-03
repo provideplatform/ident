@@ -58,9 +58,9 @@ stop_local:
 	./ops/stop_local.sh
 
 test: build
-	NATS_SERVER_PORT=4223 NATS_STREAMING_SERVER_PORT=4224 ./ops/run_local_dependencies.sh
-	NATS_SERVER_PORT=4223 NATS_STREAMING_SERVER_PORT=4224 ./ops/run_unit_tests.sh
+	NATS_SERVER_PORT=4223 ./ops/run_local_dependencies.sh
+	NATS_SERVER_PORT=4223 ./ops/run_unit_tests.sh
 
 integration:
-	# NATS_SERVER_PORT=4223 NATS_STREAMING_SERVER_PORT=4224 ./ops/run_local_dependencies.sh
-	NATS_SERVER_PORT=4223 NATS_STREAMING_SERVER_PORT=4224 ./ops/run_integration_tests.sh
+	# NATS_SERVER_PORT=4223 ./ops/run_local_dependencies.sh
+	NATS_SERVER_PORT=4223 ./ops/run_integration_tests.sh

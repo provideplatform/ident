@@ -40,9 +40,9 @@ services:
     restart: always
 
   nats:
-    image: provide/nats-server
+    image: provide/nats-server:2.2.3-beta.4-PRVD
     container_name: provide-nats
-    command: ["-auth", "testtoken", "-p", "4222", "-D", "-V"]
+    command: ["--js", "--server_name", "prvd-nats1", "-auth", "testtoken", "-p", "4222", "-D", "-V"]
     environment:
       JWT_SIGNER_PUBLIC_KEY: |-
         -----BEGIN PUBLIC KEY-----
@@ -75,30 +75,11 @@ services:
     volumes:
       - ./ops/await_tcp.sh:/usr/local/bin/await_tcp.sh:cached
 
-  nats-streaming:
-    image: provide/nats-streaming
-    command: ["-cid", "provide", "--auth", "testtoken", "-SDV"]
-    container_name: nats-streaming
-    depends_on:
-      - nats
-    healthcheck:
-      test: ["CMD", "/usr/local/bin/await_tcp.sh", "localhost:4222"]
-      interval: 1m
-      timeout: 1s
-      retries: 2
-      start_period: 10s
-    hostname: nats-streaming
-    networks:
-      - provide
-    restart: always
-    volumes:
-      - ./ops/await_tcp.sh:/usr/local/bin/await_tcp.sh:cached
-
   ident:
     build: ../
     container_name: ident
     depends_on:
-      - nats-streaming
+      - nats
       - postgres
       - redis
     environment:
@@ -110,7 +91,7 @@ services:
       - DATABASE_SUPERUSER_PASSWORD=prvdp455
       - NATS_CLIENT_PREFIX=ident
       - NATS_URL=nats://nats:4222
-      - NATS_STREAMING_URL=nats://nats-streaming:4222
+      - NATS_JETSTREAM_URL=nats://nats:4222
       - REDIS_HOSTS=redis:6379
       - LOG_LEVEL=DEBUG
       - PORT=8080
@@ -134,10 +115,10 @@ services:
 
   ident-consumer:
     build: ../
+    entrypoint: ./ops/run_consumer.sh
     container_name: ident-consumer
     depends_on:
       - ident
-      - nats-streaming
       - postgres
       - redis
     environment:
@@ -150,7 +131,7 @@ services:
       - DATABASE_SUPERUSER_PASSWORD=prvdp455
       - NATS_CLIENT_PREFIX=ident-consumer
       - NATS_URL=nats://nats:4222
-      - NATS_STREAMING_URL=nats://nats-streaming:4222
+      - NATS_JETSTREAM_URL=nats://nats:4222
       - REDIS_HOSTS=redis:6379
       - LOG_LEVEL=DEBUG
       - PORT=8080

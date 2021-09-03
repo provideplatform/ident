@@ -4,11 +4,7 @@ set -e
 echo "" > coverage.txt
 
 if [[ -z "${NATS_SERVER_PORT}" ]]; then
-  NATS_SERVER_PORT=4221
-fi
-
-if [[ -z "${NATS_STREAMING_SERVER_PORT}" ]]; then
-  NATS_STREAMING_SERVER_PORT=4222
+  NATS_SERVER_PORT=4222
 fi
 
 if [[ -z "${DATABASE_HOST}" ]]; then
@@ -291,7 +287,7 @@ for d in "${pkgs[@]}" ; do
     CONSUME_NATS_STREAMING_SUBSCRIPTIONS=true \
     NATS_TOKEN=testtoken \
     NATS_URL=nats://localhost:${NATS_SERVER_PORT} \
-    NATS_STREAMING_URL=nats://localhost:${NATS_STREAMING_SERVER_PORT} \
+    NATS_JETSTREAM_URL=nats://localhost:${NATS_SERVER_PORT} \
     NATS_CLUSTER_ID=provide \
     NATS_STREAMING_CONCURRENCY=1 \
     GIN_MODE=release \
@@ -319,7 +315,7 @@ for d in "${pkgs[@]}" ; do
     CONSUME_NATS_STREAMING_SUBSCRIPTIONS=true \
     NATS_TOKEN=testtoken \
     NATS_URL=nats://localhost:${NATS_SERVER_PORT} \
-    NATS_STREAMING_URL=nats://localhost:${NATS_STREAMING_SERVER_PORT} \
+    NATS_JETSTREAM_URL=nats://localhost:${NATS_SERVER_PORT} \
     NATS_CLUSTER_ID=provide \
     NATS_STREAMING_CONCURRENCY=1 \
     GIN_MODE=release \

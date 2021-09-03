@@ -16,11 +16,7 @@ if [[ -z "${DATABASE_PASSWORD}" ]]; then
 fi
 
 if [[ -z "${NATS_SERVER_PORT}" ]]; then
-  export NATS_SERVER_PORT=4221
-fi
-
-if [[ -z "${NATS_STREAMING_SERVER_PORT}" ]]; then
-  export NATS_STREAMING_SERVER_PORT=4222
+  export NATS_SERVER_PORT=4222
 fi
 
 if [[ -z "${REDIS_SERVER_PORT}" ]]; then
@@ -227,7 +223,7 @@ echo ident ready
 
 export NATS_TOKEN=testtoken
 export NATS_URL=nats://localhost:${NATS_SERVER_PORT}
-export NATS_STREAMING_URL=nats://localhost:${NATS_STREAMING_SERVER_PORT}
+export NATS_JETSTREAM_URL=nats://localhost:${NATS_SERVER_PORT}
 export NATS_CLUSTER_ID=provide
 export DATABASE_HOST=localhost
 export LOG_LEVEL=DEBUG
