@@ -119,6 +119,7 @@ services:
     container_name: ident-consumer
     depends_on:
       - ident
+      - nats
       - postgres
       - redis
     environment:
