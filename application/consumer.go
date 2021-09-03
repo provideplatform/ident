@@ -53,7 +53,7 @@ func createNatsApplicationImplicitKeyExchangeSubscriptions(wg *sync.WaitGroup) {
 		)
 
 		if err != nil {
-			common.Log.Panicf("failed to subscribe to NATS stream via subject: %s; %s", natsDispatchInvitationSubject, err.Error())
+			common.Log.Panicf("failed to subscribe to NATS stream via subject: %s; %s", natsApplicationImplicitKeyExchangeInitSubject, err.Error())
 		}
 	}
 }
@@ -71,7 +71,7 @@ func createNatsApplicationOrganizationUpdatedSubscriptions(wg *sync.WaitGroup) {
 		)
 
 		if err != nil {
-			common.Log.Panicf("failed to subscribe to NATS stream via subject: %s; %s", natsDispatchInvitationSubject, err.Error())
+			common.Log.Panicf("failed to subscribe to NATS stream via subject: %s; %s", natsOrganizationUpdatedSubject, err.Error())
 		}
 	}
 }
