@@ -58,6 +58,13 @@ func init() {
 	}
 
 	natsutil.EstablishSharedNatsConnection(nil)
+	natsutil.NatsCreateStream(defaultNatsStream, []string{
+		natsCreatedOrganizationCreatedSubject,
+		natsOrganizationImplicitKeyExchangeCompleteSubject,
+		natsOrganizationImplicitKeyExchangeInitSubject,
+		natsOrganizationRegistrationSubject,
+		contractTypeRegistry,
+	})
 
 	var waitGroup sync.WaitGroup
 

@@ -12,15 +12,15 @@ import (
 	"github.com/provideplatform/ident/common"
 )
 
+const defaultNatsStream = "IDENT"
+
 const natsApplicationImplicitKeyExchangeInitSubject = "ident.application.keys.exchange.init"
 const natsApplicationImplicitKeyExchangeMaxInFlight = 2048
 const natsApplicationImplicitKeyExchangeInitAckWait = time.Second * 5
-const applicationImplicitKeyExchangeInitTimeout = int64(time.Second * 20)
 
 const natsOrganizationUpdatedSubject = "ident.organization.updated"
 const natsOrganizationUpdatedMaxInFlight = 2048
 const natsOrganizationUpdatedAckWait = time.Second * 5
-const organizationUpdatedTimeout = int64(time.Second * 20)
 
 func init() {
 	if !common.ConsumeNATSStreamingSubscriptions {
@@ -29,6 +29,10 @@ func init() {
 	}
 
 	natsutil.EstablishSharedNatsConnection(nil)
+	natsutil.NatsCreateStream(defaultNatsStream, []string{
+		natsApplicationImplicitKeyExchangeInitSubject,
+		natsOrganizationUpdatedSubject,
+	})
 
 	var waitGroup sync.WaitGroup
 

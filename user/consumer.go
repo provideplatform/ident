@@ -23,6 +23,9 @@ func init() {
 	}
 
 	natsutil.EstablishSharedNatsConnection(nil)
+	natsutil.NatsCreateStream(defaultNatsStream, []string{
+		natsDispatchInvitationSubject,
+	})
 
 	var waitGroup sync.WaitGroup
 
