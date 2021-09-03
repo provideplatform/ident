@@ -2,6 +2,7 @@ package user
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
@@ -11,10 +12,11 @@ import (
 	"github.com/provideplatform/ident/token"
 )
 
+const defaultNatsStream = "ident"
+
 const natsDispatchInvitationSubject = "ident.invitation.dispatch"
 const natsDispatchInvitationMaxInFlight = 2048
 const dispatchInvitationAckWait = time.Second * 30
-const natsDispatchInvitationTimeout = int64(time.Minute * 5)
 
 func init() {
 	if !common.ConsumeNATSStreamingSubscriptions {
@@ -24,7 +26,7 @@ func init() {
 
 	natsutil.EstablishSharedNatsConnection(nil)
 	natsutil.NatsCreateStream(defaultNatsStream, []string{
-		natsDispatchInvitationSubject,
+		fmt.Sprintf("%s.*", defaultNatsStream),
 	})
 
 	var waitGroup sync.WaitGroup

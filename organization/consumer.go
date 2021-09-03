@@ -22,25 +22,31 @@ import (
 	"github.com/provideplatform/ident/token"
 )
 
+const defaultNatsStream = "ident"
+
 const natsCreatedOrganizationCreatedSubject = "ident.organization.created"
 const natsCreatedOrganizationCreatedMaxInFlight = 2048
 const createOrganizationAckWait = time.Second * 5
-const createOrganizationTimeout = int64(time.Second * 20)
+
+// const createOrganizationTimeout = int64(time.Second * 20)
 
 const natsOrganizationImplicitKeyExchangeCompleteSubject = "ident.organization.keys.exchange.complete"
 const natsOrganizationImplicitKeyExchangeCompleteMaxInFlight = 2048
 const natsOrganizationImplicitKeyExchangeCompleteAckWait = time.Second * 5
-const organizationImplicitKeyExchangeCompleteTimeout = int64(time.Second * 20)
+
+// const organizationImplicitKeyExchangeCompleteTimeout = int64(time.Second * 20)
 
 const natsOrganizationImplicitKeyExchangeInitSubject = "ident.organization.keys.exchange.init"
 const natsOrganizationImplicitKeyExchangeMaxInFlight = 2048
 const natsOrganizationImplicitKeyExchangeInitAckWait = time.Second * 5
-const organizationImplicitKeyExchangeInitTimeout = int64(time.Second * 20)
+
+// const organizationImplicitKeyExchangeInitTimeout = int64(time.Second * 20)
 
 const natsOrganizationRegistrationSubject = "ident.organization.registration"
 const natsOrganizationRegistrationMaxInFlight = 2048
 const natsOrganizationRegistrationAckWait = time.Second * 60
-const organizationRegistrationTimeout = int64(natsOrganizationRegistrationAckWait * 10)
+
+// const organizationRegistrationTimeout = int64(natsOrganizationRegistrationAckWait * 10)
 const organizationRegistrationMethod = "registerOrg"
 const organizationUpdateRegistrationMethod = "updateOrg"
 const organizationSetInterfaceImplementerMethod = "setInterfaceImplementer"
@@ -48,8 +54,9 @@ const organizationSetInterfaceImplementerMethod = "setInterfaceImplementer"
 const contractTypeRegistry = "registry"
 const contractTypeOrgRegistry = "organization-registry"
 const contractTypeERC1820Registry = "erc1820-registry"
-const contractTypeShield = "shield"
-const contractTypeVerifier = "verifier"
+
+// const contractTypeShield = "shield"
+// const contractTypeVerifier = "verifier"
 
 func init() {
 	if !common.ConsumeNATSStreamingSubscriptions {
@@ -59,11 +66,7 @@ func init() {
 
 	natsutil.EstablishSharedNatsConnection(nil)
 	natsutil.NatsCreateStream(defaultNatsStream, []string{
-		natsCreatedOrganizationCreatedSubject,
-		natsOrganizationImplicitKeyExchangeCompleteSubject,
-		natsOrganizationImplicitKeyExchangeInitSubject,
-		natsOrganizationRegistrationSubject,
-		contractTypeRegistry,
+		fmt.Sprintf("%s.*", defaultNatsStream),
 	})
 
 	var waitGroup sync.WaitGroup

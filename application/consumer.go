@@ -2,6 +2,7 @@ package application
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 	"github.com/provideplatform/ident/common"
 )
 
-const defaultNatsStream = "IDENT"
+const defaultNatsStream = "ident"
 
 const natsApplicationImplicitKeyExchangeInitSubject = "ident.application.keys.exchange.init"
 const natsApplicationImplicitKeyExchangeMaxInFlight = 2048
@@ -30,8 +31,7 @@ func init() {
 
 	natsutil.EstablishSharedNatsConnection(nil)
 	natsutil.NatsCreateStream(defaultNatsStream, []string{
-		natsApplicationImplicitKeyExchangeInitSubject,
-		natsOrganizationUpdatedSubject,
+		fmt.Sprintf("%s.*", defaultNatsStream),
 	})
 
 	var waitGroup sync.WaitGroup
