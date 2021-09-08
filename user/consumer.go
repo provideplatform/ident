@@ -17,6 +17,7 @@ const defaultNatsStream = "ident"
 const natsDispatchInvitationSubject = "ident.invitation.dispatch"
 const natsDispatchInvitationMaxInFlight = 2048
 const dispatchInvitationAckWait = time.Second * 30
+const dispatchInvitationMaxDeliveries = 5
 
 func init() {
 	if !common.ConsumeNATSStreamingSubscriptions {
@@ -43,6 +44,7 @@ func createNatsDispatchInvitationSubscriptions(wg *sync.WaitGroup) {
 			consumeDispatchInvitationSubscriptionsMsg,
 			dispatchInvitationAckWait,
 			natsDispatchInvitationMaxInFlight,
+			dispatchInvitationMaxDeliveries,
 			nil,
 		)
 

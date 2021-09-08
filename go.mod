@@ -17,15 +17,15 @@ require (
 	github.com/kthomas/go-auth0 v0.0.0-20210417042937-27d1d2dadf19
 	github.com/kthomas/go-db-config v0.0.0-20200612131637-ec0436a9685e
 	github.com/kthomas/go-logger v0.0.0-20210526080020-a63672d0724c
-	github.com/kthomas/go-natsutil v0.0.0-20210903192029-65b750c188cc
+	github.com/kthomas/go-natsutil v0.0.0-20210907061523-ffc21333715f
 	github.com/kthomas/go-pgputil v0.0.0-20200602073402-784e96083943
 	github.com/kthomas/go-redisutil v0.0.0-20200602073431-aa49de17e9ff
 	github.com/kthomas/go.uuid v1.2.1-0.20190324131420-28d1fa77e9a4
 	github.com/kthomas/trumail v0.0.0-20190925185815-ab3de2e834a3
+	github.com/lib/pq v1.2.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/nats-io/nats.go v1.12.0
-	github.com/nats-io/stan.go v0.7.0 // indirect
 	github.com/onsi/ginkgo v1.14.0
 	github.com/onsi/gomega v1.10.1
 	github.com/opencontainers/go-digest v1.0.0 // indirect
