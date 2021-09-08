@@ -48,7 +48,7 @@ const natsOrganizationImplicitKeyExchangeInitMaxDeliveries = 100
 const natsOrganizationRegistrationSubject = "ident.organization.registration"
 const natsOrganizationRegistrationMaxInFlight = 2048
 const natsOrganizationRegistrationAckWait = time.Second * 60
-const natsOrganizationRegistrationMaxDeliveries = 5000
+const natsOrganizationRegistrationMaxDeliveries = 30000
 
 // const organizationRegistrationTimeout = int64(natsOrganizationRegistrationAckWait * 10)
 const organizationRegistrationMethod = "registerOrg"
@@ -128,7 +128,7 @@ func createNatsOrganizationImplicitKeyExchangeSubscriptions(wg *sync.WaitGroup) 
 			consumeOrganizationImplicitKeyExchangeInitMsg,
 			natsOrganizationImplicitKeyExchangeInitAckWait,
 			natsOrganizationImplicitKeyExchangeMaxInFlight,
-			natsOrganizationImplicitKeyExchangeMaxDeliveries,
+			natsOrganizationImplicitKeyExchangeInitMaxDeliveries,
 			nil,
 		)
 
