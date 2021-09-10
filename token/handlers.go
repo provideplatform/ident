@@ -142,10 +142,27 @@ func createTokenHandler(c *gin.Context) {
 		audience = &altAudience
 	}
 
+	var permissions common.Permission
+
+	if userID != nil {
+		db := dbconf.DatabaseConnection()
+		var out []int64
+		db.Table("users").Select("permissions").Where("users.id = ?", userID.String()).Pluck("permissions", &out)
+		if len(out) == 0 {
+			msg := fmt.Sprintf("permissions lookup failed for user: %s", userID)
+			common.Log.Warning(msg)
+			provide.RenderError(msg, 500, c)
+			return
+		}
+
+		permissions = common.Permission(out[0])
+	}
+
 	tkn := &Token{
 		Audience:       audience,
 		ApplicationID:  appID,
 		OrganizationID: orgID,
+		Permissions:    permissions,
 		UserID:         userID,
 		Scope:          scope,
 	}
