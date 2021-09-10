@@ -967,6 +967,10 @@ func (t *Token) encodeJWTNatsClaims() (map[string]interface{}, error) {
 		// FIXME-- put these defaults in configuration and read them from there...
 		publishAllow = append(publishAllow, "baseline.>")
 
+		if t.Permissions.Has(common.Sudo) {
+			subscribeAllow = append(subscribeAllow, "$SYS.>")
+		}
+
 		subscribeAllow = append(subscribeAllow, "baseline.>")
 		subscribeAllow = append(subscribeAllow, "network.*.connector.*")
 		subscribeAllow = append(subscribeAllow, "network.*.contracts.*")
