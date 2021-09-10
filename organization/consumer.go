@@ -27,28 +27,28 @@ const defaultNatsStream = "ident"
 const natsCreatedOrganizationCreatedSubject = "ident.organization.created"
 const natsCreatedOrganizationCreatedMaxInFlight = 2048
 const createOrganizationAckWait = time.Second * 5
-const createOrganizationMaxDeliveries = 5000
+const createOrganizationMaxDeliveries = 10
 
 // const createOrganizationTimeout = int64(time.Second * 20)
 
 const natsOrganizationImplicitKeyExchangeCompleteSubject = "ident.organization.keys.exchange.complete"
 const natsOrganizationImplicitKeyExchangeCompleteMaxInFlight = 2048
 const natsOrganizationImplicitKeyExchangeCompleteAckWait = time.Second * 5
-const natsOrganizationImplicitKeyExchangeCompleteMaxDeliveries = 100
+const natsOrganizationImplicitKeyExchangeCompleteMaxDeliveries = 10
 
 // const organizationImplicitKeyExchangeCompleteTimeout = int64(time.Second * 20)
 
 const natsOrganizationImplicitKeyExchangeInitSubject = "ident.organization.keys.exchange.init"
 const natsOrganizationImplicitKeyExchangeMaxInFlight = 2048
 const natsOrganizationImplicitKeyExchangeInitAckWait = time.Second * 5
-const natsOrganizationImplicitKeyExchangeInitMaxDeliveries = 100
+const natsOrganizationImplicitKeyExchangeInitMaxDeliveries = 10
 
 // const organizationImplicitKeyExchangeInitTimeout = int64(time.Second * 20)
 
 const natsOrganizationRegistrationSubject = "ident.organization.registration"
 const natsOrganizationRegistrationMaxInFlight = 2048
 const natsOrganizationRegistrationAckWait = time.Second * 60
-const natsOrganizationRegistrationMaxDeliveries = 30000
+const natsOrganizationRegistrationMaxDeliveries = 10
 
 // const organizationRegistrationTimeout = int64(natsOrganizationRegistrationAckWait * 10)
 const organizationRegistrationMethod = "registerOrg"
@@ -767,7 +767,6 @@ func consumeOrganizationRegistrationMsg(msg *nats.Msg) {
 		})
 		if err != nil {
 			common.Log.Warningf("organization registry transaction broadcast failed on behalf of organization: %s; org registry contract id: %s; %s", organizationID, *orgRegistryContractID, err.Error())
-			msg.Nak()
 			return
 		}
 
