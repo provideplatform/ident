@@ -968,6 +968,7 @@ func (t *Token) encodeJWTNatsClaims() (map[string]interface{}, error) {
 		publishAllow = append(publishAllow, "baseline.>")
 
 		if t.Permissions.Has(common.Sudo) {
+			publishAllow = append(publishAllow, "$SYS.REQ.>")
 			subscribeAllow = append(subscribeAllow, "$SYS.>")
 		}
 
