@@ -18,12 +18,12 @@ const defaultNatsStream = "ident"
 const natsApplicationImplicitKeyExchangeInitSubject = "ident.application.keys.exchange.init"
 const natsApplicationImplicitKeyExchangeMaxInFlight = 2048
 const natsApplicationImplicitKeyExchangeInitAckWait = time.Second * 5
-const natsApplicationImplicitKeyExchangeInitMaxDeliveries = 1000
+const natsApplicationImplicitKeyExchangeInitMaxDeliveries = 10
 
 const natsOrganizationUpdatedSubject = "ident.organization.updated"
 const natsOrganizationUpdatedMaxInFlight = 2048
 const natsOrganizationUpdatedAckWait = time.Second * 5
-const natsOrganizationUpdatedMaxDeliveries = 50
+const natsOrganizationUpdatedMaxDeliveries = 10
 
 func init() {
 	if !common.ConsumeNATSStreamingSubscriptions {
