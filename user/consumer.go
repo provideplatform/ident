@@ -37,7 +37,7 @@ func init() {
 
 func createNatsDispatchInvitationSubscriptions(wg *sync.WaitGroup) {
 	for i := uint64(0); i < natsutil.GetNatsConsumerConcurrency(); i++ {
-		natsutil.RequireNatsJetstreamSubscription(wg,
+		_, err := natsutil.RequireNatsJetstreamSubscription(wg,
 			dispatchInvitationAckWait,
 			natsDispatchInvitationSubject,
 			natsDispatchInvitationSubject,
@@ -48,6 +48,10 @@ func createNatsDispatchInvitationSubscriptions(wg *sync.WaitGroup) {
 			dispatchInvitationMaxDeliveries,
 			nil,
 		)
+
+		if err != nil {
+			common.Log.Panicf("failed to subscribe to NATS stream via subject: %s; %s", natsDispatchInvitationSubject, err.Error())
+		}
 	}
 }
 
