@@ -87,6 +87,7 @@ func createNatsOrganizationCreatedSubscriptions(wg *sync.WaitGroup) {
 			createOrganizationAckWait,
 			natsCreatedOrganizationCreatedSubject,
 			natsCreatedOrganizationCreatedSubject,
+			natsCreatedOrganizationCreatedSubject,
 			consumeCreatedOrganizationMsg,
 			createOrganizationAckWait,
 			natsCreatedOrganizationCreatedMaxInFlight,
@@ -104,6 +105,7 @@ func createNatsOrganizationImplicitKeyExchangeCompleteSubscriptions(wg *sync.Wai
 	for i := uint64(0); i < natsutil.GetNatsConsumerConcurrency(); i++ {
 		_, err := natsutil.RequireNatsJetstreamSubscription(wg,
 			natsOrganizationImplicitKeyExchangeCompleteAckWait,
+			natsOrganizationImplicitKeyExchangeCompleteSubject,
 			natsOrganizationImplicitKeyExchangeCompleteSubject,
 			natsOrganizationImplicitKeyExchangeCompleteSubject,
 			consumeOrganizationImplicitKeyExchangeCompleteMsg,
@@ -125,6 +127,7 @@ func createNatsOrganizationImplicitKeyExchangeSubscriptions(wg *sync.WaitGroup) 
 			natsOrganizationImplicitKeyExchangeInitAckWait,
 			natsOrganizationImplicitKeyExchangeInitSubject,
 			natsOrganizationImplicitKeyExchangeInitSubject,
+			natsOrganizationImplicitKeyExchangeInitSubject,
 			consumeOrganizationImplicitKeyExchangeInitMsg,
 			natsOrganizationImplicitKeyExchangeInitAckWait,
 			natsOrganizationImplicitKeyExchangeMaxInFlight,
@@ -142,6 +145,7 @@ func createNatsOrganizationRegistrationSubscriptions(wg *sync.WaitGroup) {
 	for i := uint64(0); i < natsutil.GetNatsConsumerConcurrency(); i++ {
 		_, err := natsutil.RequireNatsJetstreamSubscription(wg,
 			natsOrganizationRegistrationAckWait,
+			natsOrganizationRegistrationSubject,
 			natsOrganizationRegistrationSubject,
 			natsOrganizationRegistrationSubject,
 			consumeOrganizationRegistrationMsg,

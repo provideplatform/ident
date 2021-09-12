@@ -41,6 +41,7 @@ func createNatsDispatchInvitationSubscriptions(wg *sync.WaitGroup) {
 			dispatchInvitationAckWait,
 			natsDispatchInvitationSubject,
 			natsDispatchInvitationSubject,
+			natsDispatchInvitationSubject,
 			consumeDispatchInvitationSubscriptionsMsg,
 			dispatchInvitationAckWait,
 			natsDispatchInvitationMaxInFlight,

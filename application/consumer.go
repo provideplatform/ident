@@ -48,6 +48,7 @@ func createNatsApplicationImplicitKeyExchangeSubscriptions(wg *sync.WaitGroup) {
 			natsApplicationImplicitKeyExchangeInitAckWait,
 			natsApplicationImplicitKeyExchangeInitSubject,
 			natsApplicationImplicitKeyExchangeInitSubject,
+			natsApplicationImplicitKeyExchangeInitSubject,
 			consumeApplicationImplicitKeyExchangeInitMsg,
 			natsApplicationImplicitKeyExchangeInitAckWait,
 			natsApplicationImplicitKeyExchangeMaxInFlight,
@@ -65,6 +66,7 @@ func createNatsApplicationOrganizationUpdatedSubscriptions(wg *sync.WaitGroup) {
 	for i := uint64(0); i < natsutil.GetNatsConsumerConcurrency(); i++ {
 		_, err := natsutil.RequireNatsJetstreamSubscription(wg,
 			natsOrganizationUpdatedAckWait,
+			natsOrganizationUpdatedSubject,
 			natsOrganizationUpdatedSubject,
 			natsOrganizationUpdatedSubject,
 			consumeApplicationOrganizationUpdatedMsg,
