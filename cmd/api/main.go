@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -23,6 +24,8 @@ import (
 	provide "github.com/provideplatform/provide-go/common"
 	util "github.com/provideplatform/provide-go/common/util"
 )
+
+const jsonWebKey2020Type = "JsonWebKey2020"
 
 const privacyPolicyUpdatedAt = "2018-10-19T00:00:00.000000"
 const termsOfServiceUpdatedAt = "2018-10-19T00:00:00.000000"
@@ -106,6 +109,7 @@ func runAPI() {
 
 	r.GET("/.well-known/keys", token.FetchJWKsHandler)
 	r.GET("/.well-known/openid-configuration", openIDConfigurationHandler)
+	r.GET("/.well-known/resolve/:did", resolveDIDHandler) // deprecated
 
 	r.GET("/status", statusHandler)
 	r.GET("/legal/privacy_policy", privacyPolicyHandler)
@@ -161,6 +165,51 @@ func privacyPolicyHandler(c *gin.Context) {
 func termsOfServiceHandler(c *gin.Context) {
 	resp := map[string]interface{}{}
 	provide.Render(resp, 200, c)
+}
+
+func resolveDIDHandler(c *gin.Context) {
+	did := c.Param("did")
+
+	verificationMethod := make([]interface{}, 0)
+	assertionMethod := make([]interface{}, 0)
+	authentication := make([]interface{}, 0)
+	capabilityInvocation := make([]interface{}, 0)
+	capabilityDelegation := make([]interface{}, 0)
+	keyAgreement := make([]interface{}, 0)
+
+	jwks, _ := common.ResolveJWKs()
+	for _, jwk := range jwks {
+		uri := fmt.Sprintf("%s#%s", did, jwk.Fingerprint)
+
+		verificationMethod = append(verificationMethod, map[string]interface{}{
+			"id":           uri,
+			"type":         jsonWebKey2020Type,
+			"controller":   did,
+			"publicKeyJwk": jwk,
+		})
+
+		assertionMethod = append(assertionMethod, uri)
+		authentication = append(authentication, uri)
+		capabilityInvocation = append(capabilityInvocation, uri)
+		capabilityDelegation = append(capabilityDelegation, uri)
+		keyAgreement = append(keyAgreement, uri)
+	}
+
+	document := &common.DIDDocument{
+		Context: []string{
+			"https://www.w3.org/ns/did/v1",
+			"https://w3id.org/security/suites/jws-2020/v1",
+		},
+		ID:                   did,
+		VerificationMethod:   verificationMethod,
+		AssertionMethod:      assertionMethod,
+		Authentication:       authentication,
+		CapabilityInvocation: capabilityInvocation,
+		CapabilityDelegation: capabilityDelegation,
+		KeyAgreement:         keyAgreement,
+	}
+
+	provide.Render(document, 200, c)
 }
 
 func shuttingDown() bool {

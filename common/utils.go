@@ -3,10 +3,12 @@ package common
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"math/rand"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/provideplatform/provide-go/api/ident"
 )
 
 const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -57,6 +59,31 @@ func RandomString(length int) string {
 		b[i] = charset[seededRand.Intn(len(charset))]
 	}
 	return string(b)
+}
+
+// ResolveJWKs resolves the configured JWKs for the environment
+func ResolveJWKs() ([]*ident.JSONWebKey, error) {
+	jwks := make([]*ident.JSONWebKey, 0)
+	for kid := range JWTKeypairs {
+		keypair := JWTKeypairs[kid]
+
+		var publicKey string
+		if keypair.VaultKey != nil && keypair.VaultKey.PublicKey != nil {
+			publicKey = *keypair.VaultKey.PublicKey
+		} else if keypair.PublicKeyPEM != nil {
+			publicKey = *keypair.PublicKeyPEM
+		}
+
+		jwks = append(jwks, &ident.JSONWebKey{
+			E:           fmt.Sprintf("%X", keypair.PublicKey.E),
+			Fingerprint: keypair.Fingerprint,
+			Kid:         kid,
+			N:           keypair.PublicKey.N.String(),
+			PublicKey:   publicKey,
+		})
+	}
+
+	return jwks, nil
 }
 
 // SHA256 is a convenience method to return the sha256 hash of the given input
