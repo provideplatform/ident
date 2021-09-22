@@ -25,6 +25,7 @@ import (
 	util "github.com/provideplatform/provide-go/common/util"
 )
 
+const didDocumentVocab = "https://ident.provide.services/"
 const jsonWebKey2020Type = "JsonWebKey2020"
 
 const privacyPolicyUpdatedAt = "2018-10-19T00:00:00.000000"
@@ -196,9 +197,12 @@ func resolveDIDHandler(c *gin.Context) {
 	}
 
 	document := &common.DIDDocument{
-		Context: []string{
+		Context: []interface{}{
 			"https://www.w3.org/ns/did/v1",
 			"https://w3id.org/security/suites/jws-2020/v1",
+			map[string]interface{}{
+				"@vocab": didDocumentVocab,
+			},
 		},
 		ID:                   did,
 		VerificationMethod:   verificationMethod,

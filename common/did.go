@@ -1,7 +1,7 @@
 package common
 
 type DIDDocument struct {
-	Context              []string      `json:"@context"`
+	Context              []interface{} `json:"@context"`
 	ID                   string        `json:"id"`
 	VerificationMethod   []interface{} `json:"verificationMethod"`
 	AssertionMethod      []interface{} `json:"assertionMethod"`
