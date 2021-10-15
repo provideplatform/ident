@@ -1,11 +1,9 @@
 package user
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"html/template"
 	"strings"
 	"time"
 
@@ -285,7 +283,6 @@ func (u *User) Create(tx *gorm.DB, createAuth0User bool) bool {
 					natsutil.NatsJetstreamPublish(natsSiaUserNotificationSubject, payload)
 				}
 
-				sendWelcomeEmail(u)
 				return success
 			}
 		}
@@ -624,23 +621,4 @@ func (u *User) CreateResetPasswordToken(db *gorm.DB) bool {
 		return false
 	}
 	return true
-}
-
-// sendWelcomeEmail will send a templated welcome email to the user
-func sendWelcomeEmail(u *User) {
-	// Load template
-	t, err := template.ParseFiles("templates/welcome.html")
-	if err != nil {
-		common.Log.Errorf("unable to load welcome template: %s", err)
-		return
-	}
-
-	// Fill template
-	buf := new(bytes.Buffer)
-	t.Execute(buf, u)
-
-	common.SendEmail(
-		[]string{*u.Email},
-		"Welcome to Provide!",
-		buf.String())
 }

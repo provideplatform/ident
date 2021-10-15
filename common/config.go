@@ -75,25 +75,6 @@ var (
 
 	// OpenIDConfiguration is the openid configuration JSON which is served from .well-known/openid-configuration
 	OpenIDConfiguration map[string]interface{}
-
-	//
-	// SMTP Server Settings for sending emails
-	//
-
-	// SMTPServerHost is the URL for the SMTP server excluding port
-	SMTPServerHost string
-
-	// SMTPServerPort is the port to use to connect to the SMTP server
-	SMTPServerPort string
-
-	// SMTPUser is the user (email) used when authenticating with the SMTP server
-	SMTPUser string
-
-	// SMTPPassword is the password for authenticating with the SMTP server
-	SMTPPassword string
-
-	// CanSendEmails determines if the config provided will allow for sending out emails
-	CanSendEmails bool
 )
 
 func init() {
@@ -103,7 +84,6 @@ func init() {
 	requireEmailVerification()
 	requireIPLists()
 	requireOpenIDConfiguration()
-	requireSMTPServerSettings()
 
 	Auth0IntegrationEnabled = strings.ToLower(os.Getenv("AUTH0_INTEGRATION_ENABLED")) == "true"
 	Auth0IntegrationCustomDatabase = strings.ToLower(os.Getenv("AUTH0_INTEGRATION_CUSTOM_DATABASE")) == "true"
@@ -142,31 +122,6 @@ func establishAPIAccountingConn() error {
 	}
 	apiAccountingConn = conn
 	return nil
-}
-
-func requireSMTPServerSettings() {
-	SMTPServerHost = os.Getenv("SMTP_SERVER_HOST")
-	SMTPServerPort = os.Getenv("SMTP_SERVER_PORT")
-	SMTPUser = os.Getenv("SMTP_USER")
-	SMTPPassword = os.Getenv("SMTP_PASSWORD")
-
-	CanSendEmails = true
-	if SMTPServerHost == "" {
-		Log.Warning("no SMTP Host set")
-		CanSendEmails = false
-	}
-	if SMTPServerPort == "" {
-		Log.Warning("no SMTP Port set")
-		CanSendEmails = false
-	}
-	if SMTPUser == "" {
-		Log.Warning("no SMTP User set")
-		CanSendEmails = false
-	}
-	if SMTPPassword == "" {
-		Log.Warning("no SMTP Password set")
-		CanSendEmails = false
-	}
 }
 
 func requireEmailVerification() {
