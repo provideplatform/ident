@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/rand"
+	"net/smtp"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -91,4 +93,27 @@ func SHA256(str string) string {
 	digest := sha256.New()
 	digest.Write([]byte(str))
 	return hex.EncodeToString(digest.Sum(nil))
+}
+
+// SendEmail uses the SMTP settings in Config to send a HTML email message to the provided addresses
+func SendEmail(to []string, subject string, html string) error {
+	if CanSendEmails {
+		headers := []string{
+			"MIME-version: 1.0",
+			"Content-Type: text/html; charset=\"UTF-8\"",
+			"To: " + strings.Join(to, ", "),
+			"Subject: " + subject,
+		}
+		message := strings.Join(headers, "\r\n") + "\r\n\r\n" + html
+
+		auth := smtp.PlainAuth("", SMTPUser, SMTPPassword, SMTPServerHost)
+		err := smtp.SendMail(SMTPServerHost+":"+SMTPServerPort, auth, SMTPUser, to, []byte(message))
+		if err != nil {
+			Log.Warningf("unable to send mail to [%s]; %s", to, err)
+		}
+		return err
+	}
+
+	Log.Warning("skipping email, not configured to send")
+	return nil
 }
