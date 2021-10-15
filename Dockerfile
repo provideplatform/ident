@@ -15,6 +15,7 @@ WORKDIR /ident
 
 COPY --from=builder /go/src/github.com/provideplatform/ident/.bin /ident/.bin
 COPY --from=builder /go/src/github.com/provideplatform/ident/ops /ident/ops
+COPY --from=builder /go/src/github.com/provideplatform/ident/templates /ident/templates
 
 EXPOSE 8080
 ENTRYPOINT ["./ops/run_api.sh"]
