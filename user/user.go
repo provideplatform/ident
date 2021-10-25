@@ -28,7 +28,8 @@ const natsSiaUserDeleteNotificationSubject = "sia.user.deleted"
 
 // User model
 type User struct {
-	provide.Model
+	provide.ModelWithDID
+
 	ApplicationID          *uuid.UUID             `sql:"type:uuid" json:"application_id,omitempty"`
 	Name                   *string                `sql:"-" json:"name"`
 	FirstName              *string                `sql:"not null" json:"first_name"`
@@ -51,7 +52,7 @@ type AuthenticationResponse struct {
 
 // Response is preferred over writing an entire User instance as JSON
 type Response struct {
-	ID                     uuid.UUID              `json:"id"`
+	ID                     string                 `json:"id"`
 	CreatedAt              time.Time              `json:"created_at"`
 	Name                   string                 `json:"name"`
 	FirstName              string                 `json:"first_name"`
@@ -64,18 +65,18 @@ type Response struct {
 }
 
 // Find returns a user for the given id
-func Find(userID uuid.UUID) *User {
+func Find(userID string) *User {
 	db := dbconf.DatabaseConnection()
 	user := &User{}
 	db.Where("id = ?", userID).Find(&user)
-	if user == nil || user.ID == uuid.Nil {
+	if user == nil || user.ID == nil {
 		return nil
 	}
 	return user
 }
 
 // FindByEmail returns a user for the given email address, application and organization id
-func FindByEmail(email string, applicationID *uuid.UUID, organizationID *uuid.UUID) *User {
+func FindByEmail(email string, applicationID *uuid.UUID, organizationID *string) *User {
 	db := dbconf.DatabaseConnection()
 
 	user := &User{}
@@ -88,7 +89,7 @@ func FindByEmail(email string, applicationID *uuid.UUID, organizationID *uuid.UU
 		query = query.Where("users.application_id IS NULL")
 	}
 
-	if organizationID != nil && *organizationID != uuid.Nil {
+	if organizationID != nil {
 		if applicationID != nil && *applicationID != uuid.Nil {
 			query = query.Joins("LEFT OUTER JOIN applications_organizations as ao ON ao.organization_id = ou.organization_id")
 			query = query.Where("ao.application_id = ? AND ao.organization_id = ?", applicationID, organizationID)
@@ -98,15 +99,16 @@ func FindByEmail(email string, applicationID *uuid.UUID, organizationID *uuid.UU
 		query = query.Where("ou.organization_id = ?", organizationID)
 	}
 	query.Find(&user)
-	if user == nil || user.ID == uuid.Nil {
+	if user == nil || user.ID == nil {
 		return nil
 	}
 	return user
 }
 
 // Exists returns true if a user exists for the given email address, app id and org id
-func Exists(email string, applicationID *uuid.UUID, organizationID *uuid.UUID) bool {
+func Exists(email string, applicationID *uuid.UUID, organizationID *string) bool {
 	return FindByEmail(email, applicationID, organizationID) != nil
+
 }
 
 // AuthenticateUser attempts to authenticate by email address and password;
@@ -128,7 +130,7 @@ func AuthenticateUser(tx *gorm.DB, email, password string, applicationID *uuid.U
 	}
 
 	query.First(&user)
-	if user != nil && user.ID != uuid.Nil {
+	if user != nil && user.ID != nil {
 		if !user.hasPermission(common.Authenticate) {
 			return nil, errors.New("authentication failed due to revoked authenticate permission")
 		}
@@ -141,7 +143,7 @@ func AuthenticateUser(tx *gorm.DB, email, password string, applicationID *uuid.U
 	}
 
 	token := &token.Token{
-		UserID:      &user.ID,
+		UserID:      user.ID,
 		Scope:       scope,
 		Permissions: user.Permissions,
 	}
@@ -171,7 +173,7 @@ func AuthenticateApplicationUser(email string, applicationID uuid.UUID, scope *s
 	db := dbconf.DatabaseConnection()
 	query := db.Where("application_id = ? AND email = ?", applicationID, strings.ToLower(email))
 	query.First(&user)
-	if user != nil && user.ID != uuid.Nil {
+	if user != nil && user.ID != nil {
 		if !user.hasPermission(common.Authenticate) {
 			return nil, errors.New("authentication failed due to revoked authenticate permission")
 		}
@@ -187,7 +189,7 @@ func AuthenticateApplicationUser(email string, applicationID uuid.UUID, scope *s
 	}
 
 	token := &token.Token{
-		UserID:      &user.ID,
+		UserID:      user.ID,
 		Scope:       scope,
 		Permissions: user.Permissions,
 	}
@@ -243,49 +245,74 @@ func (u *User) Create(tx *gorm.DB, createAuth0User bool) bool {
 	}
 
 	if !u.validate() {
+		fmt.Println("user is invalid")
 		return false
 	}
 
-	if db.NewRecord(u) {
-		result := db.Create(&u)
-		rowsAffected := result.RowsAffected
-		errors := result.GetErrors()
-		if len(errors) > 0 {
-			for _, err := range errors {
-				u.Errors = append(u.Errors, &provide.Error{
-					Message: common.StringOrNil(err.Error()),
-				})
-			}
+	var result *gorm.DB
+	var rowsAffected int64
+	var errors []error
+
+	var count int64
+	res := db.Model(&User{}).Where("id = ?", *u.ID).Count(&count)
+	// TODO check other entities for the same DID
+	errs := res.GetErrors()
+
+	if len(errs) > 0 {
+		for _, err := range errs {
+			common.Log.Debugf("error counting: %s", *common.StringOrNil(err.Error()))
 		}
-		if !db.NewRecord(u) {
-			success := rowsAffected > 0
-			if success {
-				common.Log.Debugf("created user: %s", *u.Email)
+	}
 
-				if createAuth0User && common.Auth0IntegrationEnabled && !common.Auth0IntegrationCustomDatabase {
-					err := u.createAuth0User()
-					if err != nil {
-						u.Errors = append(u.Errors, &provide.Error{
-							Message: common.StringOrNil(err.Error()),
-						})
-						return false
-					}
-				}
+	if count == 0 {
+		result = db.Create(&u)
+	} else {
+		common.Log.Debugf("user with DID %s already exists", *u.ID)
+		u.Errors = append(u.Errors, &provide.Error{
+			Message: common.StringOrNil(fmt.Sprintf("user with DID %s already exists", *u.ID)),
+		})
+		return false
+	}
 
-				if tx == nil {
-					db.Commit()
-				}
+	rowsAffected = result.RowsAffected
+	errors = result.GetErrors()
+	if len(errors) > 0 {
+		for _, err := range errors {
+			u.Errors = append(u.Errors, &provide.Error{
+				Message: common.StringOrNil(err.Error()),
+			})
+		}
+	}
 
-				if success && (u.ApplicationID == nil || *u.ApplicationID == uuid.Nil) && common.DispatchSiaNotifications {
-					payload, _ := json.Marshal(map[string]interface{}{
-						"id": u.ID.String(),
+	if !db.NewRecord(u) {
+		success := rowsAffected > 0
+		if success {
+			common.Log.Debugf("created user: %s", *u.Email)
+
+			if createAuth0User && common.Auth0IntegrationEnabled && !common.Auth0IntegrationCustomDatabase {
+				err := u.createAuth0User()
+				if err != nil {
+					common.Log.Debugf("failed to create auth0: %s", common.StringOrNil(err.Error()))
+					u.Errors = append(u.Errors, &provide.Error{
+						Message: common.StringOrNil(err.Error()),
 					})
-					natsutil.NatsJetstreamPublish(natsSiaUserNotificationSubject, payload)
+					return false
 				}
-
-				return success
 			}
+
+			if tx == nil {
+				db.Commit()
+			}
+
+			if success && (u.ApplicationID == nil || *u.ApplicationID == uuid.Nil) && common.DispatchSiaNotifications {
+				payload, _ := json.Marshal(map[string]interface{}{
+					"id": *u.ID,
+				})
+				natsutil.NatsJetstreamPublish(natsSiaUserNotificationSubject, payload)
+			}
+
 		}
+		return success
 	}
 
 	return false
@@ -354,7 +381,7 @@ func (u *User) addApplicationAssociation(tx *gorm.DB, appID uuid.UUID, permissio
 	return success
 }
 
-func (u *User) addOrganizationAssociation(tx *gorm.DB, orgID uuid.UUID, permissions common.Permission) bool {
+func (u *User) addOrganizationAssociation(tx *gorm.DB, orgID string, permissions common.Permission) bool {
 	var db *gorm.DB
 	if tx != nil {
 		db = tx
@@ -478,15 +505,12 @@ func (u *User) Reload() {
 // validate a user for persistence
 func (u *User) validate() bool {
 	u.Errors = make([]*provide.Error, 0)
-	db := dbconf.DatabaseConnection()
-	if db.NewRecord(u) {
-		if u.Password != nil || u.ApplicationID == nil {
-			u.verifyEmailAddress()
-			u.rehashPassword()
-		}
-		if u.Permissions == 0 {
-			u.Permissions = common.DefaultUserPermission
-		}
+	if u.Password != nil || u.ApplicationID == nil {
+		u.verifyEmailAddress()
+		u.rehashPassword()
+	}
+	if u.Permissions == 0 {
+		u.Permissions = common.DefaultUserPermission
 	}
 	return len(u.Errors) == 0
 }
@@ -540,7 +564,7 @@ func (u *User) Delete() bool {
 
 		if common.DispatchSiaNotifications {
 			payload, _ := json.Marshal(map[string]interface{}{
-				"user_id": u.ID.String(),
+				"user_id": *u.ID,
 			})
 			natsutil.NatsJetstreamPublish(natsSiaUserDeleteNotificationSubject, payload)
 		}
@@ -552,7 +576,7 @@ func (u *User) Delete() bool {
 // AsResponse marshals a user into a user response
 func (u *User) AsResponse() *Response {
 	return &Response{
-		ID:                     u.ID,
+		ID:                     *u.ID,
 		CreatedAt:              u.CreatedAt,
 		Name:                   *(u.FullName()),
 		FirstName:              *u.FirstName,
@@ -597,7 +621,7 @@ func (u *User) CreateResetPasswordToken(db *gorm.DB) bool {
 		"jti":                        tokenID,
 		"exp":                        issuedAt.Add(defaultResetPasswordTokenTimeout).Unix(),
 		"iat":                        issuedAt.Unix(),
-		"sub":                        fmt.Sprintf("user:%s", u.ID.String()),
+		"sub":                        fmt.Sprintf("user|%s", *u.ID),
 		util.JWTApplicationClaimsKey: appClaims,
 	}
 

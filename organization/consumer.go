@@ -190,14 +190,14 @@ func consumeCreatedOrganizationMsg(msg *nats.Msg) {
 	organization := &Organization{}
 	db.Where("id = ?", organizationID).Find(&organization)
 
-	if organization == nil || organization.ID == uuid.Nil {
+	if organization == nil || organization.ID == nil {
 		common.Log.Warningf("failed to resolve organization during created message handler; organization id: %s", organizationID)
 		msg.Nak()
 		return
 	}
 
 	orgToken := &token.Token{
-		OrganizationID: &organization.ID,
+		OrganizationID: organization.ID,
 	}
 	if !orgToken.Vend() {
 		common.Log.Warningf("failed to vend signed JWT for organization registration tx signing; organization id: %s", organizationID)
@@ -256,14 +256,14 @@ func consumeOrganizationImplicitKeyExchangeInitMsg(msg *nats.Msg) {
 	organization := &Organization{}
 	db.Where("id = ?", organizationID).Find(&organization)
 
-	if organization == nil || organization.ID == uuid.Nil {
+	if organization == nil || organization.ID == nil {
 		common.Log.Warningf("failed to resolve organization during implicit key exchange message handler; organization id: %s", organizationID)
 		msg.Nak()
 		return
 	}
 
 	orgToken := &token.Token{
-		OrganizationID: &organization.ID,
+		OrganizationID: organization.ID,
 	}
 	if !orgToken.Vend() {
 		common.Log.Warningf("failed to vend signed JWT for organization implicit key exchange; organization id: %s", organizationID)
@@ -414,14 +414,14 @@ func consumeOrganizationImplicitKeyExchangeCompleteMsg(msg *nats.Msg) {
 	organization := &Organization{}
 	db.Where("id = ?", organizationID).Find(&organization)
 
-	if organization == nil || organization.ID == uuid.Nil {
+	if organization == nil || organization.ID == nil {
 		common.Log.Warningf("failed to resolve organization during implicit key exchange message handler; organization id: %s", organizationID)
 		msg.Nak()
 		return
 	}
 
 	orgToken := &token.Token{
-		OrganizationID: &organization.ID,
+		OrganizationID: organization.ID,
 	}
 	if !orgToken.Vend() {
 		common.Log.Warningf("failed to vend signed JWT for organization implicit key exchange; organization id: %s", organizationID)
@@ -548,7 +548,7 @@ func consumeOrganizationRegistrationMsg(msg *nats.Msg) {
 	organization := &Organization{}
 	db.Where("id = ?", organizationID).Find(&organization)
 
-	if organization == nil || organization.ID == uuid.Nil {
+	if organization == nil {
 		common.Log.Warningf("failed to resolve organization during registration message handler; organization id: %s", organizationID)
 		msg.Nak()
 		return
@@ -560,7 +560,7 @@ func consumeOrganizationRegistrationMsg(msg *nats.Msg) {
 	var orgZeroKnowledgePublicKey *string
 
 	orgToken := &token.Token{
-		OrganizationID: &organization.ID,
+		OrganizationID: organization.ID,
 	}
 	if !orgToken.Vend() {
 		common.Log.Warningf("failed to vend signed JWT for organization implicit key exchange; organization id: %s", organizationID)
@@ -690,7 +690,7 @@ func consumeOrganizationRegistrationMsg(msg *nats.Msg) {
 
 		orgToken := &token.Token{
 			// ApplicationID:  &applicationUUID,
-			OrganizationID: &organization.ID,
+			OrganizationID: organization.ID,
 		}
 		if !orgToken.Vend() {
 			common.Log.Warningf("failed to vend signed JWT for organization registration tx signing; organization id: %s", organizationID)

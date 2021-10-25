@@ -14,6 +14,7 @@ import (
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
+	"github.com/ockam-network/did"
 	"github.com/provideplatform/ident/common"
 	provide "github.com/provideplatform/provide-go/api"
 	"github.com/provideplatform/provide-go/api/vault"
@@ -53,8 +54,8 @@ type Token struct {
 
 	// Associations
 	ApplicationID  *uuid.UUID `sql:"type:uuid" json:"-"`
-	OrganizationID *uuid.UUID `sql:"type:uuid" json:"-"`
-	UserID         *uuid.UUID `sql:"type:uuid" json:"-"`
+	OrganizationID *string    `sql:"-" json:"-"`
+	UserID         *string    `sql:"-" json:"-"`
 
 	// OAuth 2 fields
 	AccessToken  *string `sql:"-" json:"access_token,omitempty"`
@@ -166,8 +167,8 @@ func Parse(token string) (*Token, error) {
 	appclaims, appclaimsOk := claims[util.JWTApplicationClaimsKey].(map[string]interface{})
 
 	var appID *uuid.UUID
-	var orgID *uuid.UUID
-	var userID *uuid.UUID
+	var orgID *string
+	var userID *string
 
 	var sub string
 	if subclaim, subclaimOk := claims["sub"].(string); subclaimOk {
@@ -182,15 +183,22 @@ func Parse(token string) (*Token, error) {
 		}
 	}
 
+	subStr := subprts[1]
 	subUUID, err := uuid.FromString(subprts[1])
 	if err != nil {
-		if subprts[0] == authorizationSubjectInvite {
-			err := checkmail.ValidateFormat(subprts[1])
-			if err != nil {
+		_, err := did.Parse(subStr)
+
+		if err != nil {
+			common.Log.Debugf("valid bearer authorization sub claim is not a valid did: %s", sub)
+
+			if subprts[0] == authorizationSubjectInvite {
+				err := checkmail.ValidateFormat(subprts[1])
+				if err != nil {
+					return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
+				}
+			} else {
 				return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
 			}
-		} else {
-			return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
 		}
 	}
 
@@ -198,13 +206,13 @@ func Parse(token string) (*Token, error) {
 	case authorizationSubjectApplication:
 		appID = &subUUID
 	case authorizationSubjectAuth0:
-		userID = &subUUID
+		userID = &subStr
 	case authorizationSubjectInvite:
 		// this is an invitation token and can only authorize certain actions within a user creation or authentication transaction;
 		// such actions may be made on behalf of an application_id and/or organization_id specified in the invitation application claims
 		common.Log.Debugf("parsed valid bearer authorization containing invitation subject: %s", sub)
 	case authorizationSubjectOrganization:
-		orgID = &subUUID
+		orgID = &subStr
 	case authorizationSubjectToken:
 		isRefreshToken = true
 
@@ -219,25 +227,25 @@ func Parse(token string) (*Token, error) {
 				appID = &subUUID
 				common.Log.Debugf("authorized refresh token for creation of new access token on behalf of application: %s", appID)
 			} else if claimedOrgID, claimedOrgIDOk := appclaims["organization_id"].(string); claimedOrgIDOk {
-				subUUID, err := uuid.FromString(claimedOrgID)
-				if err != nil {
-					return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
-				}
+				// subUUID, err := uuid.FromString(claimedOrgID)
+				// if err != nil {
+				// 	return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
+				// }
 
-				orgID = &subUUID
+				orgID = &claimedOrgID
 				common.Log.Debugf("authorized refresh token for creation of new access token on behalf of organization: %s", orgID)
 			} else if claimedUserID, claimedUserIDOk := appclaims["user_id"].(string); claimedUserIDOk {
-				subUUID, err := uuid.FromString(claimedUserID)
-				if err != nil {
-					return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
-				}
+				// subUUID, err := uuid.FromString(claimedUserID)
+				// if err != nil {
+				// 	return nil, fmt.Errorf("valid bearer authorization contained invalid sub claim: %s; %s", sub, err.Error())
+				// }
 
-				userID = &subUUID
+				userID = &claimedUserID
 				common.Log.Debugf("authorized refresh token for creation of new access token on behalf of user: %s", userID)
 			}
 		}
 	case authorizationSubjectUser:
-		userID = &subUUID
+		userID = &subStr
 	}
 
 	var iat *time.Time
@@ -289,19 +297,19 @@ func Parse(token string) (*Token, error) {
 		}
 
 		if orgIDClaim, orgIDClaimOk := appclaims["organization_id"].(string); orgIDClaimOk && tkn.OrganizationID == nil {
-			orgUUID, err := uuid.FromString(orgIDClaim)
-			if err != nil {
-				return nil, fmt.Errorf("valid bearer authorization contained invalid org_id app claim: %s; %s", sub, err.Error())
-			}
-			tkn.OrganizationID = &orgUUID
+			// orgUUID, err := uuid.FromString(orgIDClaim)
+			// if err != nil {
+			// 	return nil, fmt.Errorf("valid bearer authorization contained invalid org_id app claim: %s; %s", sub, err.Error())
+			// }
+			tkn.OrganizationID = &orgIDClaim
 		}
 
 		if userIDClaim, userIDClaimOk := appclaims["user_id"].(string); userIDClaimOk && tkn.UserID == nil {
-			userUUID, err := uuid.FromString(userIDClaim)
-			if err != nil {
-				return nil, fmt.Errorf("valid bearer authorization contained invalid user_id app claim: %s; %s", sub, err.Error())
-			}
-			tkn.UserID = &userUUID
+			// userUUID, err := uuid.FromString(userIDClaim)
+			// if err != nil {
+			// 	return nil, fmt.Errorf("valid bearer authorization contained invalid user_id app claim: %s; %s", sub, err.Error())
+			// }
+			tkn.UserID = &userIDClaim
 		}
 
 		if permissions, permissionsOk := appclaims["permissions"].(float64); permissionsOk {
@@ -539,9 +547,9 @@ func (t *Token) vendRefreshToken() bool {
 // are persisted as "legacy" tokens as described in the VendLegacyToken docs
 func VendApplicationToken(
 	tx *gorm.DB,
-	applicationID,
-	organizationID,
-	userID *uuid.UUID,
+	applicationID *uuid.UUID,
+	organizationID *string,
+	userID *string,
 	extPermissions map[string]common.Permission,
 	audience *string,
 ) (*Token, error) {
@@ -671,11 +679,11 @@ func (t *Token) validate() bool {
 		if t.Subject == nil {
 			var sub *string
 			if t.OrganizationID != nil {
-				sub = common.StringOrNil(fmt.Sprintf("%s:%s", authorizationSubjectOrganization, t.OrganizationID.String()))
+				sub = common.StringOrNil(fmt.Sprintf("%s|%s", authorizationSubjectOrganization, *t.OrganizationID))
 			} else if t.ApplicationID != nil {
 				sub = common.StringOrNil(fmt.Sprintf("%s:%s", authorizationSubjectApplication, t.ApplicationID.String()))
 			} else if t.UserID != nil {
-				sub = common.StringOrNil(fmt.Sprintf("%s:%s", authorizationSubjectUser, t.UserID.String()))
+				sub = common.StringOrNil(fmt.Sprintf("%s|%s", authorizationSubjectUser, *t.UserID))
 			}
 			t.Subject = sub
 		}
@@ -914,11 +922,11 @@ func (t *Token) encodeJWTNatsClaims() (map[string]interface{}, error) {
 	}
 
 	if t.UserID != nil {
-		subscribeAllow = append(subscribeAllow, fmt.Sprintf("user.%s", t.UserID.String()))
+		subscribeAllow = append(subscribeAllow, fmt.Sprintf("user.%s", *t.UserID))
 	}
 
 	if t.OrganizationID != nil {
-		subscribeAllow = append(subscribeAllow, fmt.Sprintf("organization.%s", t.OrganizationID.String()))
+		subscribeAllow = append(subscribeAllow, fmt.Sprintf("organization.%s", *t.OrganizationID))
 	}
 
 	if t.NatsClaims != nil && len(t.NatsClaims) > 0 {

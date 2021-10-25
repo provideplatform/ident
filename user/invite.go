@@ -10,6 +10,7 @@ import (
 	natsutil "github.com/kthomas/go-natsutil"
 	"github.com/kthomas/go-redisutil"
 	uuid "github.com/kthomas/go.uuid"
+	"github.com/ockam-network/did"
 	"github.com/provideplatform/ident/common"
 	"github.com/provideplatform/ident/token"
 	provide "github.com/provideplatform/provide-go/api"
@@ -26,13 +27,13 @@ type Invitor interface {
 type Invite struct {
 	// provide.Model
 	ApplicationID    *uuid.UUID         `sql:"-" json:"application_id,omitempty"`
-	UserID           *uuid.UUID         `sql:"-" json:"user_id,omitempty"`
+	UserID           *string            `sql:"-" json:"user_id,omitempty"`
 	FirstName        *string            `sql:"-" json:"first_name,omitempty"`
 	LastName         *string            `sql:"-" json:"last_name,omitempty"`
 	Email            *string            `sql:"-" json:"email,omitempty"`
-	InvitorID        *uuid.UUID         `sql:"-" json:"invitor_id,omitempty"`
+	InvitorID        *string            `sql:"-" json:"invitor_id,omitempty"`
 	InvitorName      *string            `sql:"-" json:"invitor_name,omitempty"`
-	OrganizationID   *uuid.UUID         `sql:"-" json:"organization_id,omitempty"`
+	OrganizationID   *string            `sql:"-" json:"organization_id,omitempty"`
 	OrganizationName *string            `sql:"-" json:"organization_name,omitempty"`
 	Permissions      *common.Permission `sql:"-" json:"permissions,omitempty"`
 	Params           *json.RawMessage   `sql:"-" json:"params,omitempty"`
@@ -69,14 +70,14 @@ func ParseInvite(signedToken string, strict bool) (*Invite, error) {
 		permissions = &perms
 	}
 
-	var invitorUUID *uuid.UUID
+	var invitorUUID *string
 	if invitorID, invitorIDOk := data["invitor_id"].(string); invitorIDOk {
-		senderUUID, err := uuid.FromString(invitorID)
-		if err != nil {
-			common.Log.Warningf("failed to parse invitation token; invalid invitor id; %s", err.Error())
-			return nil, err
-		}
-		invitorUUID = &senderUUID
+		// senderUUID, err := uuid.FromString(invitorID)
+		// if err != nil {
+		// 	common.Log.Warningf("failed to parse invitation token; invalid invitor id; %s", err.Error())
+		// 	return nil, err
+		// }
+		invitorUUID = &invitorID
 	}
 	invitorName, _ := data["invitor_name"].(string)
 
@@ -92,14 +93,15 @@ func ParseInvite(signedToken string, strict bool) (*Invite, error) {
 		}
 	}
 
-	var organizationUUID *uuid.UUID
+	var organizationDID *string
 	if organizationID, organizationIDOk := data["organization_id"].(string); organizationIDOk {
-		orgUUID, err := uuid.FromString(organizationID)
+		_, err := did.Parse(organizationID)
+		// orgUUID, err := uuid.FromString(organizationID)
 		if err != nil {
-			common.Log.Warningf("failed to parse invitation token; invalid organization_ id; %s", err.Error())
+			common.Log.Warningf("failed to parse invitation token; invalid organization_id; %s", err.Error())
 			return nil, err
 		}
-		organizationUUID = &orgUUID
+		organizationDID = &organizationID
 	}
 
 	var organizationName *string
@@ -115,7 +117,7 @@ func ParseInvite(signedToken string, strict bool) (*Invite, error) {
 		Email:            common.StringOrNil(email),
 		InvitorID:        invitorUUID,
 		InvitorName:      common.StringOrNil(invitorName),
-		OrganizationID:   organizationUUID,
+		OrganizationID:   organizationDID,
 		OrganizationName: organizationName,
 		Permissions:      permissions,
 		Token:            token,
@@ -235,7 +237,7 @@ func (i *Invite) InvalidateCache() error {
 	}
 
 	if i.OrganizationID != nil {
-		key := fmt.Sprintf("organization.%s.invitations", i.OrganizationID.String())
+		key := fmt.Sprintf("organization.%s.invitations", *i.OrganizationID)
 		err = redisutil.WithRedlock(key, func() error { return i.invalidateCache(key) })
 		if err != nil {
 			common.Log.Warningf("failed to purge invitation from cache at key: %s; %s", key, err.Error())
@@ -284,7 +286,7 @@ func (i *Invite) Create() bool {
 			redisutil.WithRedlock(key, func() error { return i.cache(key) })
 		}
 		if i.OrganizationID != nil {
-			key := fmt.Sprintf("organization.%s.invitations", i.OrganizationID.String())
+			key := fmt.Sprintf("organization.%s.invitations", *i.OrganizationID)
 			redisutil.WithRedlock(key, func() error { return i.cache(key) })
 		}
 	}
