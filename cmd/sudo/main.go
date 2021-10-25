@@ -280,7 +280,7 @@ func vendToken(email string, ttl *int, appclaims map[string]interface{}) {
 
 	common.Log.Debugf("attempting to vend bearer token for user: %s", email)
 	token := &token.Token{
-		UserID:            &user.ID,
+		UserID:            user.ID,
 		Permissions:       user.Permissions,
 		ApplicationClaims: appclaims,
 	}

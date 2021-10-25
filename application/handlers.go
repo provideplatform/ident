@@ -24,6 +24,7 @@ import (
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
+	"github.com/ockam-network/did"
 	"github.com/provideplatform/ident/common"
 	"github.com/provideplatform/ident/organization"
 	"github.com/provideplatform/ident/token"
@@ -65,21 +66,21 @@ func InstallPublicOAuthApplicationsAPI(r *gin.Engine) {
 	r.GET("/api/v1/oauth/applications/:id", oauthApplicationDetailsHandler)
 }
 
-func resolveAppUser(db *gorm.DB, app *Application, userID *uuid.UUID) *user.User {
+func resolveAppUser(db *gorm.DB, app *Application, userID *string) *user.User {
 	if userID == nil {
 		return nil
 	}
 	appUser := &user.User{}
 	query := app.UsersListQuery(db)
 	query.Where("au.user_id = ?", userID).Find(&appUser)
-	if appUser == nil || appUser.ID == uuid.Nil {
+	if appUser == nil || appUser.ID == nil {
 		query := db.Select("users.id, users.created_at, users.first_name, users.last_name, ou.permissions as permissions")
 		query = query.Joins("LEFT OUTER JOIN applications_organizations as ao ON ao.application_id = ? LEFT OUTER JOIN organizations_users as ou ON ou.organization_id = ao.organization_id", app.ID)
 		query = query.Joins("LEFT OUTER JOIN applications_users as au ON au.application_id = ?", app.ID)
 		query = query.Where("au.user_id = ? OR (ao.organization_id = ou.organization_id AND ou.user_id = ?)", userID, userID)
 		query.Find(&appUser)
 
-		if appUser == nil || appUser.ID == uuid.Nil {
+		if appUser == nil || appUser.ID == nil {
 			return nil
 		}
 	}
@@ -91,7 +92,7 @@ func applicationsListQuery(c *gin.Context) *gorm.DB {
 	orgID := bearer.OrganizationID
 	userID := bearer.UserID
 
-	if (userID == nil || *userID == uuid.Nil) && (orgID == nil || *orgID == uuid.Nil) {
+	if (userID == nil) && (orgID == nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return nil
 	}
@@ -150,7 +151,7 @@ func applicationsListHandler(c *gin.Context) {
 	provide.Paginate(c, query, &Application{}).Find(&apps)
 	for _, app := range apps {
 		var cfg map[string]interface{}
-		if userID.String() == app.UserID.String() {
+		if *userID == app.UserID {
 			cfg = app.mergedConfig()
 		} else {
 			cfg = app.ParseConfig()
@@ -168,7 +169,7 @@ func createApplicationHandler(c *gin.Context) {
 	orgID := bearer.OrganizationID
 	userID := bearer.UserID
 
-	if (userID == nil || *userID == uuid.Nil) && (orgID == nil || *orgID == uuid.Nil) {
+	if (userID == nil) && (orgID == nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -223,7 +224,7 @@ func applicationDetailsHandler(c *gin.Context) {
 	appID := bearer.ApplicationID
 	orgID := bearer.OrganizationID
 
-	if (userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) && (orgID == nil || *orgID == uuid.Nil) {
+	if (userID == nil) && (appID == nil || *appID == uuid.Nil) && (orgID == nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -263,7 +264,7 @@ func applicationDetailsHandler(c *gin.Context) {
 	}
 
 	var cfg map[string]interface{}
-	if userID != nil && userID.String() == app.UserID.String() {
+	if userID != nil && *userID == app.UserID {
 		cfg = app.mergedConfig()
 	} else {
 		cfg = app.ParseConfig()
@@ -278,7 +279,7 @@ func applicationDetailsHandler(c *gin.Context) {
 
 func updateApplicationHandler(c *gin.Context) {
 	bearer := token.InContext(c)
-	if bearer == nil || ((bearer.UserID == nil || *bearer.UserID == uuid.Nil) && (bearer.OrganizationID == nil || *bearer.OrganizationID == uuid.Nil)) {
+	if bearer == nil || ((bearer.UserID == nil) && (bearer.OrganizationID == nil)) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -340,7 +341,7 @@ func applicationTokensListHandler(c *gin.Context) {
 	userID := bearer.UserID
 	appID := bearer.ApplicationID
 
-	if (userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) {
+	if (userID == nil) && (appID == nil || *appID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -380,7 +381,7 @@ func applicationOrganizationsListHandler(c *gin.Context) {
 	appID := bearer.ApplicationID
 	orgID := bearer.OrganizationID
 
-	if (userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) && (orgID == nil || *orgID == uuid.Nil) {
+	if (userID == nil) && (appID == nil || *appID == uuid.Nil) && (orgID == nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -486,7 +487,7 @@ func createApplicationOrganizationHandler(c *gin.Context) {
 
 	org := &organization.Organization{}
 	db.Where("id = ?", organizationID).Find(&org)
-	if org == nil || org.ID == uuid.Nil {
+	if org == nil {
 		provide.RenderError("organization not found", 404, c)
 		return
 	}
@@ -521,7 +522,7 @@ func deleteApplicationOrganizationHandler(c *gin.Context) {
 	appID := bearer.ApplicationID
 	orgID := bearer.OrganizationID
 
-	if (appID == nil || *appID == uuid.Nil) && (orgID == nil || *orgID == uuid.Nil) {
+	if (appID == nil || *appID == uuid.Nil) && (orgID == nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -538,11 +539,13 @@ func deleteApplicationOrganizationHandler(c *gin.Context) {
 		appID = &_appID
 	}
 
-	if orgID != nil && orgID.String() != c.Param("orgId") {
+	if orgID != nil && *orgID != c.Param("orgId") {
 		provide.RenderError("no organization_id provided", 422, c)
 		return
 	} else if orgID == nil {
-		_orgID, err := uuid.FromString(c.Param("orgId"))
+		_orgID := c.Param("orgId")
+		_, err := did.Parse(_orgID)
+		// _orgID, err := uuid.FromString(c.Param("orgId"))
 		if err != nil {
 			provide.RenderError(err.Error(), 422, c)
 			return
@@ -561,7 +564,7 @@ func deleteApplicationOrganizationHandler(c *gin.Context) {
 
 	org := &organization.Organization{}
 	db.Where("id = ?", orgID).Find(&org)
-	if org == nil || org.ID == uuid.Nil {
+	if org == nil {
 		provide.RenderError("organization not found", 404, c)
 		return
 	}
@@ -580,7 +583,7 @@ func applicationInvitationsListHandler(c *gin.Context) {
 	userID := bearer.UserID
 	appID := bearer.ApplicationID
 
-	if (userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) {
+	if (userID == nil) && (appID == nil || *appID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -625,7 +628,7 @@ func applicationUsersListHandler(c *gin.Context) {
 	userID := bearer.UserID
 	appID := bearer.ApplicationID
 
-	if (userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) {
+	if (userID == nil) && (appID == nil || *appID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -721,7 +724,7 @@ func createApplicationUserHandler(c *gin.Context) {
 
 	usr := &user.User{}
 	db.Where("id = ?", userID).Find(&usr)
-	if usr == nil || usr.ID == uuid.Nil {
+	if usr == nil || usr.ID == nil {
 		provide.RenderError("user not found", 404, c)
 		return
 	}
@@ -744,7 +747,7 @@ func deleteApplicationUserHandler(c *gin.Context) {
 	appID := bearer.ApplicationID
 	userID := bearer.UserID
 
-	if (appID == nil || *appID == uuid.Nil) && (userID == nil || *userID == uuid.Nil) {
+	if (appID == nil || *appID == uuid.Nil) && (userID == nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -762,11 +765,12 @@ func deleteApplicationUserHandler(c *gin.Context) {
 	}
 
 	if userID == nil {
-		_userID, err := uuid.FromString(c.Param("userId"))
-		if err != nil {
-			provide.RenderError(err.Error(), 422, c)
-			return
-		}
+		// _userID, err := uuid.FromString(c.Param("userId"))
+		// if err != nil {
+		// 	provide.RenderError(err.Error(), 422, c)
+		// 	return
+		// }
+		_userID := c.Param("userId")
 		userID = &_userID
 	}
 
@@ -781,7 +785,7 @@ func deleteApplicationUserHandler(c *gin.Context) {
 
 	usr := &user.User{}
 	db.Where("id = ?", userID).Find(&usr)
-	if usr == nil || usr.ID == uuid.Nil {
+	if usr == nil || usr.ID == nil {
 		provide.RenderError("user not found", 404, c)
 		return
 	}

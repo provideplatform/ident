@@ -29,6 +29,8 @@ import (
 
 	vault "github.com/provideplatform/provide-go/api/vault"
 	provide "github.com/provideplatform/provide-go/common"
+
+	"github.com/ockam-network/did"
 )
 
 // InstallOrganizationAPI installs handlers using the given gin Engine
@@ -65,7 +67,7 @@ func InstallOrganizationVaultsAPI(r *gin.Engine) {
 	// r.DELETE("/api/v1/organizations/:id/vaults/:vaultId/secrets/:secretId", deleteOrganizationVaultSecretHandler)
 }
 
-func resolveOrganization(db *gorm.DB, orgID, appID, userID *uuid.UUID) *gorm.DB {
+func resolveOrganization(db *gorm.DB, orgID *string, appID *uuid.UUID, userID *string) *gorm.DB {
 	query := db.Where("organizations.enabled = true")
 	if appID != nil {
 		query = db.Joins("JOIN applications_organizations as ao ON ao.organization_id = organizations.id").Where("ao.application_id = ?", appID)
@@ -83,7 +85,7 @@ func resolveOrganization(db *gorm.DB, orgID, appID, userID *uuid.UUID) *gorm.DB 
 	return query.Order("organizations.created_at DESC").Group("organizations.id")
 }
 
-func resolveOrganizationUsers(db *gorm.DB, orgID uuid.UUID, appID *uuid.UUID) *gorm.DB {
+func resolveOrganizationUsers(db *gorm.DB, orgID string, appID *uuid.UUID) *gorm.DB {
 	query := db.Select("users.id, users.created_at, users.first_name, users.last_name, users.email, ou.permissions as permissions")
 	query = query.Joins("JOIN organizations_users as ou ON ou.user_id = users.id").Where("ou.organization_id = ?", orgID)
 	if appID != nil {
@@ -98,7 +100,7 @@ func organizationsListHandler(c *gin.Context) {
 	organizationID := bearer.OrganizationID
 	userID := bearer.UserID
 
-	if (userID == nil || *userID == uuid.Nil) && (applicationID == nil || *applicationID == uuid.Nil) && (organizationID == nil || *organizationID == uuid.Nil) {
+	if (userID == nil) && (applicationID == nil || *applicationID == uuid.Nil) && (organizationID == nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -124,7 +126,7 @@ func organizationDetailsHandler(c *gin.Context) {
 		return
 	}
 
-	if orgID != nil && orgID.String() != c.Param("id") {
+	if orgID != nil && *orgID != c.Param("id") {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
@@ -133,7 +135,9 @@ func organizationDetailsHandler(c *gin.Context) {
 	// the resolveOrganization will ensure that the bearer token user is
 	// associated with that org
 	if orgID == nil {
-		organizationID, err := uuid.FromString(c.Param("id"))
+		organizationID := c.Param("id")
+		_, err := did.Parse(organizationID)
+		// organizationID, err := uuid.FromString(c.Param("id"))
 		if err != nil {
 			provide.RenderError("bad request", 400, c)
 			return
@@ -149,7 +153,7 @@ func organizationDetailsHandler(c *gin.Context) {
 	org := &Organization{}
 	resolveOrganization(db, orgID, nil, userID).Find(&org)
 
-	if org == nil || org.ID == uuid.Nil {
+	if org == nil {
 		provide.RenderError("organization not found", 404, c)
 		return
 	}
@@ -162,7 +166,7 @@ func createOrganizationHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 	userID := bearer.UserID
 
-	if userID == nil || *userID == uuid.Nil {
+	if userID == nil {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -239,7 +243,7 @@ func createOrganizationHandler(c *gin.Context) {
 
 func updateOrganizationHandler(c *gin.Context) {
 	bearer := token.InContext(c)
-	if bearer == nil || (bearer.UserID == nil || *bearer.UserID == uuid.Nil) {
+	if bearer == nil || (bearer.UserID == nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -252,12 +256,12 @@ func updateOrganizationHandler(c *gin.Context) {
 
 	org := &Organization{}
 	dbconf.DatabaseConnection().Where("id = ?", c.Param("id")).Find(&org)
-	if org.ID == uuid.Nil {
+	if org.ID == nil {
 		provide.RenderError("org not found", 404, c)
 		return
 	}
 
-	if bearer.UserID != nil && bearer.UserID.String() != org.UserID.String() { // FIXME-- this should be more than just org.UserID
+	if bearer.UserID != nil && *bearer.UserID != *org.UserID { // FIXME-- this should be more than just org.UserID
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
@@ -287,18 +291,20 @@ func organizationInvitationsListHandler(c *gin.Context) {
 	applicationID := bearer.ApplicationID
 	organizationID := bearer.OrganizationID
 
-	if (userID == nil || *userID == uuid.Nil) && (applicationID == nil || *applicationID == uuid.Nil) && (organizationID == nil || *organizationID == uuid.Nil) {
+	if (userID == nil) && (applicationID == nil || *applicationID == uuid.Nil) && (organizationID == nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
 
-	orgID, err := uuid.FromString(c.Param("id"))
+	orgID := c.Param("id")
+	_, err := did.Parse(orgID)
+	// orgID, err := uuid.FromString(c.Param("id"))
 	if err != nil {
 		provide.RenderError(err.Error(), 422, c)
 		return
 	}
 
-	if organizationID != nil && organizationID.String() != orgID.String() {
+	if organizationID != nil && *organizationID != orgID {
 		provide.RenderError(err.Error(), 403, c)
 		return
 	}
@@ -307,7 +313,7 @@ func organizationInvitationsListHandler(c *gin.Context) {
 	query := dbconf.DatabaseConnection()
 	resolveOrganization(query, &orgID, applicationID, userID).Find(&org)
 
-	if org == nil || org.ID == uuid.Nil {
+	if org == nil {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -336,7 +342,9 @@ func organizationUsersListHandler(c *gin.Context) {
 
 	listRightsGranted := false
 
-	organizationID, err := uuid.FromString(c.Param("id"))
+	organizationID := c.Param("id")
+	_, err := did.Parse(organizationID)
+	// organizationID, err := uuid.FromString(c.Param("id"))
 	if err != nil {
 		provide.RenderError(err.Error(), 422, c)
 		return
@@ -347,7 +355,7 @@ func organizationUsersListHandler(c *gin.Context) {
 	// check if organization exists
 	org := &Organization{}
 	resolveOrganization(db, &organizationID, nil, nil).Find(&org)
-	if org == nil || org.ID == uuid.Nil {
+	if org == nil {
 		provide.RenderError("organization not found", 404, c)
 		return
 	}
@@ -355,7 +363,7 @@ func organizationUsersListHandler(c *gin.Context) {
 	// bearer Application token even if org is in app, must have ReadResources bearer permission
 	if bearerApplicationID != nil {
 		resolveOrganization(db, &organizationID, bearerApplicationID, nil).Find(&org)
-		if org == nil || org.ID == uuid.Nil {
+		if org == nil {
 			provide.RenderError("unauthorized - org not in app", 401, c)
 			return
 		}
@@ -373,7 +381,7 @@ func organizationUsersListHandler(c *gin.Context) {
 	// bearer Organization token must still have ReadResources bearer permission
 	if bearerOrganizationID != nil && (*bearer.OrganizationID == organizationID) && !listRightsGranted {
 		resolveOrganization(db, &organizationID, nil, nil).Find(&org)
-		if org == nil || org.ID == uuid.Nil {
+		if org == nil {
 			provide.RenderError("unauthorized - org not resolved", 401, c)
 			return
 		}
@@ -391,7 +399,7 @@ func organizationUsersListHandler(c *gin.Context) {
 	if bearerUserID != nil && !listRightsGranted {
 		// check if user is in org
 		resolveOrganization(db, &organizationID, nil, bearerUserID).Find(&org)
-		if org == nil || org.ID == uuid.Nil {
+		if org == nil {
 			provide.RenderError("unauthorized - user not in org", 401, c)
 			return
 		}
@@ -432,7 +440,9 @@ func createOrganizationUserHandler(c *gin.Context) {
 	// createRightsGranted := false without the ability for org or app to grant, we don't need this
 
 	// get the organization id
-	organizationID, err := uuid.FromString(c.Param("id"))
+	organizationID := c.Param("id")
+	_, err := did.Parse(organizationID)
+	// organizationID, err := uuid.FromString(c.Param("id"))
 	if err != nil {
 		provide.RenderError(err.Error(), 422, c)
 		return
@@ -467,7 +477,7 @@ func createOrganizationUserHandler(c *gin.Context) {
 	// check if organization exists
 	org := &Organization{}
 	resolveOrganization(db, &organizationID, nil, nil).Find(&org)
-	if org == nil || org.ID == uuid.Nil {
+	if org == nil {
 		provide.RenderError("organization not found", 404, c)
 		return
 	}
@@ -475,7 +485,7 @@ func createOrganizationUserHandler(c *gin.Context) {
 	// check if the user exists
 	usr := &user.User{}
 	db.Where("id = ?", userID).Find(&usr)
-	if usr == nil || usr.ID == uuid.Nil {
+	if usr == nil || usr.ID == nil {
 		provide.RenderError("user not found", 404, c)
 		return
 	}
@@ -495,7 +505,7 @@ func createOrganizationUserHandler(c *gin.Context) {
 			return
 		}
 
-		if invite.OrganizationID.String() != organizationID.String() {
+		if *invite.OrganizationID != organizationID {
 			provide.RenderError("invitation organization_id did not match authorized organization", 403, c)
 			return
 		}
@@ -568,13 +578,17 @@ func deleteOrganizationUserHandler(c *gin.Context) {
 	// todo at some point: allow the user in the organization table to reset up a user, or something
 
 	// ensure we have the required parameters
-	organizationID, err := uuid.FromString(c.Param("id"))
+	organizationID := c.Param("id")
+	_, err := did.Parse(organizationID)
+	// organizationID, err := uuid.FromString(c.Param("id"))
 	if err != nil {
 		provide.RenderError(err.Error(), 422, c)
 		return
 	}
 
-	userID, err := uuid.FromString(c.Param("userId"))
+	userID := c.Param("userId")
+	_, err = did.Parse(userID)
+	// userID, err := uuid.FromString(c.Param("userId"))
 	if err != nil {
 		provide.RenderError(err.Error(), 422, c)
 		return
@@ -585,7 +599,7 @@ func deleteOrganizationUserHandler(c *gin.Context) {
 	// check if organization exists
 	org := &Organization{}
 	resolveOrganization(db, &organizationID, nil, nil).Find(&org)
-	if org == nil || org.ID == uuid.Nil {
+	if org == nil {
 		provide.RenderError("organization not found", 404, c)
 		return
 	}
@@ -593,7 +607,7 @@ func deleteOrganizationUserHandler(c *gin.Context) {
 	// check if user exists
 	usr := &user.User{}
 	db.Where("id = ?", userID).Find(&usr)
-	if usr == nil || usr.ID == uuid.Nil {
+	if usr == nil || usr.ID == nil {
 		provide.RenderError("user not found", 404, c)
 		return
 	}
@@ -605,7 +619,7 @@ func deleteOrganizationUserHandler(c *gin.Context) {
 		// if the userID is in the organizationID,
 		// AND the bearer token has the DeleteResource permission deleteRightsGranted := true
 		resolveOrganization(db, &organizationID, bearerApplicationID, &userID).Find(&org)
-		if org == nil || org.ID == uuid.Nil {
+		if org == nil {
 			provide.RenderError("unauthorized - org not in app", 401, c)
 			return
 		}
@@ -625,7 +639,7 @@ func deleteOrganizationUserHandler(c *gin.Context) {
 		// if the userID is in the organizationID
 		// AND the bearer token has the DeleteResource permission deleteRightsGranted := true
 		resolveOrganization(db, &organizationID, nil, &userID).Find(&org)
-		if org == nil || org.ID == uuid.Nil {
+		if org == nil {
 			provide.RenderError("unauthorized - user not in org", 401, c)
 			return
 		}
@@ -644,7 +658,7 @@ func deleteOrganizationUserHandler(c *gin.Context) {
 	if bearerUserID != nil && (*bearerUserID == userID) && !deleteRightsGranted {
 		// 2. check that the bearerUserID is in the organizationID (organization_users table)
 		resolveOrganization(db, &organizationID, nil, bearerUserID).Find(&org)
-		if org == nil || org.ID == uuid.Nil {
+		if org == nil {
 			provide.RenderError("unauthorized - bearer user not in org", 401, c)
 			return
 		}
@@ -668,14 +682,14 @@ func deleteOrganizationUserHandler(c *gin.Context) {
 
 		// check the bearer user is in the organization
 		resolveOrganization(db, &organizationID, nil, bearerUserID).Find(&org)
-		if org == nil || org.ID == uuid.Nil {
+		if org == nil {
 			provide.RenderError("unauthorized - bearer user not in org", 401, c)
 			return
 		}
 
 		//check the user is also in the organization
 		resolveOrganization(db, &organizationID, nil, &userID).Find(&org)
-		if org == nil || org.ID == uuid.Nil {
+		if org == nil {
 			provide.RenderError("unauthorized - user not in org", 401, c)
 			return
 		}
@@ -711,7 +725,7 @@ func organizationVaultsListHandler(c *gin.Context) {
 	userID := bearer.UserID
 	applicationID := bearer.ApplicationID
 
-	if (userID == nil || *userID == uuid.Nil) && (applicationID == nil || *applicationID == uuid.Nil) {
+	if (userID == nil) && (applicationID == nil || *applicationID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -729,7 +743,7 @@ func organizationVaultKeysListHandler(c *gin.Context) {
 	userID := bearer.UserID
 	applicationID := bearer.ApplicationID
 
-	if (userID == nil || *userID == uuid.Nil) && (applicationID == nil || *applicationID == uuid.Nil) {
+	if (userID == nil) && (applicationID == nil || *applicationID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -747,7 +761,7 @@ func createOrganizationVaultKeyHandler(c *gin.Context) {
 	userID := bearer.UserID
 	applicationID := bearer.ApplicationID
 
-	if (userID == nil || *userID == uuid.Nil) && (applicationID == nil || *applicationID == uuid.Nil) {
+	if (userID == nil) && (applicationID == nil || *applicationID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -765,7 +779,7 @@ func organizationVaultKeySignHandler(c *gin.Context) {
 	userID := bearer.UserID
 	applicationID := bearer.ApplicationID
 
-	if (userID == nil || *userID == uuid.Nil) && (applicationID == nil || *applicationID == uuid.Nil) {
+	if (userID == nil) && (applicationID == nil || *applicationID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -796,7 +810,7 @@ func organizationVaultKeyVerifyHandler(c *gin.Context) {
 	userID := bearer.UserID
 	applicationID := bearer.ApplicationID
 
-	if (userID == nil || *userID == uuid.Nil) && (applicationID == nil || *applicationID == uuid.Nil) {
+	if (userID == nil) && (applicationID == nil || *applicationID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -830,7 +844,7 @@ func organizationVaultSecretsListHandler(c *gin.Context) {
 	userID := bearer.UserID
 	applicationID := bearer.ApplicationID
 
-	if (userID == nil || *userID == uuid.Nil) && (applicationID == nil || *applicationID == uuid.Nil) {
+	if (userID == nil) && (applicationID == nil || *applicationID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}

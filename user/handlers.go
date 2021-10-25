@@ -103,6 +103,7 @@ func authenticationHandler(c *gin.Context) {
 				db := dbconf.DatabaseConnection()
 				resp, err := AuthenticateUser(db, email, pw, appID, scope)
 				if err != nil {
+					common.Log.Debugf("unauthorized 1 %s", err.Error())
 					provide.RenderError(err.Error(), 401, c)
 					return
 				}
@@ -129,6 +130,7 @@ func authenticationHandler(c *gin.Context) {
 			} else if bearerApplicationID != nil {
 				resp, err := AuthenticateApplicationUser(email, *bearerApplicationID, scope)
 				if err != nil {
+					common.Log.Debugf("unauthorized 2 %s", err.Error())
 					provide.RenderError(err.Error(), 401, c)
 					return
 				}
@@ -142,6 +144,7 @@ func authenticationHandler(c *gin.Context) {
 		}
 	}
 
+	common.Log.Debug("unauthorized 3")
 	provide.RenderError("unauthorized", 401, c)
 }
 
@@ -177,7 +180,7 @@ func usersListHandler(c *gin.Context) {
 
 func userDetailsHandler(c *gin.Context) {
 	bearer := token.InContext(c)
-	if bearer == nil || (!bearer.HasAnyPermission(common.ListUsers, common.Sudo) && bearer.UserID != nil && bearer.UserID.String() != c.Param("id")) {
+	if bearer == nil || (!bearer.HasAnyPermission(common.ListUsers, common.Sudo) && bearer.UserID != nil && *bearer.UserID != c.Param("id")) {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
@@ -189,7 +192,7 @@ func userDetailsHandler(c *gin.Context) {
 	}
 
 	query.Find(&user)
-	if user.ID == uuid.Nil {
+	if user.ID == nil {
 		provide.RenderError("user not found", 404, c)
 		return
 	}
@@ -322,6 +325,11 @@ func createUserHandler(c *gin.Context) {
 		tx.Rollback()
 		obj := map[string]interface{}{}
 		obj["errors"] = user.Errors
+
+		for _, err := range user.Errors {
+			common.Log.Debugf("errors?: %s", *err.Message)
+		}
+
 		provide.Render(obj, 422, c)
 	}
 }
@@ -364,7 +372,7 @@ func processUserInvite(tx *gorm.DB, user User, invite Invite) error {
 
 func updateUserHandler(c *gin.Context) {
 	bearer := token.InContext(c)
-	if bearer == nil || (bearer.UserID != nil && bearer.UserID.String() != c.Param("id") && !bearer.HasAnyPermission(common.UpdateUser, common.Sudo)) {
+	if bearer == nil || (bearer.UserID != nil && *bearer.UserID != c.Param("id") && !bearer.HasAnyPermission(common.UpdateUser, common.Sudo)) {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
@@ -389,7 +397,7 @@ func updateUserHandler(c *gin.Context) {
 
 	user := &User{}
 	dbconf.DatabaseConnection().Where("id = ?", c.Param("id")).Find(&user)
-	if user.ID == uuid.Nil {
+	if user.ID == nil {
 		provide.RenderError("user not found", 404, c)
 		return
 	}
@@ -438,7 +446,7 @@ func deleteUserHandler(c *gin.Context) {
 	}
 
 	query.Find(&user)
-	if user.ID == uuid.Nil {
+	if user.ID == nil {
 		provide.RenderError("user not found", 404, c)
 		return
 	}
@@ -493,7 +501,7 @@ func userResetPasswordRequestHandler(c *gin.Context) {
 	db := dbconf.DatabaseConnection()
 	user := FindByEmail(email, appID, nil)
 
-	if user == nil || user.ID == uuid.Nil {
+	if user == nil || user.ID == nil {
 		provide.RenderError("user not found", 404, c)
 		return
 	}
@@ -578,7 +586,7 @@ func userResetPasswordHandler(c *gin.Context) {
 	}
 	query.Find(&user)
 
-	if user == nil || user.ID == uuid.Nil {
+	if user == nil || user.ID == nil {
 		provide.RenderError("user not found", 404, c)
 		return
 	}
@@ -606,7 +614,7 @@ func vendInvitationTokenHandler(c *gin.Context) {
 	appID := bearer.ApplicationID
 	orgID := bearer.OrganizationID
 
-	if (userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) && (orgID == nil || *orgID == uuid.Nil) {
+	if (userID == nil) && (appID == nil || *appID == uuid.Nil) && (orgID == nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}

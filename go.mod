@@ -18,6 +18,7 @@ require (
 	github.com/kthomas/go.uuid v1.2.1-0.20190324131420-28d1fa77e9a4
 	github.com/kthomas/trumail v0.0.0-20190925185815-ab3de2e834a3
 	github.com/nats-io/nats.go v1.31.0
+	github.com/ockam-network/did v0.1.3
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.30.0
 	github.com/provideplatform/provide-go v0.0.0-20231128064227-1e47281359cc
@@ -59,7 +60,6 @@ require (
 	github.com/nats-io/nkeys v0.4.6 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
-	github.com/ockam-network/did v0.1.3 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.8 // indirect

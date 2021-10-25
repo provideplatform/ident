@@ -27,7 +27,6 @@ import (
 
 	dbconf "github.com/kthomas/go-db-config"
 	natsutil "github.com/kthomas/go-natsutil"
-	uuid "github.com/kthomas/go.uuid"
 	"github.com/nats-io/nats.go"
 	"github.com/provideplatform/ident/common"
 	"github.com/provideplatform/ident/token"
@@ -184,13 +183,13 @@ func consumeCreatedOrganizationMsg(msg *nats.Msg) {
 	organization := &Organization{}
 	db.Where("id = ?", organizationID).Find(&organization)
 
-	if organization == nil || organization.ID == uuid.Nil {
+	if organization == nil || organization.ID == nil {
 		common.Log.Warningf("failed to resolve organization during created message handler; organization id: %s", organizationID)
 		return
 	}
 
 	orgToken := &token.Token{
-		OrganizationID: &organization.ID,
+		OrganizationID: organization.ID,
 	}
 	if !orgToken.Vend() {
 		common.Log.Warningf("failed to vend signed JWT for organization registration tx signing; organization id: %s", organizationID)
@@ -249,13 +248,13 @@ func consumeOrganizationImplicitKeyExchangeInitMsg(msg *nats.Msg) {
 	organization := &Organization{}
 	db.Where("id = ?", organizationID).Find(&organization)
 
-	if organization == nil || organization.ID == uuid.Nil {
+	if organization == nil || organization.ID == nil {
 		common.Log.Warningf("failed to resolve organization during implicit key exchange message handler; organization id: %s", organizationID)
 		return
 	}
 
 	orgToken := &token.Token{
-		OrganizationID: &organization.ID,
+		OrganizationID: organization.ID,
 	}
 	if !orgToken.Vend() {
 		common.Log.Warningf("failed to vend signed JWT for organization implicit key exchange; organization id: %s", organizationID)
@@ -412,13 +411,13 @@ func consumeOrganizationImplicitKeyExchangeCompleteMsg(msg *nats.Msg) {
 	organization := &Organization{}
 	db.Where("id = ?", organizationID).Find(&organization)
 
-	if organization == nil || organization.ID == uuid.Nil {
+	if organization == nil || organization.ID == nil {
 		common.Log.Warningf("failed to resolve organization during implicit key exchange message handler; organization id: %s", organizationID)
 		return
 	}
 
 	orgToken := &token.Token{
-		OrganizationID: &organization.ID,
+		OrganizationID: organization.ID,
 	}
 	if !orgToken.Vend() {
 		common.Log.Warningf("failed to vend signed JWT for organization implicit key exchange; organization id: %s", organizationID)
