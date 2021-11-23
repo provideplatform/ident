@@ -37,8 +37,8 @@ func main() {
 	dsn := fmt.Sprintf(
 		"postgres://%s/%s?user=%s&password=%s&sslmode=%s",
 		cfg.DatabaseHost,
-		cfg.DatabaseName,
-		cfg.DatabaseUser,
+		url.QueryEscape(cfg.DatabaseName),
+		url.QueryEscape(cfg.DatabaseUser),
 		url.QueryEscape(cfg.DatabasePassword),
 		cfg.DatabaseSSLMode,
 	)
