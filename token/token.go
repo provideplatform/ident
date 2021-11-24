@@ -965,6 +965,7 @@ func (t *Token) encodeJWTNatsClaims() (map[string]interface{}, error) {
 		}
 	} else {
 		// FIXME-- put these defaults in configuration and read them from there...
+		publishAllow = append(publishAllow, "baseline")
 		publishAllow = append(publishAllow, "baseline.>")
 
 		if t.Permissions.Has(common.Sudo) {
