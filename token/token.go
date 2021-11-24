@@ -973,6 +973,7 @@ func (t *Token) encodeJWTNatsClaims() (map[string]interface{}, error) {
 			subscribeAllow = append(subscribeAllow, "$SYS.>")
 		}
 
+		subscribeAllow = append(subscribeAllow, "baseline")
 		subscribeAllow = append(subscribeAllow, "baseline.>")
 		subscribeAllow = append(subscribeAllow, "network.*.connector.*")
 		subscribeAllow = append(subscribeAllow, "network.*.contracts.*")
