@@ -79,9 +79,10 @@ func resolveOrganizationUsers(db *gorm.DB, orgID uuid.UUID, appID *uuid.UUID) *g
 func organizationsListHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 	applicationID := bearer.ApplicationID
+	organizationID := bearer.OrganizationID
 	userID := bearer.UserID
 
-	if (userID == nil || *userID == uuid.Nil) && (applicationID == nil || *applicationID == uuid.Nil) {
+	if (userID == nil || *userID == uuid.Nil) && (applicationID == nil || *applicationID == uuid.Nil) && (organizationID == nil || *organizationID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -89,7 +90,7 @@ func organizationsListHandler(c *gin.Context) {
 	var orgs []*Organization
 
 	db := dbconf.DatabaseConnection()
-	query := resolveOrganization(db, nil, applicationID, userID)
+	query := resolveOrganization(db, organizationID, applicationID, userID)
 	provide.Paginate(c, query, &Organization{}).Find(&orgs)
 	for _, org := range orgs {
 		org.Enrich(db, nil)
