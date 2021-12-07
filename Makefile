@@ -8,11 +8,11 @@ clean:
 
 build: mod clean
 	go fmt ./...
-	go build -v -o ./.bin/ident_api ./cmd/api
-	go build -v -o ./.bin/ident_api_accountant ./cmd/api_accountant
-	go build -v -o ./.bin/ident_consumer ./cmd/consumer
-	go build -v -o ./.bin/ident_migrate ./cmd/migrate
-	go build -v -o ./.bin/ident_sudo ./cmd/sudo
+	CGO_ENABLED=0 go build -v -o ./.bin/ident_api ./cmd/api
+	CGO_ENABLED=0 go build -v -o ./.bin/ident_api_accountant ./cmd/api_accountant
+	CGO_ENABLED=0 go build -v -o ./.bin/ident_consumer ./cmd/consumer
+	CGO_ENABLED=0 go build -v -o ./.bin/ident_migrate ./cmd/migrate
+	CGO_ENABLED=0 go build -v -o ./.bin/ident_sudo ./cmd/sudo
 
 build_sia_consumer: clean mod
 	./ops/build_sia_consumer.sh
