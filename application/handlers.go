@@ -150,7 +150,7 @@ func createApplicationHandler(c *gin.Context) {
 	}
 	app.UserID = *userID
 
-	if app.OrganizationID != nil {
+	if orgID != nil {
 		app.OrganizationID = orgID
 	}
 
