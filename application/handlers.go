@@ -81,7 +81,7 @@ func applicationsListHandler(c *gin.Context) {
 
 	if orgID != nil {
 		query = query.Joins("LEFT OUTER JOIN applications_organizations as ao ON ao.application_id = applications.id")
-		query = query.Where("applications_organizations.organization_id = ?", orgID)
+		query = query.Where("ao.organization_id = ?", orgID)
 	} else if userID != nil {
 		query = query.Joins("LEFT OUTER JOIN applications_organizations as ao ON ao.application_id = applications.id LEFT OUTER JOIN organizations_users as ou ON ou.organization_id = ao.organization_id")
 		query = query.Joins("LEFT OUTER JOIN applications_users as au ON au.application_id = applications.id")
