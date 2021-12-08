@@ -66,9 +66,10 @@ func resolveAppUser(db *gorm.DB, app *Application, userID *uuid.UUID) *user.User
 
 func applicationsListHandler(c *gin.Context) {
 	bearer := token.InContext(c)
+	orgID := bearer.OrganizationID
 	userID := bearer.UserID
 
-	if userID == nil || *userID == uuid.Nil {
+	if (userID == nil || *userID == uuid.Nil) && (orgID == nil || *orgID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -80,7 +81,12 @@ func applicationsListHandler(c *gin.Context) {
 
 	query = query.Joins("LEFT OUTER JOIN applications_organizations as ao ON ao.application_id = applications.id LEFT OUTER JOIN organizations_users as ou ON ou.organization_id = ao.organization_id")
 	query = query.Joins("LEFT OUTER JOIN applications_users as au ON au.application_id = applications.id")
-	query = query.Where("applications.user_id = ? OR au.user_id = ? OR (ao.organization_id = ou.organization_id AND ou.user_id = ?)", userID, userID, userID)
+
+	if orgID != nil {
+		query = query.Where("applications_organizations.organization_id = ?", orgID)
+	} else if userID != nil {
+		query = query.Where("applications.user_id = ? OR au.user_id = ? OR (ao.organization_id = ou.organization_id AND ou.user_id = ?)", userID, userID, userID)
+	}
 
 	if c.Query("network_id") != "" {
 		query = query.Where("applications.network_id = ?", c.Query("network_id"))
@@ -189,8 +195,6 @@ func applicationDetailsHandler(c *gin.Context) {
 	}
 
 	appUser := resolveAppUser(db, app, userID)
-	common.Log.Debugf("APP USER : %s", appUser)
-
 	if appID != nil && appID.String() != c.Param("id") { // FIXME -- test ListApplications permission
 		provide.RenderError("forbidden", 403, c)
 		return
