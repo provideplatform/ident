@@ -79,12 +79,12 @@ func applicationsListHandler(c *gin.Context) {
 	query := dbconf.DatabaseConnection()
 	query = query.Select("applications.*")
 
-	query = query.Joins("LEFT OUTER JOIN applications_organizations as ao ON ao.application_id = applications.id LEFT OUTER JOIN organizations_users as ou ON ou.organization_id = ao.organization_id")
-	query = query.Joins("LEFT OUTER JOIN applications_users as au ON au.application_id = applications.id")
-
 	if orgID != nil {
+		query = query.Joins("LEFT OUTER JOIN applications_organizations as ao ON ao.application_id = applications.id")
 		query = query.Where("applications_organizations.organization_id = ?", orgID)
 	} else if userID != nil {
+		query = query.Joins("LEFT OUTER JOIN applications_organizations as ao ON ao.application_id = applications.id LEFT OUTER JOIN organizations_users as ou ON ou.organization_id = ao.organization_id")
+		query = query.Joins("LEFT OUTER JOIN applications_users as au ON au.application_id = applications.id")
 		query = query.Where("applications.user_id = ? OR au.user_id = ? OR (ao.organization_id = ou.organization_id AND ou.user_id = ?)", userID, userID, userID)
 	}
 
@@ -128,9 +128,10 @@ func applicationsListHandler(c *gin.Context) {
 
 func createApplicationHandler(c *gin.Context) {
 	bearer := token.InContext(c)
+	orgID := bearer.OrganizationID
 	userID := bearer.UserID
 
-	if userID == nil || *userID == uuid.Nil {
+	if (userID == nil || *userID == uuid.Nil) && (orgID == nil || *orgID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -148,6 +149,10 @@ func createApplicationHandler(c *gin.Context) {
 		return
 	}
 	app.UserID = *userID
+
+	if app.OrganizationID != nil {
+		app.OrganizationID = orgID
+	}
 
 	if app.NetworkID == uuid.Nil {
 		cfg := app.ParseConfig()
@@ -179,8 +184,9 @@ func applicationDetailsHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 	userID := bearer.UserID
 	appID := bearer.ApplicationID
+	orgID := bearer.OrganizationID
 
-	if (userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) {
+	if (userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) && (orgID == nil || *orgID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -191,6 +197,11 @@ func applicationDetailsHandler(c *gin.Context) {
 	db.Where("id = ?", c.Param("id")).Find(&app)
 	if app == nil || app.ID == uuid.Nil {
 		provide.RenderError("application not found", 404, c)
+		return
+	}
+
+	if orgID != nil && !app.HasOrganization(db, *orgID) {
+		provide.RenderError("forbidden", 403, c)
 		return
 	}
 
@@ -230,7 +241,7 @@ func applicationDetailsHandler(c *gin.Context) {
 
 func updateApplicationHandler(c *gin.Context) {
 	bearer := token.InContext(c)
-	if bearer == nil || (bearer.UserID == nil || *bearer.UserID == uuid.Nil) {
+	if bearer == nil || ((bearer.UserID == nil || *bearer.UserID == uuid.Nil) && (bearer.OrganizationID == nil || *bearer.OrganizationID == uuid.Nil)) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -253,9 +264,19 @@ func updateApplicationHandler(c *gin.Context) {
 		return
 	}
 
+	if bearer.OrganizationID != nil && (app.OrganizationID == nil || *bearer.OrganizationID != *app.OrganizationID) {
+		provide.RenderError("forbidden", 403, c)
+		return
+	}
+
 	err = json.Unmarshal(buf, app)
 	if err != nil {
 		provide.RenderError(err.Error(), 422, c)
+		return
+	}
+
+	if bearer.OrganizationID != nil && (app.OrganizationID == nil || *app.OrganizationID != *bearer.OrganizationID) {
+		provide.RenderError("forbidden", 403, c)
 		return
 	}
 

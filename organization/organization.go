@@ -30,6 +30,17 @@ type Organization struct {
 	Users []*user.User `gorm:"many2many:organizations_users" json:"-"`
 }
 
+// Find returns an organization for the given id
+func Find(orgID uuid.UUID) *Organization {
+	db := dbconf.DatabaseConnection()
+	org := &Organization{}
+	db.Where("id = ?", orgID).Find(&org)
+	if org == nil || org.ID == uuid.Nil {
+		return nil
+	}
+	return org
+}
+
 // hasPermission returns true if the permissioned Organization has the given permissions
 func (o *Organization) hasPermission(permission common.Permission) bool {
 	return o.Permissions.Has(permission)

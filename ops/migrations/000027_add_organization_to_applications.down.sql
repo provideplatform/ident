@@ -1,0 +1,3 @@
+DROP INDEX idx_applications_organization_id;
+ALTER TABLE ONLY applications DROP CONSTRAINT applications_organization_id_organizations_id_foreign;
+ALTER TABLE ONLY applications DROP COLUMN organization_id;

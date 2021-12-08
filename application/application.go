@@ -28,6 +28,7 @@ type Application struct {
 	provide.Model
 	NetworkID       uuid.UUID        `sql:"type:uuid not null" json:"network_id,omitempty"`
 	UserID          uuid.UUID        `sql:"type:uuid not null" json:"user_id,omitempty"` // this is the user that initially created the app
+	OrganizationID  *uuid.UUID       `json:"organization_id,omitempty"`                  // this is the organization that initially created the app
 	Name            *string          `sql:"not null" json:"name"`
 	Description     *string          `json:"description"`
 	Status          *string          `sql:"-" json:"status,omitempty"` // this is for enrichment purposes only
@@ -384,7 +385,14 @@ func (app *Application) Create(tx *gorm.DB) bool {
 			if success {
 				usr := user.Find(app.UserID)
 				if usr != nil && app.addUser(db, *usr, common.DefaultApplicationUserResourcePermission) {
-					db.Commit()
+					if app.OrganizationID != nil {
+						org := organization.Find(*app.OrganizationID)
+						if org != nil && app.addOrganization(db, *org, common.DefaultApplicationOrganizationPermission) {
+							db.Commit()
+						}
+					} else {
+						db.Commit()
+					}
 				}
 
 				if common.DispatchSiaNotifications {
