@@ -49,14 +49,20 @@ func TestCreateOrganization(t *testing.T) {
 			t.Errorf("user authentication failed for user %s. error: %s", tc.email, err.Error())
 		}
 
+		did, err := didFactory()
+		if err != nil {
+			t.Errorf("did creation failed. error: %s", err.Error())
+		}
+
 		// create the org with that user (for the moment...)
 		org, err := provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
+			"id":          did,
 			"name":        userOrg.name,
 			"description": userOrg.description,
-			"user_id":     user.ID,
+			"user_id":     *user.ID,
 		})
 		if err != nil {
-			t.Errorf("error creating organisation for user id %s", user.ID)
+			t.Errorf("error creating organisation for user id %s", *user.ID)
 		}
 
 		if org == nil {
@@ -103,36 +109,54 @@ func TestGetOrganizationDetailsWithAuthorizedUserToken(t *testing.T) {
 	}
 
 	t.Logf("auth response: %+v", auth)
+
 	// create an org...
+	did, err := didFactory()
+	if err != nil {
+		t.Errorf("did creation failed. error: %s", err.Error())
+	}
 	provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
+		"id":          did,
 		"name":        "organiation name 1",
 		"description": "organization description 1",
 	})
 	if err != nil {
-		t.Errorf("error creation organization for user id %s", user.ID)
+		t.Errorf("error creation organization for user id %s", *user.ID)
 	}
 
 	// Create an organization we will fetch
+
+	did, err = didFactory()
+	if err != nil {
+		t.Errorf("did creation failed. error: %s", err.Error())
+	}
 	org, err := provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
+		"id":          did,
 		"name":        "organiation name",
 		"description": "organization description",
 	})
 	if err != nil {
-		t.Errorf("error creation organization for user id %s", user.ID)
+		t.Errorf("error creation organization for user id %s", *user.ID)
 		return
 	}
 
 	// create another org...
+
+	did, err = didFactory()
+	if err != nil {
+		t.Errorf("did creation failed. error: %s", err.Error())
+	}
 	provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
+		"id":          did,
 		"name":        "organiation name 2",
 		"description": "organization description 2",
 	})
 	if err != nil {
-		t.Errorf("error creation organization for user id %s", user.ID)
+		t.Errorf("error creation organization for user id %s", *user.ID)
 	}
 
-	t.Logf("getting organisation details for org %s", org.ID.String())
-	deets, err := provide.GetOrganizationDetails(*auth.Token.AccessToken, org.ID.String(), map[string]interface{}{})
+	t.Logf("getting organisation details for org %s", *org.ID)
+	deets, err := provide.GetOrganizationDetails(*auth.Token.AccessToken, *org.ID, map[string]interface{}{})
 	if err != nil {
 		t.Errorf("error getting organization details. Error: %s", err.Error())
 		return
@@ -149,8 +173,8 @@ func TestGetOrganizationDetailsWithAuthorizedUserToken(t *testing.T) {
 			return
 		}
 
-		if org.UserID.String() != deets.UserID.String() {
-			t.Errorf("UserID mismatch. Expected %s, got %s", org.UserID.String(), deets.UserID.String())
+		if *org.UserID != *deets.UserID {
+			t.Errorf("UserID mismatch. Expected %s, got %s", *org.UserID, *deets.UserID)
 			return
 		}
 	} else {
@@ -192,7 +216,7 @@ func TestOrganizationDetailsWithOrgToken(t *testing.T) {
 	tt := []struct {
 		name        string
 		description string
-		identifier  *uuid.UUID
+		identifier  *string
 	}{
 		{"org1" + testId.String(), "org1 desc" + testId.String(), nil},
 		{"org2" + testId.String(), "org1 desc" + testId.String(), nil},
@@ -204,29 +228,35 @@ func TestOrganizationDetailsWithOrgToken(t *testing.T) {
 
 	for counter, tc := range tt {
 		// create the orgs all at once, because if we create them one at a time, we might not catch the bug (always returning latest org, maybe)
+
+		did, err := didFactory()
+		if err != nil {
+			t.Errorf("did creation failed. error: %s", err.Error())
+		}
 		org, err := provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
+			"id":          did,
 			"name":        tc.name,
 			"description": tc.description,
 		})
 		if err != nil {
-			t.Errorf("error creation organization for user id %s", user.ID)
+			t.Errorf("error creation organization for user id %s", *user.ID)
 		}
 		t.Logf("orgy orgy: %+v", org)
 
 		//assign the returned identifier to the test table
-		tt[counter].identifier = &org.ID
+		tt[counter].identifier = org.ID
 	}
 
 	for _, tc_deets := range tt {
 		// get the org details
-		t.Logf("getting organisation details for org %s", tc_deets.identifier.String())
+		t.Logf("getting organisation details for org %s", *tc_deets.identifier)
 
 		orgToken, err := orgTokenFactory(*auth.Token.AccessToken, *tc_deets.identifier)
 		if err != nil {
-			t.Errorf("error generating org token for org %s", tc_deets.identifier.String())
+			t.Errorf("error generating org token for org %s", *tc_deets.identifier)
 		}
 
-		deets, err := provide.GetOrganizationDetails(*orgToken.Token, tc_deets.identifier.String(), map[string]interface{}{})
+		deets, err := provide.GetOrganizationDetails(*orgToken.Token, *tc_deets.identifier, map[string]interface{}{})
 		if err != nil {
 			t.Errorf("error getting organization details. Error: %s", err.Error())
 			return
@@ -234,19 +264,19 @@ func TestOrganizationDetailsWithOrgToken(t *testing.T) {
 
 		if deets.Name != nil {
 			if tc_deets.name != *deets.Name {
-				t.Errorf("Name mismatch for org %s. Expected %s, got %s", tc_deets.identifier.String(), tc_deets.name, *deets.Name)
+				t.Errorf("Name mismatch for org %s. Expected %s, got %s", *tc_deets.identifier, tc_deets.name, *deets.Name)
 				return
 			}
 
 			if tc_deets.description != *deets.Description {
-				t.Errorf("Description mismatch for org %s. Expected %s, got %s", tc_deets.identifier.String(), tc_deets.description, *deets.Description)
+				t.Errorf("Description mismatch for org %s. Expected %s, got %s", *tc_deets.identifier, tc_deets.description, *deets.Description)
 				return
 			}
 		} else {
-			t.Errorf("could not get organization details for org %s - org not returned", tc_deets.identifier.String())
+			t.Errorf("could not get organization details for org %s - org not returned", *tc_deets.identifier)
 			return
 		}
-		t.Logf("org %s details ok", tc_deets.identifier.String())
+		t.Logf("org %s details ok", *tc_deets.identifier)
 	}
 }
 
@@ -284,7 +314,7 @@ func TestOrganizationDetailsWithUserToken(t *testing.T) {
 	tt := []struct {
 		name        string
 		description string
-		identifier  *uuid.UUID
+		identifier  *string
 	}{
 		{"org1" + testId.String(), "org1 desc" + testId.String(), nil},
 		{"org2" + testId.String(), "org1 desc" + testId.String(), nil},
@@ -294,22 +324,28 @@ func TestOrganizationDetailsWithUserToken(t *testing.T) {
 
 	for counter, tc := range tt {
 		// create the orgs all at once, because if we create them one at a time, we might not catch the bug (always returning latest org, maybe)
+
+		did, err := didFactory()
+		if err != nil {
+			t.Errorf("did creation failed. error: %s", err.Error())
+		}
 		org, err := provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
+			"id":          did,
 			"name":        tc.name,
 			"description": tc.description,
 		})
 		if err != nil {
-			t.Errorf("error creation organization for user id %s", user.ID)
+			t.Errorf("error creation organization for user id %s", *user.ID)
 		}
 		//assign the returned identifier to the test table
-		tt[counter].identifier = &org.ID
+		tt[counter].identifier = org.ID
 	}
 
 	for _, tc_deets := range tt {
 		// get the org details
-		t.Logf("getting organisation details for org %s", tc_deets.identifier.String())
+		t.Logf("getting organisation details for org %s", *tc_deets.identifier)
 
-		deets, err := provide.GetOrganizationDetails(*auth.Token.AccessToken, tc_deets.identifier.String(), map[string]interface{}{})
+		deets, err := provide.GetOrganizationDetails(*auth.Token.AccessToken, *tc_deets.identifier, map[string]interface{}{})
 		if err != nil {
 			t.Errorf("error getting organization details. Error: %s", err.Error())
 			return
@@ -317,19 +353,19 @@ func TestOrganizationDetailsWithUserToken(t *testing.T) {
 
 		if deets.Name != nil {
 			if tc_deets.name != *deets.Name {
-				t.Errorf("Name mismatch for org %s. Expected %s, got %s", tc_deets.identifier.String(), tc_deets.name, *deets.Name)
+				t.Errorf("Name mismatch for org %s. Expected %s, got %s", *tc_deets.identifier, tc_deets.name, *deets.Name)
 				return
 			}
 
 			if tc_deets.description != *deets.Description {
-				t.Errorf("Description mismatch for org %s. Expected %s, got %s", tc_deets.identifier.String(), tc_deets.description, *deets.Description)
+				t.Errorf("Description mismatch for org %s. Expected %s, got %s", *tc_deets.identifier, tc_deets.description, *deets.Description)
 				return
 			}
 		} else {
-			t.Errorf("could not get organization details for org %s - org not returned", tc_deets.identifier.String())
+			t.Errorf("could not get organization details for org %s - org not returned", *tc_deets.identifier)
 			return
 		}
-		t.Logf("org %s details ok", tc_deets.identifier.String())
+		t.Logf("org %s details ok", *tc_deets.identifier)
 	}
 }
 
@@ -365,12 +401,17 @@ func TestUpdateOrganizationDetails(t *testing.T) {
 	}
 
 	// Create an Organization for that org
+	did, err := didFactory()
+	if err != nil {
+		t.Errorf("did creation failed. error: %s", err.Error())
+	}
 	org, err := provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
+		"id":          did,
 		"name":        "org name",
 		"description": "org description",
 	})
 	if err != nil {
-		t.Errorf("error creation organization for user id %s", user.ID)
+		t.Errorf("error creation organization for user id %s", *user.ID)
 	}
 
 	if org == nil {
@@ -381,7 +422,7 @@ func TestUpdateOrganizationDetails(t *testing.T) {
 	updatedName := "org nane " + testId.String()
 	updatedDescription := "org description " + testId.String()
 
-	err = provide.UpdateOrganization(string(*auth.Token.AccessToken), org.ID.String(), map[string]interface{}{
+	err = provide.UpdateOrganization(string(*auth.Token.AccessToken), *org.ID, map[string]interface{}{
 		"name":        updatedName,
 		"description": updatedDescription,
 	})
@@ -390,7 +431,7 @@ func TestUpdateOrganizationDetails(t *testing.T) {
 	}
 
 	// FIXME, or rather when the code is updated to enable user org tokens, this will return the right org
-	deets, err := provide.GetOrganizationDetails(*auth.Token.AccessToken, org.ID.String(), map[string]interface{}{})
+	deets, err := provide.GetOrganizationDetails(*auth.Token.AccessToken, *org.ID, map[string]interface{}{})
 	if err != nil {
 		t.Errorf("error getting organization details. Error: %s", err.Error())
 		return
@@ -411,8 +452,8 @@ func TestUpdateOrganizationDetails(t *testing.T) {
 		return
 	}
 
-	if org.UserID.String() != deets.UserID.String() {
-		t.Errorf("UserID mismatch. Expected %s, got %s", org.UserID.String(), deets.UserID.String())
+	if *org.UserID != *deets.UserID {
+		t.Errorf("UserID mismatch. Expected %s, got %s", *org.UserID, *deets.UserID)
 		return
 	}
 }
@@ -479,13 +520,18 @@ func TestFetchOrgDetailsFailsWithUnauthorizedUser(t *testing.T) {
 	for _, tc := range tt {
 
 		// Create an Organization for that org
+		did, err := didFactory()
+		if err != nil {
+			t.Errorf("did creation failed. error: %s", err.Error())
+		}
 		org, err := provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
+			"id":          did,
 			"name":        tc.name,
 			"description": tc.description,
-			"user_id":     user.ID,
+			"user_id":     *user.ID,
 		})
 		if err != nil {
-			t.Errorf("error creation organization for user id %s", user.ID)
+			t.Errorf("error creation organization for user id %s", *user.ID)
 		}
 
 		if org == nil {
@@ -493,7 +539,7 @@ func TestFetchOrgDetailsFailsWithUnauthorizedUser(t *testing.T) {
 			return
 		}
 
-		_, err = provide.GetOrganizationDetails(*nonAuth.Token.AccessToken, org.ID.String(), map[string]interface{}{})
+		_, err = provide.GetOrganizationDetails(*nonAuth.Token.AccessToken, *org.ID, map[string]interface{}{})
 		if err == nil {
 			t.Errorf("expected error getting organization details by a user not associated with the organization")
 			return
@@ -732,25 +778,31 @@ func TestCreateOrganizationUser(t *testing.T) {
 
 		// Create an Organization if it doesn't exist
 		if org == nil {
+
+			did, err := didFactory()
+			if err != nil {
+				t.Errorf("did creation failed. error: %s", err.Error())
+			}
 			org, err = provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
+				"id":          did,
 				"name":        userOrg.name,
 				"description": userOrg.description,
 			})
 			if err != nil {
-				t.Errorf("error creation organization for user id %s", user.ID)
+				t.Errorf("error creation organization for user id %s", *user.ID)
 				return
 			}
 		} else {
 			// let's add this user to the organization as the creating user is automatically added...
-			err := provide.CreateOrganizationUser(*organizingUserToken.AccessToken, org.ID.String(), map[string]interface{}{
-				"user_id": user.ID.String(),
+			err := provide.CreateOrganizationUser(*organizingUserToken.AccessToken, *org.ID, map[string]interface{}{
+				"user_id": *user.ID,
 			})
 			if err != nil {
-				t.Errorf("failed to add user %s to organization %s; %s", user.ID, org.ID.String(), err.Error())
+				t.Errorf("failed to add user %s to organization %s; %s", *user.ID, *org.ID, err.Error())
 				return
 			}
 
-			listOrgUsers, err := provide.ListOrganizationUsers(string(*organizingUserToken.AccessToken), org.ID.String(), map[string]interface{}{})
+			listOrgUsers, err := provide.ListOrganizationUsers(string(*organizingUserToken.AccessToken), *org.ID, map[string]interface{}{})
 			if err != nil {
 				t.Errorf("error getting organization users list %s", err.Error())
 			}

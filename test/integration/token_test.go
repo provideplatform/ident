@@ -78,7 +78,7 @@ func TestUserAccessRefreshToken(t *testing.T) {
 		"grant_type": "refresh_token",
 	})
 	if err != nil {
-		t.Errorf("error refreshing token for user %s", user.ID)
+		t.Errorf("error refreshing token for user %s", *user.ID)
 		return
 	}
 
@@ -130,7 +130,7 @@ func TestAppRevocableToken(t *testing.T) {
 		"name": "DeFi Unicornz",
 	})
 	if err != nil {
-		t.Errorf("error creating application for user id %s", user.ID)
+		t.Errorf("error creating application for user id %s", *user.ID)
 		return
 	}
 
@@ -191,7 +191,7 @@ func TestAppAccessRefreshToken(t *testing.T) {
 		"name": "DeFi Unicornz",
 	})
 	if err != nil {
-		t.Errorf("error creating application for user id %s", user.ID)
+		t.Errorf("error creating application for user id %s", *user.ID)
 		return
 	}
 
@@ -278,21 +278,26 @@ func TestOrgAccessRefreshToken(t *testing.T) {
 	}
 
 	// create an org
+	did, err := didFactory()
+	if err != nil {
+		t.Errorf("did creation failed. error: %s", err.Error())
+	}
 	org, err := provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
+		"id":   did,
 		"name": "ABC Corp",
 	})
 	if err != nil {
-		t.Errorf("error creating organization for user id %s", user.ID)
+		t.Errorf("error creating organization for user id %s", *user.ID)
 		return
 	}
 
 	// create an access/refresh token
 	accessRefreshToken, err := provide.CreateToken(string(*auth.Token.AccessToken), map[string]interface{}{
-		"organization_id": org.ID.String(),
+		"organization_id": *org.ID,
 		"scope":           "offline_access",
 	})
 	if err != nil {
-		t.Errorf("error creating token for org id %s", org.ID.String())
+		t.Errorf("error creating token for org id %s", *org.ID)
 		return
 	}
 
@@ -321,7 +326,7 @@ func TestOrgAccessRefreshToken(t *testing.T) {
 		"grant_type": "refresh_token",
 	})
 	if err != nil {
-		t.Errorf("error refreshing token for org %s", org.ID)
+		t.Errorf("error refreshing token for org %s", *org.ID)
 		return
 	}
 

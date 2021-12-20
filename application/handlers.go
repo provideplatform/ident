@@ -401,16 +401,17 @@ func createApplicationOrganizationHandler(c *gin.Context) {
 		return
 	}
 
-	var organizationID *uuid.UUID
+	var organizationID *string
 	if orgIDStr, orgIDOk := params["organization_id"].(string); orgIDOk {
-		orgID, err := uuid.FromString(orgIDStr)
+		_, err := did.Parse(orgIDStr)
+		// orgID, err := uuid.FromString(orgIDStr)
 		if err != nil {
 			provide.RenderError(err.Error(), 422, c)
 			return
 		}
-		organizationID = &orgID
+		organizationID = &orgIDStr
 	}
-	if organizationID == nil || *organizationID == uuid.Nil {
+	if organizationID == nil {
 		provide.RenderError("no organization_id provided", 422, c)
 		return
 	}
