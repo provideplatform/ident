@@ -74,7 +74,13 @@ func TestOrganizationDetailsWithOrgToken(t *testing.T) {
 
 	for counter, tc := range tt {
 		// create the orgs all at once, because if we create them one at a time, we might not catch the bug (always returning latest org, maybe)
+		did, err := didFactory()
+		if err != nil {
+			t.Errorf("did creation failed. error: %s", err.Error())
+		}
+
 		org, err := provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
+			"id":          did,
 			"name":        tc.name,
 			"description": tc.description,
 		})

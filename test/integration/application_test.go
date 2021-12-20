@@ -67,7 +67,7 @@ func TestCreateApplication(t *testing.T) {
 		app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 			"name":        userApp.name,
 			"description": userApp.description,
-			"user_id":     user.ID,
+			"user_id":     *user.ID,
 		})
 		if err != nil {
 			t.Errorf("error creation application for user id %s", *user.ID)
@@ -219,7 +219,7 @@ func TestGetApplicationDetails(t *testing.T) {
 		app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 			"name":        tc.name,
 			"description": tc.description,
-			"user_id":     user.ID,
+			"user_id":     *user.ID,
 		})
 		if err != nil {
 			t.Errorf("error creation application for user id %s", *user.ID)
@@ -292,7 +292,7 @@ func TestUpdateApplicationDetails(t *testing.T) {
 		app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 			"name":        tc.name,
 			"description": tc.description,
-			"user_id":     user.ID,
+			"user_id":     *user.ID,
 		})
 		if err != nil {
 			t.Errorf("error creation application for user id %s", *user.ID)
@@ -480,7 +480,7 @@ func TestUserUpdateAppDetailsAccess(t *testing.T) {
 		app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 			"name":        tc.name,
 			"description": tc.description,
-			"user_id":     user.ID,
+			"user_id":     *user.ID,
 		})
 		if err != nil {
 			t.Errorf("error creating application for user id %s", *user.ID)
@@ -497,7 +497,7 @@ func TestUserUpdateAppDetailsAccess(t *testing.T) {
 		err = provide.UpdateApplication(*nonAuth.Token.AccessToken, app.ID.String(), map[string]interface{}{
 			"name":        updatedName,
 			"description": updatedDescription,
-			"user_id":     nonUser.ID,
+			"user_id":     *nonUser.ID,
 		})
 		if err == nil {
 			t.Errorf("expected error updating application details by a user not associated with the application")
@@ -567,7 +567,7 @@ func TestDeleteApplication(t *testing.T) {
 		app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 			"name":        userApp.name,
 			"description": userApp.description,
-			"user_id":     user.ID,
+			"user_id":     *user.ID,
 		})
 		if err != nil {
 			t.Errorf("error creation application for user id %s", *user.ID)
@@ -692,7 +692,7 @@ func TestApplicationOrganizationList(t *testing.T) {
 	app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 		"name":        userApp.name,
 		"description": userApp.description,
-		"user_id":     user.ID,
+		"user_id":     *user.ID,
 	})
 	if err != nil {
 		t.Errorf("error creation application for user id %s", *user.ID)
@@ -713,10 +713,15 @@ func TestApplicationOrganizationList(t *testing.T) {
 
 	for _, tc := range tt {
 
+		did, err := didFactory()
+		if err != nil {
+			t.Errorf("did creation failed. error: %s", err.Error())
+		}
 		org, err := provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
+			"id":          did,
 			"name":        tc.name,
 			"description": tc.description,
-			"user_id":     user.ID,
+			"user_id":     *user.ID,
 		})
 		if err != nil {
 			t.Errorf("error creating organisation for user id %s", *user.ID)
@@ -793,7 +798,7 @@ func TestCreateApplicationOrganization(t *testing.T) {
 	app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 		"name":        userApp.name,
 		"description": userApp.description,
-		"user_id":     user.ID,
+		"user_id":     *user.ID,
 	})
 	if err != nil {
 		t.Errorf("error creation application for user id %s", *user.ID)
@@ -814,10 +819,15 @@ func TestCreateApplicationOrganization(t *testing.T) {
 
 	for _, tc := range tt {
 
+		did, err := didFactory()
+		if err != nil {
+			t.Errorf("did creation failed. error: %s", err.Error())
+		}
 		org, err := provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
+			"id":          did,
 			"name":        tc.name,
 			"description": tc.description,
-			"user_id":     user.ID,
+			"user_id":     *user.ID,
 		})
 		if err != nil {
 			t.Errorf("error creating organisation for user id %s", *user.ID)
@@ -878,7 +888,7 @@ func UpdateApplicationOrganization(t *testing.T) {
 	app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 		"name":        userApp.name,
 		"description": userApp.description,
-		"user_id":     user.ID,
+		"user_id":     *user.ID,
 	})
 	if err != nil {
 		t.Errorf("error creation application for user id %s", *user.ID)
@@ -899,10 +909,15 @@ func UpdateApplicationOrganization(t *testing.T) {
 
 	for _, tc := range tt {
 
+		did, err := didFactory()
+		if err != nil {
+			t.Errorf("did creation failed. error: %s", err.Error())
+		}
 		org, err := provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
+			"id":          did,
 			"name":        tc.name,
 			"description": tc.description,
-			"user_id":     user.ID,
+			"user_id":     *user.ID,
 		})
 		if err != nil {
 			t.Errorf("error creating organisation for user id %s", *user.ID)
@@ -976,7 +991,7 @@ func TestDeleteApplicationOrganizationWithApplicationAPIToken(t *testing.T) {
 	app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 		"name":        userApp.name,
 		"description": userApp.description,
-		"user_id":     user.ID,
+		"user_id":     *user.ID,
 	})
 	if err != nil {
 		t.Errorf("error creation application for user id %s", *user.ID)
@@ -997,10 +1012,15 @@ func TestDeleteApplicationOrganizationWithApplicationAPIToken(t *testing.T) {
 
 	for _, tc := range tt {
 
+		did, err := didFactory()
+		if err != nil {
+			t.Errorf("did creation failed. error: %s", err.Error())
+		}
 		org, err := provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
+			"id":          did,
 			"name":        tc.name,
 			"description": tc.description,
-			"user_id":     user.ID,
+			"user_id":     *user.ID,
 		})
 		if err != nil {
 			t.Errorf("error creating organisation for user id %s", *user.ID)

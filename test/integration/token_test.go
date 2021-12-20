@@ -290,7 +290,12 @@ func TestOrgAccessRefreshToken(t *testing.T) {
 	}
 
 	// create an org
+	did, err := didFactory()
+	if err != nil {
+		t.Errorf("did creation failed. error: %s", err.Error())
+	}
 	org, err := provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
+		"id":   did,
 		"name": "ABC Corp",
 	})
 	if err != nil {
@@ -300,7 +305,7 @@ func TestOrgAccessRefreshToken(t *testing.T) {
 
 	// create an access/refresh token
 	accessRefreshToken, err := provide.CreateToken(string(*auth.Token.AccessToken), map[string]interface{}{
-		"organization_id": org.ID,
+		"organization_id": *org.ID,
 		"scope":           "offline_access",
 	})
 	if err != nil {

@@ -24,6 +24,8 @@ import (
 	identcommon "github.com/provideplatform/ident/common"
 	identuser "github.com/provideplatform/ident/user"
 	provide "github.com/provideplatform/provide-go/api/ident"
+	didkit "github.com/spruceid/didkit-go"
+	"log"
 )
 
 type User struct {
@@ -43,8 +45,30 @@ type Organization struct {
 	description string
 }
 
+func didFactory() (string, error) {
+	key, err := didkit.GenerateEd25519Key()
+	if err != nil {
+		log.Printf("failed generate: %v", err)
+		return "", err
+	}
+
+	did, err := didkit.KeyToDID("key", key)
+	if err != nil {
+		log.Printf("failed key-to-did: %v", err)
+		return "", err
+	}
+
+	return did, nil
+}
+
 func permissionedUserFactory(firstName, lastName, email, password string, permissions identcommon.Permission) (*provide.User, error) {
+	did, err := didFactory()
+	if err != nil {
+		return nil, err
+	}
+
 	user, err := provide.CreateUser("", map[string]interface{}{
+		"id":         did,
 		"first_name": firstName,
 		"last_name":  lastName,
 		"email":      email,
@@ -64,7 +88,13 @@ func permissionedUserFactory(firstName, lastName, email, password string, permis
 }
 
 func userFactory(firstName, lastName, email, password string) (*provide.User, error) {
+	did, err := didFactory()
+	if err != nil {
+		return nil, err
+	}
+
 	return provide.CreateUser("", map[string]interface{}{
+		"id":         did,
 		"first_name": firstName,
 		"last_name":  lastName,
 		"email":      email,
@@ -80,7 +110,13 @@ func appFactory(token, name, desc string) (*provide.Application, error) {
 }
 
 func orgFactory(token, name, desc string) (*provide.Organization, error) {
+	did, err := didFactory()
+	if err != nil {
+		return nil, err
+	}
+
 	return provide.CreateOrganization(token, map[string]interface{}{
+		"id":          did,
 		"name":        name,
 		"description": desc,
 	})

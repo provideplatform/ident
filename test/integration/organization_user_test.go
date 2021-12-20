@@ -75,7 +75,7 @@ func TestDeleteOrganizationUser(t *testing.T) {
 		t.Errorf("organizing user %s creation failed. Error: %s", ou.email, err.Error())
 		return
 	}
-	//t.Logf("created organizing user %s with email %s", organizingUser.ID.String(), ou.email)
+	//t.Logf("created organizing user %s with email %s", *organizingUser.ID, ou.email)
 
 	// authenticate organizing user
 	ouAuth, err := provide.Authenticate(ou.email, ou.password)
@@ -83,7 +83,7 @@ func TestDeleteOrganizationUser(t *testing.T) {
 		t.Errorf("authentication failed for organizing user %s. error: %s", ou.email, err.Error())
 		return
 	}
-	//t.Logf("authenticated organizing user %s", organizingUser.ID.String())
+	//t.Logf("authenticated organizing user %s", *organizingUser.ID)
 	ouToken := ouAuth.Token.AccessToken
 
 	// create application
@@ -146,16 +146,16 @@ func TestDeleteOrganizationUser(t *testing.T) {
 	// now we'll do stuff and stuff with them...
 
 	//1. let's try deleting an app org user with an app token
-	err = provide.DeleteOrganizationUser(*appToken.AccessToken, *Organization.ID, users[0].userID)
+	err = provide.DeleteOrganizationUser(*appToken.AccessToken, *Organization.ID, *users[0].userID)
 	if err != nil {
-		t.Errorf("error deleting organization user %s with app token. Error: %s", users[0].userID, err.Error())
+		t.Errorf("error deleting organization user %s with app token. Error: %s", *users[0].userID, err.Error())
 		return
 	}
 
 	//2. let's try deleting an app org user with an org token
-	err = provide.DeleteOrganizationUser(*orgToken.AccessToken, *Organization.ID, users[1].userID)
+	err = provide.DeleteOrganizationUser(*orgToken.AccessToken, *Organization.ID, *users[1].userID)
 	if err != nil {
-		t.Errorf("error deleting organization user %s with org token. Error: %s", users[1].userID, err.Error())
+		t.Errorf("error deleting organization user %s with org token. Error: %s", *users[1].userID, err.Error())
 		return
 	}
 
@@ -166,9 +166,9 @@ func TestDeleteOrganizationUser(t *testing.T) {
 		return
 	}
 
-	err = provide.DeleteOrganizationUser(*delAuth.Token.AccessToken, *Organization.ID, users[2].userID)
+	err = provide.DeleteOrganizationUser(*delAuth.Token.AccessToken, *Organization.ID, *users[2].userID)
 	if err != nil {
-		t.Errorf("error deleting organization user %s with org token. Error: %s", users[2].userID, err.Error())
+		t.Errorf("error deleting organization user %s with org token. Error: %s", *users[2].userID, err.Error())
 		return
 	}
 }
@@ -198,7 +198,7 @@ func TestListOrganizationUsersWithNoUsersInOrg(t *testing.T) {
 		t.Errorf("organizing user %s creation failed. Error: %s", ou.email, err.Error())
 		return
 	}
-	//t.Logf("created organizing user %s with email %s", organizingUser.ID.String(), ou.email)
+	//t.Logf("created organizing user %s with email %s", *organizingUser.ID, ou.email)
 
 	// authenticate organizing user
 	ouAuth, err := provide.Authenticate(ou.email, ou.password)
@@ -206,7 +206,7 @@ func TestListOrganizationUsersWithNoUsersInOrg(t *testing.T) {
 		t.Errorf("authentication failed for organizing user %s. error: %s", ou.email, err.Error())
 		return
 	}
-	//t.Logf("authenticated organizing user %s", organizingUser.ID.String())
+	//t.Logf("authenticated organizing user %s", *organizingUser.ID)
 	ouToken := ouAuth.Token.AccessToken
 
 	// create organization
@@ -268,7 +268,7 @@ func TestListOrganizationUsersUsingOrganizingUser(t *testing.T) {
 		t.Errorf("organizing user %s creation failed. Error: %s", ou.email, err.Error())
 		return
 	}
-	//t.Logf("created organizing user %s with email %s", organizingUser.ID.String(), ou.email)
+	//t.Logf("created organizing user %s with email %s", *organizingUser.ID, ou.email)
 
 	// authenticate organizing user
 	ouAuth, err := provide.Authenticate(ou.email, ou.password)
@@ -276,7 +276,7 @@ func TestListOrganizationUsersUsingOrganizingUser(t *testing.T) {
 		t.Errorf("authentication failed for organizing user %s. error: %s", ou.email, err.Error())
 		return
 	}
-	//t.Logf("authenticated organizing user %s", organizingUser.ID.String())
+	//t.Logf("authenticated organizing user %s", *organizingUser.ID)
 	ouToken := ouAuth.Token.AccessToken
 
 	// create organization
@@ -358,7 +358,12 @@ func TestListOrganizationUsers(t *testing.T) {
 
 		// create an Organization if it doesn't exist
 		if org == nil {
+			did, err := didFactory()
+			if err != nil {
+				t.Errorf("did creation failed. error: %s", err.Error())
+			}
 			org, err = provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
+				"id":          did,
 				"name":        userOrg.name,
 				"description": userOrg.description,
 			})
@@ -369,7 +374,7 @@ func TestListOrganizationUsers(t *testing.T) {
 		} else {
 			// let's add this user to the organization as the creating user is automatically added...
 			err := provide.CreateOrganizationUser(*organizingUserToken.AccessToken, *org.ID, map[string]interface{}{
-				"user_id": user.ID,
+				"user_id": *user.ID,
 			})
 			if err != nil {
 				t.Errorf("failed to add user %s to organization %s; %s", *user.ID, *org.ID, err.Error())

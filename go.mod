@@ -22,6 +22,7 @@ require (
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.30.0
 	github.com/provideplatform/provide-go v0.0.0-20231128064227-1e47281359cc
+	github.com/spruceid/didkit-go v0.0.0-20210924134325-586b38032a19
 	golang.org/x/crypto v0.26.0
 )
 
