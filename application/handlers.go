@@ -259,7 +259,7 @@ func updateApplicationHandler(c *gin.Context) {
 		return
 	}
 
-	if (bearer.UserID != nil && *bearer.UserID != app.UserID) && (app.OrganizationID == nil || bearer.OrganizationID == nil && ) {
+	if (bearer.UserID != nil && *bearer.UserID != app.UserID) && (app.OrganizationID == nil || bearer.OrganizationID == nil) {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
