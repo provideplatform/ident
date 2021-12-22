@@ -259,7 +259,7 @@ func updateApplicationHandler(c *gin.Context) {
 		return
 	}
 
-	if bearer.UserID != nil && *bearer.UserID != app.UserID {
+	if (bearer.UserID != nil && *bearer.UserID != app.UserID) && (app.OrganizationID == nil || bearer.OrganizationID == nil && ) {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
@@ -272,11 +272,6 @@ func updateApplicationHandler(c *gin.Context) {
 	err = json.Unmarshal(buf, app)
 	if err != nil {
 		provide.RenderError(err.Error(), 422, c)
-		return
-	}
-
-	if bearer.OrganizationID != nil && (app.OrganizationID == nil || *app.OrganizationID != *bearer.OrganizationID) {
-		provide.RenderError("forbidden", 403, c)
 		return
 	}
 
