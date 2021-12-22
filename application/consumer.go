@@ -10,6 +10,7 @@ import (
 	natsutil "github.com/kthomas/go-natsutil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/nats-io/nats.go"
+	"github.com/ockam-network/did"
 	"github.com/provideplatform/ident/common"
 )
 
@@ -112,7 +113,8 @@ func consumeApplicationImplicitKeyExchangeInitMsg(msg *nats.Msg) {
 		msg.Nak()
 		return
 	}
-	orgUUID, err := uuid.FromString(organizationID)
+	_, err = did.Parse(organizationID)
+	// orgUUID, err := uuid.FromString(organizationID)
 	if err != nil {
 		common.Log.Warning("failed to parse organization_id during application implicit key exchange message handler")
 		msg.Nak()
@@ -130,7 +132,7 @@ func consumeApplicationImplicitKeyExchangeInitMsg(msg *nats.Msg) {
 		return
 	}
 
-	err = app.initImplicitDiffieHellmanKeyExchange(db, orgUUID)
+	err = app.initImplicitDiffieHellmanKeyExchange(db, organizationID)
 	if err == nil {
 		msg.Ack()
 	} else {

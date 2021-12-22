@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
+	"github.com/ockam-network/did"
 
 	// "github.com/provideplatform/ident/application"
 	"github.com/provideplatform/ident/common"
@@ -40,7 +41,7 @@ func tokensListHandler(c *gin.Context) {
 		query = query.Where("user_id = ?", c.Query("user_id"))
 	} else if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
 		query = query.Where("application_id = ?", bearer.ApplicationID)
-	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
+	} else if bearer.UserID != nil {
 		query = query.Where("user_id = ?", bearer.UserID)
 	} else {
 		provide.RenderError("forbidden", 403, c)
@@ -92,23 +93,25 @@ func createTokenHandler(c *gin.Context) {
 		appID = bearer.ApplicationID
 	}
 
-	var orgID *uuid.UUID
+	var orgID *string
 	if organizationID, ok := params["organization_id"].(string); ok {
-		orgUUID, err := uuid.FromString(organizationID)
+		_, err := did.Parse(organizationID)
+		// orgUUID, err := uuid.FromString(organizationID)
 		if err == nil {
-			orgID = &orgUUID
+			orgID = &organizationID
 		}
-	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
+	} else if bearer.OrganizationID != nil {
 		orgID = bearer.OrganizationID
 	}
 
-	var userID *uuid.UUID
+	var userID *string
 	if usrID, ok := params["user_id"].(string); ok {
-		userUUID, err := uuid.FromString(usrID)
+		_, err := did.Parse(usrID)
+		// userUUID, err := uuid.FromString(usrID)
 		if err == nil {
-			userID = &userUUID
+			userID = &usrID
 		}
-	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
+	} else if bearer.UserID != nil {
 		userID = bearer.UserID
 	}
 
@@ -127,9 +130,9 @@ func createTokenHandler(c *gin.Context) {
 	if userID != nil {
 		db := dbconf.DatabaseConnection()
 		var out []int64
-		db.Table("users").Select("permissions").Where("users.id = ?", userID.String()).Pluck("permissions", &out)
+		db.Table("users").Select("permissions").Where("users.id = ?", userID).Pluck("permissions", &out)
 		if len(out) == 0 {
-			msg := fmt.Sprintf("permissions lookup failed for user: %s", userID)
+			msg := fmt.Sprintf("permissions lookup failed for user: %s", *userID)
 			common.Log.Warning(msg)
 			provide.RenderError(msg, 500, c)
 			return
@@ -177,7 +180,7 @@ func deleteTokenHandler(c *gin.Context) {
 	bearer := InContext(c)
 	userID := bearer.UserID
 	appID := bearer.ApplicationID
-	if bearer == nil || ((userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) && !bearer.HasAnyPermission(common.DeleteToken, common.Sudo)) {
+	if bearer == nil || ((userID == nil) && (appID == nil || *appID == uuid.Nil) && !bearer.HasAnyPermission(common.DeleteToken, common.Sudo)) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}

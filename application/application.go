@@ -27,8 +27,8 @@ const natsSiaApplicationNotificationSubject = "sia.application.notification"
 type Application struct {
 	provide.Model
 	NetworkID       uuid.UUID        `sql:"type:uuid not null" json:"network_id,omitempty"`
-	UserID          uuid.UUID        `sql:"type:uuid not null" json:"user_id,omitempty"` // this is the user that initially created the app
-	OrganizationID  *uuid.UUID       `json:"organization_id,omitempty"`                  // this is the organization that initially created the app
+	UserID          string           `sql:"not null" json:"user_id,omitempty"` // this is the user that initially created the app
+	OrganizationID  *string          `json:"organization_id,omitempty"`        // this is the organization that initially created the app
 	Name            *string          `sql:"not null" json:"name"`
 	Description     *string          `json:"description"`
 	Status          *string          `sql:"-" json:"status,omitempty"` // this is for enrichment purposes only
@@ -72,7 +72,7 @@ func FindByID(appID uuid.UUID) *Application {
 }
 
 // HasOrganization returns true if the application instance has the given organization
-func (app *Application) HasOrganization(db *gorm.DB, organizationID uuid.UUID) bool {
+func (app *Application) HasOrganization(db *gorm.DB, organizationID string) bool {
 	var orgs []*organization.Organization
 	query := db.Select("organizations.id")
 	query = query.Joins("JOIN applications_organizations as ao ON ao.organization_id = organizations.id")
@@ -191,7 +191,7 @@ func (app *Application) pendingInvitations() []*user.Invite {
 
 // initImplicitDiffieHellmanKeyExchange initializes a Diffie-Hellman key exchange for all organizations
 // within the current application, completing the exchange for all possible peers of the given
-func (app *Application) initImplicitDiffieHellmanKeyExchange(db *gorm.DB, organizationID uuid.UUID) error {
+func (app *Application) initImplicitDiffieHellmanKeyExchange(db *gorm.DB, organizationID string) error {
 	common.Log.Debugf("initializing implicit Diffie-Hellman key exchange for application: %s; new organization: %s", app.ID, organizationID)
 
 	var orgs []*organization.Organization
@@ -199,14 +199,14 @@ func (app *Application) initImplicitDiffieHellmanKeyExchange(db *gorm.DB, organi
 
 	for _, peerOrg := range orgs {
 		payload, _ := json.Marshal(map[string]interface{}{
-			"organization_id":      organizationID.String(),
-			"peer_organization_id": peerOrg.ID.String(),
+			"organization_id":      organizationID,
+			"peer_organization_id": *peerOrg.ID,
 		})
 		natsutil.NatsJetstreamPublish(natsOrganizationImplicitKeyExchangeInitSubject, payload)
 
 		payload, _ = json.Marshal(map[string]interface{}{
-			"organization_id":      peerOrg.ID.String(),
-			"peer_organization_id": organizationID.String(),
+			"organization_id":      *peerOrg.ID,
+			"peer_organization_id": organizationID,
 		})
 		natsutil.NatsJetstreamPublish(natsOrganizationImplicitKeyExchangeInitSubject, payload)
 	}
@@ -216,11 +216,11 @@ func (app *Application) initImplicitDiffieHellmanKeyExchange(db *gorm.DB, organi
 
 // initOrgRegistration dispatches a NATS message to attempt async registration of the org;
 // this is an opaque method; subscriber implementations define all business rules
-func (app *Application) initOrgRegistration(db *gorm.DB, organizationID uuid.UUID) (*nats.PubAck, error) {
+func (app *Application) initOrgRegistration(db *gorm.DB, organizationID string) (*nats.PubAck, error) {
 	common.Log.Debugf("dispatching async org registration for application: %s; new organization: %s", app.ID, organizationID)
 	payload, _ := json.Marshal(map[string]interface{}{
 		"application_id":  app.ID.String(),
-		"organization_id": organizationID.String(),
+		"organization_id": organizationID,
 	})
 	return natsutil.NatsJetstreamPublish(natsOrganizationRegistrationSubject, payload)
 }
@@ -242,8 +242,8 @@ func (app *Application) addOrganization(tx *gorm.DB, org organization.Organizati
 
 		cfg := app.ParseConfig()
 		if isBaseline, baselinedOk := cfg["baselined"].(bool); baselinedOk && isBaseline {
-			go app.initOrgRegistration(db, org.ID)
-			go app.initImplicitDiffieHellmanKeyExchange(db, org.ID)
+			go app.initOrgRegistration(db, *org.ID)
+			go app.initImplicitDiffieHellmanKeyExchange(db, *org.ID)
 		}
 	} else {
 		common.Log.Warningf("failed to add organization %s to application: %s", org.ID, app.ID)

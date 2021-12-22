@@ -26,10 +26,16 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/nats-io/nats.go v1.12.0
+	github.com/ockam-network/did v0.1.3
 	github.com/onsi/ginkgo v1.14.0
 	github.com/onsi/gomega v1.10.1
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/provideplatform/provide-go v0.0.0-20210624064849-d7328258f0d8
+	github.com/spruceid/didkit-go v0.0.0-00010101000000-000000000000
 	golang.org/x/crypto v0.0.0-20210314154223-e6e6c4f2bb5b
 )
+
+replace github.com/provideplatform/provide-go => ../provide-go
+
+replace github.com/spruceid/didkit-go => ../didkit-go

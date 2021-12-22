@@ -40,10 +40,10 @@ func AuthMiddleware() gin.HandlerFunc {
 				c.Set(contextApplicationIDKey, token.ApplicationID.String())
 			}
 			if token.OrganizationID != nil {
-				c.Set(contextOrganizationIDKey, token.OrganizationID.String())
+				c.Set(contextOrganizationIDKey, token.OrganizationID)
 			}
 			if token.UserID != nil {
-				c.Set(contextUserIDKey, token.UserID.String())
+				c.Set(contextUserIDKey, token.UserID)
 			}
 		} else {
 			provide.RenderError("unauthorized", 401, c)
@@ -64,6 +64,7 @@ func authorize(c *gin.Context) *Token {
 		authorization = strings.Split(c.GetHeader("authorization"), "bearer ")
 	}
 	token, err := Parse(authorization[len(authorization)-1])
+
 	if err != nil {
 		common.Log.Tracef("bearer token authorization failed; %s", err.Error())
 		return nil

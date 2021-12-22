@@ -8,6 +8,8 @@ import (
 	identcommon "github.com/provideplatform/ident/common"
 	identuser "github.com/provideplatform/ident/user"
 	provide "github.com/provideplatform/provide-go/api/ident"
+	didkit "github.com/spruceid/didkit-go"
+	"log"
 )
 
 type User struct {
@@ -27,8 +29,30 @@ type Organization struct {
 	description string
 }
 
+func didFactory() (string, error) {
+	key, err := didkit.GenerateEd25519Key()
+	if err != nil {
+		log.Printf("failed generate: %v", err)
+		return "", err
+	}
+
+	did, err := didkit.KeyToDID("key", key)
+	if err != nil {
+		log.Printf("failed key-to-did: %v", err)
+		return "", err
+	}
+
+	return did, nil
+}
+
 func permissionedUserFactory(firstName, lastName, email, password string, permissions identcommon.Permission) (*provide.User, error) {
+	did, err := didFactory()
+	if err != nil {
+		return nil, err
+	}
+
 	user, err := provide.CreateUser("", map[string]interface{}{
+		"id":         did,
 		"first_name": firstName,
 		"last_name":  lastName,
 		"email":      email,
@@ -40,7 +64,7 @@ func permissionedUserFactory(firstName, lastName, email, password string, permis
 
 	usr := &identuser.User{}
 	db := dbconf.DatabaseConnection()
-	db.Where("id = ?", user.ID.String()).Find(&usr)
+	db.Where("id = ?", *user.ID).Find(&usr)
 	usr.Permissions = permissions
 	db.Save(usr)
 
@@ -48,7 +72,13 @@ func permissionedUserFactory(firstName, lastName, email, password string, permis
 }
 
 func userFactory(firstName, lastName, email, password string) (*provide.User, error) {
+	did, err := didFactory()
+	if err != nil {
+		return nil, err
+	}
+
 	return provide.CreateUser("", map[string]interface{}{
+		"id":         did,
 		"first_name": firstName,
 		"last_name":  lastName,
 		"email":      email,
@@ -64,7 +94,13 @@ func appFactory(token, name, desc string) (*provide.Application, error) {
 }
 
 func orgFactory(token, name, desc string) (*provide.Organization, error) {
+	did, err := didFactory()
+	if err != nil {
+		return nil, err
+	}
+
 	return provide.CreateOrganization(token, map[string]interface{}{
+		"id":          did,
 		"name":        name,
 		"description": desc,
 	})
@@ -82,13 +118,13 @@ func appTokenFactory(auth string, applicationID uuid.UUID) (*provide.Token, erro
 	})
 }
 
-func orgTokenFactory(auth string, organizationID uuid.UUID) (*provide.Token, error) {
+func orgTokenFactory(auth string, organizationID string) (*provide.Token, error) {
 	return provide.CreateToken(auth, map[string]interface{}{
 		"organization_id": organizationID,
 	})
 }
 
-func orgUserTokenFactory(auth string, organizationID, userID uuid.UUID) (*provide.Token, error) {
+func orgUserTokenFactory(auth string, organizationID, userID string) (*provide.Token, error) {
 	return provide.CreateToken(auth, map[string]interface{}{
 		"organization_id": organizationID,
 		"user_id":         userID,

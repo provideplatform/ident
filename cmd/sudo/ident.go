@@ -24,7 +24,7 @@ func syncIdentUsers(db *gorm.DB) error {
 	for _, usr := range users {
 		err := createAuth0User(usr, db)
 		if err != nil {
-			common.Log.Warningf("failed to synchronize user within auth0: %s", usr.ID.String())
+			common.Log.Warningf("failed to synchronize user within auth0: %s", usr.ID)
 			return err
 		}
 	}

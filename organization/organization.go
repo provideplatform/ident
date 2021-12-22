@@ -20,9 +20,9 @@ const organizationResourceKey = "organization"
 
 // Organization model
 type Organization struct {
-	provide.Model
+	provide.ModelWithDID
 	Name        *string           `sql:"not null" json:"name"`
-	UserID      *uuid.UUID        `json:"user_id,omitempty"`
+	UserID      *string           `json:"user_id,omitempty"`
 	Description *string           `json:"description"`
 	Permissions common.Permission `sql:"not null" json:"permissions,omitempty"`
 	Metadata    *json.RawMessage  `sql:"type:json" json:"metadata"`
@@ -31,11 +31,11 @@ type Organization struct {
 }
 
 // Find returns an organization for the given id
-func Find(orgID uuid.UUID) *Organization {
+func Find(orgID string) *Organization {
 	db := dbconf.DatabaseConnection()
 	org := &Organization{}
 	db.Where("id = ?", orgID).Find(&org)
-	if org == nil || org.ID == uuid.Nil {
+	if org == nil {
 		return nil
 	}
 	return org
@@ -72,7 +72,7 @@ func (o *Organization) addApplicationAssociation(tx *gorm.DB, appID uuid.UUID, p
 
 		payload, _ := json.Marshal(map[string]interface{}{
 			"application_id":  appID.String(),
-			"organization_id": o.ID.String(),
+			"organization_id": o.ID,
 		})
 		natsutil.NatsJetstreamPublish(natsApplicationImplicitKeyExchangeInitSubject, payload)
 	} else {
@@ -177,49 +177,72 @@ func (o *Organization) Create(tx *gorm.DB) bool {
 		return false
 	}
 
-	if db.NewRecord(o) {
-		result := db.Create(&o)
-		rowsAffected := result.RowsAffected
-		errors := result.GetErrors()
-		if len(errors) > 0 {
-			for _, err := range errors {
-				o.Errors = append(o.Errors, &provide.Error{
-					Message: common.StringOrNil(err.Error()),
-				})
-			}
+	var result *gorm.DB
+	var rowsAffected int64
+	var errors []error
+
+	var count int64
+	res := db.Model(&Organization{}).Where("id = ?", *o.ID).Count(&count)
+	// TODO check other entities for the same DID
+	errs := res.GetErrors()
+
+	if len(errs) > 0 {
+		for _, err := range errs {
+			common.Log.Debugf("error counting: %s", *common.StringOrNil(err.Error()))
 		}
-		if !db.NewRecord(o) {
-			success := rowsAffected > 0
-			if success {
-				common.Log.Debugf("created organization: %s", *o.Name)
+	}
 
-				if o.UserID != nil {
-					usr := &user.User{}
-					db.Where("id = ?", o.UserID).Find(&usr)
-					if usr != nil && usr.ID != uuid.Nil {
-						if o.addUser(db, *usr, common.DefaultApplicationResourcePermission) {
-							common.Log.Debugf("associated user %s with organization: %s", *usr.FullName(), *o.Name)
-							if tx == nil {
-								db.Commit()
-							}
-						} else {
-							common.Log.Warningf("failed to associate user %s with organization: %s", *usr.FullName(), *o.Name)
-							return false
+	if count == 0 {
+		result = db.Create(&o)
+	} else {
+		common.Log.Debugf("user with DID %s already exists", *o.ID)
+		o.Errors = append(o.Errors, &provide.Error{
+			Message: common.StringOrNil(fmt.Sprintf("user with DID %s already exists", *o.ID)),
+		})
+		return false
+	}
+
+	rowsAffected = result.RowsAffected
+	errors = result.GetErrors()
+	if len(errors) > 0 {
+		for _, err := range errors {
+			o.Errors = append(o.Errors, &provide.Error{
+				Message: common.StringOrNil(err.Error()),
+			})
+		}
+	}
+
+	if !db.NewRecord(o) {
+		success := rowsAffected > 0
+		if success {
+			common.Log.Debugf("created organization: %s", *o.Name)
+
+			if o.UserID != nil {
+				usr := &user.User{}
+				db.Where("id = ?", o.UserID).Find(&usr)
+				if usr != nil && usr.ID != nil {
+					if o.addUser(db, *usr, common.DefaultApplicationResourcePermission) {
+						common.Log.Debugf("associated user %s with organization: %s", *usr.FullName(), *o.Name)
+						if tx == nil {
+							db.Commit()
 						}
-					} else if tx == nil {
-						db.Commit()
+					} else {
+						common.Log.Warningf("failed to associate user %s with organization: %s", *usr.FullName(), *o.Name)
+						return false
 					}
+				} else if tx == nil {
+					db.Commit()
 				}
-
-				if success {
-					payload, _ := json.Marshal(map[string]interface{}{
-						"organization_id": o.ID.String(),
-					})
-					natsutil.NatsJetstreamPublish(natsCreatedOrganizationCreatedSubject, payload)
-				}
-
-				return success
 			}
+
+			if success {
+				payload, _ := json.Marshal(map[string]interface{}{
+					"organization_id": o.ID,
+				})
+				natsutil.NatsJetstreamPublish(natsCreatedOrganizationCreatedSubject, payload)
+			}
+
+			return success
 		}
 	}
 
@@ -230,7 +253,7 @@ func (o *Organization) Create(tx *gorm.DB) bool {
 func (o *Organization) pendingInvitations() []*user.Invite {
 	var invitations []*user.Invite
 
-	key := fmt.Sprintf("organization.%s.invitations", o.ID.String())
+	key := fmt.Sprintf("organization.%s.invitations", *o.ID)
 	rawinvites, err := redisutil.Get(key)
 	if err != nil {
 		common.Log.Debugf("failed to retrieve cached organization invitations from key: %s; %s", key, err.Error())
@@ -266,7 +289,7 @@ func (o *Organization) Update() bool {
 
 		common.Log.Debugf("dispatching async organization update message for organization: %s", o.ID)
 		payload, _ := json.Marshal(map[string]interface{}{
-			"organization_id": o.ID.String(),
+			"organization_id": o.ID,
 		})
 		natsutil.NatsJetstreamPublish(natsOrganizationUpdatedInitSubject, payload)
 

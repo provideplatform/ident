@@ -49,10 +49,10 @@ func TestCreateApplication(t *testing.T) {
 		app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 			"name":        userApp.name,
 			"description": userApp.description,
-			"user_id":     user.ID,
+			"user_id":     *user.ID,
 		})
 		if err != nil {
-			t.Errorf("error creation application for user id %s", user.ID)
+			t.Errorf("error creation application for user id %s", *user.ID)
 		}
 
 		if app == nil {
@@ -121,7 +121,7 @@ func TestListApplicationUsers(t *testing.T) {
 				"description": userApp.description,
 			})
 			if err != nil {
-				t.Errorf("error creation application for user id %s", user.ID)
+				t.Errorf("error creation application for user id %s", *user.ID)
 				return
 			}
 
@@ -137,10 +137,10 @@ func TestListApplicationUsers(t *testing.T) {
 		} else {
 			// let's add this user to the application as the creating user is automatically added...
 			err := provide.CreateApplicationUser(*appToken.Token, app.ID.String(), map[string]interface{}{
-				"user_id": user.ID.String(),
+				"user_id": *user.ID,
 			})
 			if err != nil {
-				t.Errorf("failed to add user %s to application %s; %s", user.ID, app.ID.String(), err.Error())
+				t.Errorf("failed to add user %s to application %s; %s", *user.ID, app.ID.String(), err.Error())
 				return
 			}
 		}
@@ -201,10 +201,10 @@ func TestGetApplicationDetails(t *testing.T) {
 		app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 			"name":        tc.name,
 			"description": tc.description,
-			"user_id":     user.ID,
+			"user_id":     *user.ID,
 		})
 		if err != nil {
-			t.Errorf("error creation application for user id %s", user.ID)
+			t.Errorf("error creation application for user id %s", *user.ID)
 		}
 
 		if app == nil {
@@ -228,8 +228,8 @@ func TestGetApplicationDetails(t *testing.T) {
 			return
 		}
 
-		if app.UserID.String() != deets.UserID.String() {
-			t.Errorf("UserID mismatch. Expected %s, got %s", app.UserID.String(), deets.UserID.String())
+		if *app.UserID != *deets.UserID {
+			t.Errorf("UserID mismatch. Expected %s, got %s", *app.UserID, *deets.UserID)
 			return
 		}
 	}
@@ -274,10 +274,10 @@ func TestUpdateApplicationDetails(t *testing.T) {
 		app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 			"name":        tc.name,
 			"description": tc.description,
-			"user_id":     user.ID,
+			"user_id":     *user.ID,
 		})
 		if err != nil {
-			t.Errorf("error creation application for user id %s", user.ID)
+			t.Errorf("error creation application for user id %s", *user.ID)
 		}
 
 		if app == nil {
@@ -312,8 +312,8 @@ func TestUpdateApplicationDetails(t *testing.T) {
 			return
 		}
 
-		if app.UserID.String() != deets.UserID.String() {
-			t.Errorf("UserID mismatch. Expected %s, got %s", app.UserID.String(), deets.UserID.String())
+		if *app.UserID != *deets.UserID {
+			t.Errorf("UserID mismatch. Expected %s, got %s", *app.UserID, *deets.UserID)
 			return
 		}
 	}
@@ -380,7 +380,7 @@ func TestFetchAppDetailsFailsWithUnauthorizedUser(t *testing.T) {
 			"description": tc.description,
 		})
 		if err != nil {
-			t.Errorf("error creation application for user id %s", user.ID)
+			t.Errorf("error creation application for user id %s", *user.ID)
 		}
 
 		if app == nil {
@@ -458,10 +458,10 @@ func TestUserUpdateAppDetailsAccess(t *testing.T) {
 		app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 			"name":        tc.name,
 			"description": tc.description,
-			"user_id":     user.ID,
+			"user_id":     *user.ID,
 		})
 		if err != nil {
-			t.Errorf("error creation application for user id %s", user.ID)
+			t.Errorf("error creation application for user id %s", *user.ID)
 		}
 
 		if app == nil {
@@ -475,7 +475,7 @@ func TestUserUpdateAppDetailsAccess(t *testing.T) {
 		err = provide.UpdateApplication(*nonAuth.Token.AccessToken, app.ID.String(), map[string]interface{}{
 			"name":        updatedName,
 			"description": updatedDescription,
-			"user_id":     nonUser.ID,
+			"user_id":     *nonUser.ID,
 		})
 		if err == nil {
 			t.Errorf("expected error updating application details by a user not associated with the application")
@@ -498,8 +498,8 @@ func TestUserUpdateAppDetailsAccess(t *testing.T) {
 			return
 		}
 
-		if deets.UserID.String() != app.UserID.String() {
-			t.Errorf("UserID updated by non-Application user! Expected %s, got %s", app.UserID.String(), deets.UserID.String())
+		if *deets.UserID != *app.UserID {
+			t.Errorf("UserID updated by non-Application user! Expected %s, got %s", *app.UserID, *deets.UserID)
 			return
 		}
 	}
@@ -544,10 +544,10 @@ func TestDeleteApplication(t *testing.T) {
 		app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 			"name":        userApp.name,
 			"description": userApp.description,
-			"user_id":     user.ID,
+			"user_id":     *user.ID,
 		})
 		if err != nil {
-			t.Errorf("error creation application for user id %s", user.ID)
+			t.Errorf("error creation application for user id %s", *user.ID)
 		}
 
 		if app == nil {
@@ -669,10 +669,10 @@ func TestApplicationOrganizationList(t *testing.T) {
 	app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 		"name":        userApp.name,
 		"description": userApp.description,
-		"user_id":     user.ID,
+		"user_id":     *user.ID,
 	})
 	if err != nil {
-		t.Errorf("error creation application for user id %s", user.ID)
+		t.Errorf("error creation application for user id %s", *user.ID)
 	}
 
 	if app == nil {
@@ -690,13 +690,18 @@ func TestApplicationOrganizationList(t *testing.T) {
 
 	for _, tc := range tt {
 
+		did, err := didFactory()
+		if err != nil {
+			t.Errorf("did creation failed. error: %s", err.Error())
+		}
 		org, err := provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
+			"id":          did,
 			"name":        tc.name,
 			"description": tc.description,
-			"user_id":     user.ID,
+			"user_id":     *user.ID,
 		})
 		if err != nil {
-			t.Errorf("error creating organisation for user id %s", user.ID)
+			t.Errorf("error creating organisation for user id %s", *user.ID)
 		}
 
 		if org == nil {
@@ -711,7 +716,7 @@ func TestApplicationOrganizationList(t *testing.T) {
 
 		path := fmt.Sprintf("applications/%s/organizations", app.ID)
 		status, _, err := provide.InitIdentService(appToken.Token).Post(path, map[string]interface{}{
-			"organization_id": org.ID,
+			"organization_id": *org.ID,
 		})
 		if err != nil {
 			t.Errorf("failed to create application organization; status: %v; %s", status, err.Error())
@@ -770,10 +775,10 @@ func TestCreateApplicationOrganization(t *testing.T) {
 	app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 		"name":        userApp.name,
 		"description": userApp.description,
-		"user_id":     user.ID,
+		"user_id":     *user.ID,
 	})
 	if err != nil {
-		t.Errorf("error creation application for user id %s", user.ID)
+		t.Errorf("error creation application for user id %s", *user.ID)
 	}
 
 	if app == nil {
@@ -791,13 +796,18 @@ func TestCreateApplicationOrganization(t *testing.T) {
 
 	for _, tc := range tt {
 
+		did, err := didFactory()
+		if err != nil {
+			t.Errorf("did creation failed. error: %s", err.Error())
+		}
 		org, err := provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
+			"id":          did,
 			"name":        tc.name,
 			"description": tc.description,
-			"user_id":     user.ID,
+			"user_id":     *user.ID,
 		})
 		if err != nil {
-			t.Errorf("error creating organisation for user id %s", user.ID)
+			t.Errorf("error creating organisation for user id %s", *user.ID)
 		}
 
 		if org == nil {
@@ -812,7 +822,7 @@ func TestCreateApplicationOrganization(t *testing.T) {
 
 		path := fmt.Sprintf("applications/%s/organizations", app.ID)
 		status, _, err := provide.InitIdentService(appToken.Token).Post(path, map[string]interface{}{
-			"organization_id": org.ID,
+			"organization_id": *org.ID,
 		})
 		if err != nil {
 			t.Errorf("failed to create application organization; status: %v; %s", status, err.Error())
@@ -855,10 +865,10 @@ func UpdateApplicationOrganization(t *testing.T) {
 	app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 		"name":        userApp.name,
 		"description": userApp.description,
-		"user_id":     user.ID,
+		"user_id":     *user.ID,
 	})
 	if err != nil {
-		t.Errorf("error creation application for user id %s", user.ID)
+		t.Errorf("error creation application for user id %s", *user.ID)
 	}
 
 	if app == nil {
@@ -876,13 +886,18 @@ func UpdateApplicationOrganization(t *testing.T) {
 
 	for _, tc := range tt {
 
+		did, err := didFactory()
+		if err != nil {
+			t.Errorf("did creation failed. error: %s", err.Error())
+		}
 		org, err := provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
+			"id":          did,
 			"name":        tc.name,
 			"description": tc.description,
-			"user_id":     user.ID,
+			"user_id":     *user.ID,
 		})
 		if err != nil {
-			t.Errorf("error creating organisation for user id %s", user.ID)
+			t.Errorf("error creating organisation for user id %s", *user.ID)
 		}
 
 		if org == nil {
@@ -897,7 +912,7 @@ func UpdateApplicationOrganization(t *testing.T) {
 
 		path := fmt.Sprintf("applications/%s/organizations", app.ID)
 		status, _, err := provide.InitIdentService(appToken.Token).Post(path, map[string]interface{}{
-			"organization_id": org.ID,
+			"organization_id": *org.ID,
 		})
 		if err != nil {
 			t.Errorf("failed to create application organization; status: %v; %s", status, err.Error())
@@ -908,9 +923,9 @@ func UpdateApplicationOrganization(t *testing.T) {
 		}
 
 		//update application organization
-		path = fmt.Sprintf("applications/%s/organizations/%s", app.ID, org.ID)
+		path = fmt.Sprintf("applications/%s/organizations/%s", app.ID, *org.ID)
 		status, _, err = provide.InitIdentService(appToken.Token).Put(path, map[string]interface{}{
-			"organization_id": org.ID,
+			"organization_id": *org.ID,
 		})
 		if err != nil {
 			t.Errorf("failed to update application organization; status: %v; %s", status, err.Error())
@@ -953,10 +968,10 @@ func TestDeleteApplicationOrganizationWithApplicationAPIToken(t *testing.T) {
 	app, err := provide.CreateApplication(string(*auth.Token.AccessToken), map[string]interface{}{
 		"name":        userApp.name,
 		"description": userApp.description,
-		"user_id":     user.ID,
+		"user_id":     *user.ID,
 	})
 	if err != nil {
-		t.Errorf("error creation application for user id %s", user.ID)
+		t.Errorf("error creation application for user id %s", *user.ID)
 	}
 
 	if app == nil {
@@ -974,13 +989,18 @@ func TestDeleteApplicationOrganizationWithApplicationAPIToken(t *testing.T) {
 
 	for _, tc := range tt {
 
+		did, err := didFactory()
+		if err != nil {
+			t.Errorf("did creation failed. error: %s", err.Error())
+		}
 		org, err := provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
+			"id":          did,
 			"name":        tc.name,
 			"description": tc.description,
-			"user_id":     user.ID,
+			"user_id":     *user.ID,
 		})
 		if err != nil {
-			t.Errorf("error creating organisation for user id %s", user.ID)
+			t.Errorf("error creating organisation for user id %s", *user.ID)
 		}
 
 		if org == nil {
@@ -995,7 +1015,7 @@ func TestDeleteApplicationOrganizationWithApplicationAPIToken(t *testing.T) {
 
 		path := fmt.Sprintf("applications/%s/organizations", app.ID)
 		status, _, err := provide.InitIdentService(appToken.Token).Post(path, map[string]interface{}{
-			"organization_id": org.ID,
+			"organization_id": *org.ID,
 		})
 		if err != nil {
 			t.Errorf("failed to create application organization; status: %v; %s", status, err.Error())
@@ -1005,7 +1025,7 @@ func TestDeleteApplicationOrganizationWithApplicationAPIToken(t *testing.T) {
 			t.Errorf("invalid status returned from add org to app. expected 204, got %d", status)
 		}
 
-		err = provide.DeleteApplicationOrganization(*appToken.Token, app.ID.String(), org.ID.String())
+		err = provide.DeleteApplicationOrganization(*appToken.Token, app.ID.String(), *org.ID)
 		if err != nil {
 			t.Errorf("failed to delete application organization; status: %v; %s", status, err.Error())
 			return
@@ -1066,7 +1086,7 @@ func TestCreateApplicationUser(t *testing.T) {
 				"description": userApp.description,
 			})
 			if err != nil {
-				t.Errorf("error creation application for user id %s", user.ID)
+				t.Errorf("error creation application for user id %s", *user.ID)
 				return
 			}
 
@@ -1082,10 +1102,10 @@ func TestCreateApplicationUser(t *testing.T) {
 		} else {
 			// let's add this user to the application as the creating user is automatically added...
 			err := provide.CreateApplicationUser(*appToken.Token, app.ID.String(), map[string]interface{}{
-				"user_id": user.ID.String(),
+				"user_id": *user.ID,
 			})
 			if err != nil {
-				t.Errorf("failed to add user %s to application %s; %s", user.ID, app.ID.String(), err.Error())
+				t.Errorf("failed to add user %s to application %s; %s", *user.ID, app.ID.String(), err.Error())
 				return
 			}
 		}
@@ -1128,7 +1148,7 @@ func TestDeleteApplicationUserWithApplicationAPIToken(t *testing.T) {
 		"description": userApp.description,
 	})
 	if err != nil {
-		t.Errorf("error creation application for user id %s", organizingUser.ID)
+		t.Errorf("error creation application for user id %s", *organizingUser.ID)
 		return
 	}
 
@@ -1148,17 +1168,17 @@ func TestDeleteApplicationUserWithApplicationAPIToken(t *testing.T) {
 
 	// let's add this user to the application as the creating user is automatically added...
 	err = provide.CreateApplicationUser(*apptkn.Token, app.ID.String(), map[string]interface{}{
-		"user_id": user.ID.String(),
+		"user_id": *user.ID,
 	})
 	if err != nil {
-		t.Errorf("failed to add user %s to application %s; %s", user.ID, app.ID.String(), err.Error())
+		t.Errorf("failed to add user %s to application %s; %s", *user.ID, app.ID.String(), err.Error())
 		return
 	}
 
 	//now we'll delete the user
-	err = provide.DeleteApplicationUser(*apptkn.Token, app.ID.String(), user.ID.String())
+	err = provide.DeleteApplicationUser(*apptkn.Token, app.ID.String(), *user.ID)
 	if err != nil {
-		t.Errorf("failed to delete user %s from application %s; %s", user.ID, app.ID.String(), err.Error())
+		t.Errorf("failed to delete user %s from application %s; %s", *user.ID, app.ID.String(), err.Error())
 		return
 	}
 
