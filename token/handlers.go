@@ -127,15 +127,28 @@ func createTokenHandler(c *gin.Context) {
 	if userID != nil {
 		db := dbconf.DatabaseConnection()
 		var out []int64
-		db.Table("users").Select("permissions").Where("users.id = ?", userID.String()).Pluck("permissions", &out)
-		if len(out) == 0 {
-			msg := fmt.Sprintf("permissions lookup failed for user: %s", userID)
-			common.Log.Warning(msg)
-			provide.RenderError(msg, 500, c)
-			return
-		}
 
-		permissions = common.Permission(out[0])
+		if orgID != nil {
+			db.Table("organizations_users").Select("permissions").Where("organizations_users.organization_id = ? AND organizations_users.user_id = ?", orgID.String(), userID.String()).Pluck("permissions", &out)
+			if len(out) == 0 {
+				msg := fmt.Sprintf("permissions lookup failed for organization: %s", userID)
+				common.Log.Warning(msg)
+				provide.RenderError(msg, 500, c)
+				return
+			}
+
+			permissions = common.Permission(out[0])
+		} else {
+			db.Table("users").Select("permissions").Where("users.id = ?", userID.String()).Pluck("permissions", &out)
+			if len(out) == 0 {
+				msg := fmt.Sprintf("permissions lookup failed for user: %s", userID)
+				common.Log.Warning(msg)
+				provide.RenderError(msg, 500, c)
+				return
+			}
+
+			permissions = common.Permission(out[0])
+		}
 	}
 
 	tkn := &Token{
