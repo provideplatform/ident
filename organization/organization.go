@@ -27,7 +27,8 @@ type Organization struct {
 	Permissions common.Permission `sql:"not null" json:"permissions,omitempty"`
 	Metadata    *json.RawMessage  `sql:"type:json" json:"metadata"`
 
-	Users []*user.User `gorm:"many2many:organizations_users" json:"-"`
+	Users      []*user.User `gorm:"many2many:organizations_users" json:"-"`
+	UsersCount *uint32      `json:"users_count,omitempty"`
 }
 
 // Find returns an organization for the given id
@@ -285,7 +286,8 @@ func (o *Organization) FullName() *string {
 
 // Enrich an organization
 func (o *Organization) Enrich(db *gorm.DB, keyType *string) {
-
+	count := o.usersCount(db)
+	o.UsersCount = &count
 }
 
 // validate an organization for persistence
@@ -332,4 +334,23 @@ func (o *Organization) setMetadata(metadata map[string]interface{}) {
 	metadataJSON, _ := json.Marshal(metadata)
 	_metadataJSON := json.RawMessage(metadataJSON)
 	o.Metadata = &_metadataJSON
+}
+
+func (o *Organization) usersCount(tx *gorm.DB) uint32 {
+	rows, err := tx.Raw("SELECT count(*) FROM organizations_users WHERE organization_id=?", o.ID).Rows()
+	if err != nil {
+		common.Log.Warningf("failed to read organization users count; %s", err.Error())
+		return 0
+	}
+
+	var len uint32
+	for rows.Next() {
+		err = rows.Scan(&len)
+		if err != nil {
+			common.Log.Warningf("failed to read organization users count; %s", err.Error())
+			return 0
+		}
+	}
+
+	return len
 }
