@@ -28,7 +28,7 @@ type Organization struct {
 	Metadata    *json.RawMessage  `sql:"type:json" json:"metadata"`
 
 	Users      []*user.User `gorm:"many2many:organizations_users" json:"-"`
-	UsersCount *uint32      `json:"users_count,omitempty"`
+	UsersCount *uint32      `sql:"-" json:"users_count,omitempty"`
 }
 
 // Find returns an organization for the given id
