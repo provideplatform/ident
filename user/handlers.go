@@ -21,9 +21,10 @@ import (
 // InstallPublicUserAPI installs unauthenticated API handlers using the given gin Engine
 func InstallPublicUserAPI(r *gin.Engine) {
 	r.POST("/api/v1/authenticate", authenticationHandler)
+	r.POST("/api/v1/reset_password", userResetPasswordRequestHandler)
+	r.POST("/api/v1/reset_password/:token", userResetPasswordHandler)
+
 	r.POST("/api/v1/users", createUserHandler)
-	r.POST("/api/v1/users/reset_password", userResetPasswordRequestHandler)
-	r.POST("/api/v1/users/reset_password/:token", userResetPasswordHandler)
 
 	r.POST("/api/v1/oauth/callback", oauthCallbackHandler)
 }
