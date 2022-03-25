@@ -176,7 +176,6 @@ func consumeApplicationOrganizationUpdatedMsg(msg *nats.Msg) {
 		payload, _ := json.Marshal(map[string]interface{}{
 			"application_id":  app.ID.String(),
 			"organization_id": orgUUID.String(),
-			"update_registry": true,
 		})
 		natsutil.NatsJetstreamPublish(natsOrganizationRegistrationSubject, payload)
 	}

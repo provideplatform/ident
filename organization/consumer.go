@@ -9,17 +9,13 @@ import (
 	"sync"
 	"time"
 
-	nchain "github.com/provideplatform/provide-go/api/nchain"
-	vault "github.com/provideplatform/provide-go/api/vault"
-
-	// providecrypto "github.com/provideplatform/provide-go/crypto"
-
 	dbconf "github.com/kthomas/go-db-config"
 	natsutil "github.com/kthomas/go-natsutil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/nats-io/nats.go"
 	"github.com/provideplatform/ident/common"
 	"github.com/provideplatform/ident/token"
+	vault "github.com/provideplatform/provide-go/api/vault"
 )
 
 const defaultNatsStream = "ident"
@@ -29,38 +25,20 @@ const natsCreatedOrganizationCreatedMaxInFlight = 2048
 const createOrganizationAckWait = time.Second * 5
 const createOrganizationMaxDeliveries = 10
 
-// const createOrganizationTimeout = int64(time.Second * 20)
-
 const natsOrganizationImplicitKeyExchangeCompleteSubject = "ident.organization.keys.exchange.complete"
 const natsOrganizationImplicitKeyExchangeCompleteMaxInFlight = 2048
 const natsOrganizationImplicitKeyExchangeCompleteAckWait = time.Second * 5
 const natsOrganizationImplicitKeyExchangeCompleteMaxDeliveries = 10
-
-// const organizationImplicitKeyExchangeCompleteTimeout = int64(time.Second * 20)
 
 const natsOrganizationImplicitKeyExchangeInitSubject = "ident.organization.keys.exchange.init"
 const natsOrganizationImplicitKeyExchangeMaxInFlight = 2048
 const natsOrganizationImplicitKeyExchangeInitAckWait = time.Second * 5
 const natsOrganizationImplicitKeyExchangeInitMaxDeliveries = 10
 
-// const organizationImplicitKeyExchangeInitTimeout = int64(time.Second * 20)
-
 const natsOrganizationRegistrationSubject = "ident.organization.registration"
 const natsOrganizationRegistrationMaxInFlight = 2048
 const natsOrganizationRegistrationAckWait = time.Second * 60
 const natsOrganizationRegistrationMaxDeliveries = 10
-
-// const organizationRegistrationTimeout = int64(natsOrganizationRegistrationAckWait * 10)
-const organizationRegistrationMethod = "registerOrg"
-const organizationUpdateRegistrationMethod = "updateOrg"
-const organizationSetInterfaceImplementerMethod = "setInterfaceImplementer"
-
-const contractTypeRegistry = "registry"
-const contractTypeOrgRegistry = "organization-registry"
-const contractTypeERC1820Registry = "erc1820-registry"
-
-// const contractTypeShield = "shield"
-// const contractTypeVerifier = "verifier"
 
 func init() {
 	if !common.ConsumeNATSStreamingSubscriptions {
@@ -311,6 +289,12 @@ func consumeOrganizationImplicitKeyExchangeInitMsg(msg *nats.Msg) {
 			}
 
 			c25519PublicKeyRaw, err := hex.DecodeString(*c25519Key.PublicKey)
+			if err != nil {
+				common.Log.Warningf("failed to decode single-use c25519 public key for implicit key exchange; organization id: %s", organizationID)
+				msg.Nak()
+				return
+			}
+
 			signingResponse, err := vault.SignMessage(
 				*orgToken.Token,
 				orgVault.ID.String(),
@@ -507,282 +491,6 @@ func consumeOrganizationRegistrationMsg(msg *nats.Msg) {
 		}
 	}()
 
-	common.Log.Debugf("consuming %d-byte NATS organization registration message on subject: %s", len(msg.Data), msg.Subject)
-
-	params := map[string]interface{}{}
-	err := json.Unmarshal(msg.Data, &params)
-	if err != nil {
-		common.Log.Warningf("failed to unmarshal organization registration message; %s", err.Error())
-		msg.Nak()
-		return
-	}
-
-	organizationID, organizationIDOk := params["organization_id"].(string)
-	if !organizationIDOk {
-		common.Log.Warning("failed to parse organization_id during organization registration message handler")
-		msg.Nak()
-		return
-	}
-
-	applicationID, applicationIDOk := params["application_id"].(string)
-	if !applicationIDOk {
-		common.Log.Warning("failed to parse application_id during organization registration message handler")
-		msg.Nak()
-		return
-	}
-
-	applicationUUID, err := uuid.FromString(applicationID)
-	if err != nil {
-		common.Log.Warning("failed to parse application uuid during organization registration message handler")
-		msg.Nak()
-		return
-	}
-
-	updateRegistry := false
-	if update, updateOk := params["update_registry"].(bool); updateOk {
-		updateRegistry = update
-	}
-
-	db := dbconf.DatabaseConnection()
-
-	organization := &Organization{}
-	db.Where("id = ?", organizationID).Find(&organization)
-
-	if organization == nil || organization.ID == uuid.Nil {
-		common.Log.Warningf("failed to resolve organization during registration message handler; organization id: %s", organizationID)
-		msg.Nak()
-		return
-	}
-
-	var orgAddress *string
-	var orgMessagingEndpoint *string
-	var orgDomain *string
-	var orgZeroKnowledgePublicKey *string
-
-	orgToken := &token.Token{
-		OrganizationID: &organization.ID,
-	}
-	if !orgToken.Vend() {
-		common.Log.Warningf("failed to vend signed JWT for organization implicit key exchange; organization id: %s", organizationID)
-		msg.Nak()
-		return
-	}
-
-	vaults, err := vault.ListVaults(*orgToken.Token, map[string]interface{}{})
-	if err != nil {
-		common.Log.Warningf("failed to fetch vaults during implicit key exchange message handler; organization id: %s", organizationID)
-		msg.Nak()
-		return
-	}
-
-	var keys []*vault.Key
-
-	if len(vaults) > 0 {
-		orgVault := vaults[0]
-
-		// secp256k1
-		keys, err = vault.ListKeys(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{
-			"spec": "secp256k1",
-		})
-		if err != nil {
-			common.Log.Warningf("failed to fetch secp256k1 keys from vault during implicit key exchange message handler; organization id: %s; %s", organizationID, err.Error())
-			msg.Nak()
-			return
-		}
-		if len(keys) > 0 {
-			key := keys[0]
-			if key.Address != nil {
-				orgAddress = common.StringOrNil(*key.Address)
-			}
-		}
-
-		// babyJubJub
-		keys, err = vault.ListKeys(*orgToken.Token, orgVault.ID.String(), map[string]interface{}{
-			"spec": "babyJubJub",
-		})
-		if err != nil {
-			common.Log.Warningf("failed to fetch babyJubJub keys from vault during implicit key exchange message handler; organization id: %s; %s", organizationID, err.Error())
-			msg.Nak()
-			return
-		}
-		if len(keys) > 0 {
-			key := keys[0]
-			if key.PublicKey != nil {
-				orgZeroKnowledgePublicKey = common.StringOrNil(*key.PublicKey)
-			}
-		}
-	}
-
-	metadata := organization.ParseMetadata()
-	updateOrgMetadata := false
-
-	if messagingEndpoint, messagingEndpointOk := metadata["messaging_endpoint"].(string); messagingEndpointOk {
-		orgMessagingEndpoint = common.StringOrNil(messagingEndpoint)
-	}
-
-	if _, addrOk := metadata["address"].(string); !addrOk {
-		metadata["address"] = orgAddress
-		updateOrgMetadata = true
-	}
-
-	if domain, domainOk := metadata["domain"].(string); domainOk {
-		orgDomain = common.StringOrNil(domain)
-	}
-
-	if orgAddress == nil {
-		common.Log.Warningf("failed to resolve organization public address for storage in the public org registry; organization id: %s", organizationID)
-		msg.Nak()
-		return
-	}
-
-	if orgDomain == nil {
-		common.Log.Warningf("failed to resolve organization domain for storage in the public org registry; organization id: %s", organizationID)
-		msg.Nak()
-		return
-	}
-
-	if orgMessagingEndpoint == nil {
-		common.Log.Warningf("failed to resolve organization messaging endpoint for storage in the public org registry; organization id: %s", organizationID)
-		msg.Nak()
-		return
-	}
-
-	if orgZeroKnowledgePublicKey == nil {
-		common.Log.Warningf("failed to resolve organization zero-knowledge public key for storage in the public org registry; organization id: %s", organizationID)
-		msg.Nak()
-		return
-	}
-
-	var tokens []*token.Token
-	db.Where("tokens.application_id = ?", applicationID).Find(&tokens)
-	if len(tokens) == 0 {
-		tkn := &token.Token{
-			ApplicationID: &applicationUUID,
-			Scope:         common.StringOrNil("offline_access"),
-		}
-		if !tkn.Vend() {
-			common.Log.Warningf("failed to vend signed JWT for application with offline access; organization id: %s", applicationID)
-			msg.Nak()
-			return
-		}
-		tokens = append(tokens, tkn)
-	}
-
-	if len(tokens) > 0 {
-		jwtToken := tokens[0].Token
-
-		contracts, err := nchain.ListContracts(*jwtToken, map[string]interface{}{})
-		if err != nil {
-			common.Log.Warningf("failed to resolve organization registry contract to which the organization registration tx should be sent; organization id: %s", organizationID)
-			msg.Nak()
-			return
-		}
-
-		var erc1820RegistryContractID *string
-		var orgRegistryContractID *string
-
-		var erc1820RegistryContractAddress *string
-		var orgRegistryContractAddress *string
-
-		var orgWalletID *string
-
-		// org api token & hd wallet
-
-		orgToken := &token.Token{
-			// ApplicationID:  &applicationUUID,
-			OrganizationID: &organization.ID,
-		}
-		if !orgToken.Vend() {
-			common.Log.Warningf("failed to vend signed JWT for organization registration tx signing; organization id: %s", organizationID)
-			msg.Nak()
-			return
-		}
-
-		orgWalletResp, err := nchain.CreateWallet(*orgToken.Token, map[string]interface{}{
-			"purpose": 44,
-		})
-		if err != nil {
-			common.Log.Warningf("failed to create organization HD wallet for organization registration tx should be sent; organization id: %s", organizationID)
-			msg.Nak()
-			return
-		}
-
-		orgWalletID = common.StringOrNil(orgWalletResp.ID.String())
-		common.Log.Debugf("created HD wallet %s for organization %s", *orgWalletID, organization.ID)
-
-		for _, c := range contracts {
-			resp, err := nchain.GetContractDetails(*jwtToken, c.ID.String(), map[string]interface{}{})
-			if err != nil {
-				common.Log.Warningf("failed to resolve organization registry contract to which the organization registration tx should be sent; organization id: %s", organizationID)
-				msg.Nak()
-				return
-			}
-
-			if resp.Type != nil {
-				switch *resp.Type {
-				case contractTypeERC1820Registry:
-					erc1820RegistryContractID = common.StringOrNil(resp.ID.String())
-					erc1820RegistryContractAddress = resp.Address
-				case contractTypeOrgRegistry:
-					orgRegistryContractID = common.StringOrNil(resp.ID.String())
-					orgRegistryContractAddress = resp.Address
-				}
-			}
-		}
-
-		if erc1820RegistryContractID == nil || erc1820RegistryContractAddress == nil {
-			common.Log.Warningf("failed to resolve ERC1820 registry contract; application id: %s", applicationID)
-			msg.Nak()
-			return
-		}
-
-		if orgRegistryContractID == nil || orgRegistryContractAddress == nil {
-			common.Log.Warningf("failed to resolve organization registry contract; application id: %s", applicationID)
-			msg.Nak()
-			return
-		}
-
-		if orgWalletID == nil {
-			common.Log.Warningf("failed to resolve organization HD wallet for signing organization impl transaction transaction; organization id: %s", organizationID)
-			msg.Nak()
-			return
-		}
-
-		// registerOrg/updateOrg
-
-		method := organizationRegistrationMethod
-		if updateRegistry {
-			method = organizationUpdateRegistrationMethod
-		}
-
-		common.Log.Debugf("attempting to register organization %s, with on-chain registry contract: %s", organizationID, *orgRegistryContractAddress)
-		_, err = nchain.ExecuteContract(*jwtToken, *orgRegistryContractID, map[string]interface{}{
-			"wallet_id": orgWalletID,
-			"method":    method,
-			"params": []interface{}{
-				orgAddress,
-				*organization.Name,
-				*orgDomain,
-				*orgMessagingEndpoint,
-				*orgZeroKnowledgePublicKey,
-				"{}",
-			},
-			"value": 0,
-		})
-		if err != nil {
-			common.Log.Warningf("organization registry transaction broadcast failed on behalf of organization: %s; org registry contract id: %s; %s", organizationID, *orgRegistryContractID, err.Error())
-			return
-		}
-
-		if updateOrgMetadata {
-			organization.setMetadata(metadata)
-			organization.Update()
-		}
-
-		common.Log.Debugf("broadcast organization registry and interface impl transactions on behalf of organization: %s", organizationID)
-		msg.Ack()
-	} else {
-		common.Log.Warningf("failed to resolve API token during registration message handler; organization id: %s", organizationID)
-		msg.Nak()
-	}
+	common.Log.Debugf("consumed %d-byte NOOP NATS organization registration message on subject: %s", len(msg.Data), msg.Subject)
+	msg.Ack()
 }
