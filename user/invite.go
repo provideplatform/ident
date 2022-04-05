@@ -307,6 +307,22 @@ func (i *Invite) parseParams() map[string]interface{} {
 	return params
 }
 
+func (i *Invite) isOrganizationInvite() bool {
+	params := i.parseParams()
+	if isOrganizationInvite, ok := params["is_organization_invite"].(bool); ok {
+		return isOrganizationInvite
+	}
+	return false
+}
+
+func (i *Invite) isOrganizationUserInvite() bool {
+	params := i.parseParams()
+	if isOrganizationUserInvite, ok := params["is_organization_user_invite"].(bool); ok {
+		return isOrganizationUserInvite
+	}
+	return false
+}
+
 func (i *Invite) vendToken() (*token.Token, error) {
 	dataJSON, _ := json.Marshal(map[string]interface{}{
 		"application_id":    i.ApplicationID,
