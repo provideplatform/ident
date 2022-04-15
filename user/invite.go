@@ -281,11 +281,17 @@ func (i *Invite) Create() bool {
 	if success {
 		if i.ApplicationID != nil {
 			key := fmt.Sprintf("application.%s.invitations", i.ApplicationID.String())
-			redisutil.WithRedlock(key, func() error { return i.cache(key) })
+			err := redisutil.WithRedlock(key, func() error { return i.cache(key) })
+			if err != nil {
+				common.Log.Warningf("failed to cache invite by App ID; %s", err.Error())
+			}
 		}
 		if i.OrganizationID != nil {
 			key := fmt.Sprintf("organization.%s.invitations", i.OrganizationID.String())
-			redisutil.WithRedlock(key, func() error { return i.cache(key) })
+			err := redisutil.WithRedlock(key, func() error { return i.cache(key) })
+			if err != nil {
+				common.Log.Warningf("failed to cache invite by Org ID; %s", err.Error())
+			}
 		}
 	}
 	return success
