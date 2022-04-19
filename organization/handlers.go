@@ -178,11 +178,6 @@ func createOrganizationHandler(c *gin.Context) {
 			return
 		}
 
-		if invite.OrganizationID != nil {
-			provide.RenderError("invitation contained specific organization_id", 400, c)
-			return
-		}
-
 		if invite.Permissions != nil {
 			permissions = *invite.Permissions
 		} else {
