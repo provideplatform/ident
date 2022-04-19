@@ -183,11 +183,6 @@ func createOrganizationHandler(c *gin.Context) {
 			return
 		}
 
-		if invite.UserID != nil && userID != nil && invite.UserID.String() != userID.String() {
-			provide.RenderError("invitation user_id did not match authorized user", 403, c)
-			return
-		}
-
 		if invite.Permissions != nil {
 			permissions = *invite.Permissions
 		} else {
@@ -489,11 +484,6 @@ func createOrganizationUserHandler(c *gin.Context) {
 			provide.RenderError("invitation organization_id did not match authorized organization", 403, c)
 			return
 		}
-
-		// if invite.UserID != nil && bearerUserID != nil && invite.UserID.String() != bearerUserID.String() {
-		// 	provide.RenderError("invitation user_id did not match authorized user", 403, c)
-		// 	return
-		// }
 	}
 
 	orgPermissions, permissionsOk := params["permissions"].(common.Permission)
