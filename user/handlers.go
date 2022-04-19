@@ -639,7 +639,7 @@ func vendInvitationTokenHandler(c *gin.Context) {
 		// TODO: load invitor permissions in the appropriate context; i.e., in the ApplicationID context
 	}
 
-	if orgID != nil && invite.isOrganizationUserInvite() {
+	if orgID != nil {
 		invite.OrganizationID = orgID
 		// TODO: load invitor permissions in the appropriate context; i.e., in the OrganizationID context
 	}
