@@ -415,7 +415,7 @@ func organizationUsersListHandler(c *gin.Context) {
 
 func createOrganizationUserHandler(c *gin.Context) {
 	bearer := token.InContext(c)
-	bearerUserID := bearer.UserID
+	// bearerUserID := bearer.UserID
 	// bearerOrganizationID := bearer.OrganizationID (CHECKME - can an org token invite a user? - I'm assuming no for now)
 	// bearerApplicationID := bearer.ApplicationID   (CHECKME - can an app token invite a user? - I'm assuming no for now)
 
