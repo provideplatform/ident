@@ -64,17 +64,15 @@ func resolveAppUser(db *gorm.DB, app *Application, userID *uuid.UUID) *user.User
 	return appUser
 }
 
-func applicationsListHandler(c *gin.Context) {
+func applicationsListQuery(c *gin.Context) *gorm.DB {
 	bearer := token.InContext(c)
 	orgID := bearer.OrganizationID
 	userID := bearer.UserID
 
 	if (userID == nil || *userID == uuid.Nil) && (orgID == nil || *orgID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
-		return
+		return nil
 	}
-
-	var apps []Application
 
 	query := dbconf.DatabaseConnection()
 	query = query.Select("applications.*")
@@ -87,6 +85,23 @@ func applicationsListHandler(c *gin.Context) {
 		query = query.Joins("LEFT OUTER JOIN applications_users as au ON au.application_id = applications.id")
 		query = query.Where("applications.user_id = ? OR au.user_id = ? OR (ao.organization_id = ou.organization_id AND ou.user_id = ?)", userID, userID, userID)
 	}
+
+	return query
+}
+
+func applicationsListHandler(c *gin.Context) {
+	bearer := token.InContext(c)
+	orgID := bearer.OrganizationID
+	userID := bearer.UserID
+
+	if (userID == nil || *userID == uuid.Nil) && (orgID == nil || *orgID == uuid.Nil) {
+		provide.RenderError("unauthorized", 401, c)
+		return
+	}
+
+	var apps []Application
+
+	query := applicationsListQuery(c)
 
 	if c.Query("network_id") != "" {
 		query = query.Where("applications.network_id = ?", c.Query("network_id"))
@@ -369,8 +384,9 @@ func applicationOrganizationsListHandler(c *gin.Context) {
 func createApplicationOrganizationHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 	appID := bearer.ApplicationID
+	orgID := bearer.OrganizationID
 
-	if appID == nil || *appID == uuid.Nil {
+	if (appID == nil || *appID == uuid.Nil) && (orgID == nil || *orgID == uuid.Nil) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -379,6 +395,13 @@ func createApplicationOrganizationHandler(c *gin.Context) {
 		provide.RenderError("forbidden", 403, c)
 		return
 	}
+
+	applicationID, err := uuid.FromString(c.Param("id"))
+	if err != nil {
+		provide.RenderError(err.Error(), 422, c)
+		return
+	}
+	appID = &applicationID
 
 	buf, err := c.GetRawData()
 	if err != nil {
@@ -432,6 +455,18 @@ func createApplicationOrganizationHandler(c *gin.Context) {
 	if org == nil || org.ID == uuid.Nil {
 		provide.RenderError("organization not found", 404, c)
 		return
+	}
+
+	if orgID != nil {
+		// FIXME-- make this reusable way to authorize an organization on the application scope, using the org access token...
+		var apps []Application
+		authorizedAppsQuery := applicationsListQuery(c)
+		authorizedAppsQuery.Where("ao.application_id = ?", appID)
+		authorizedAppsQuery.Find(&apps)
+		if len(apps) == 0 {
+			provide.RenderError("forbidden", 403, c)
+			return
+		}
 	}
 
 	if app.addOrganization(db, *org, permissions) {
