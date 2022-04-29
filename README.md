@@ -29,10 +29,10 @@ make run_local
 The project comes with several wrappers/executables found in the `cmd`
 directory.
 
-|       Command        | Description                     |
-|:--------------------:|---------------------------------|
-|      **`api`**       | Runs the API server.            |
-| **`api_accountant`** | Runs the API accountant server. |
-|      `consumer`      | Runs a consumer.                |
-|      `migrate`       | Runs migrations.                |
-|        `sudo`        | Runs as sudo.                   |
+|       Command        | Description                                                                                                          |
+|:--------------------:|----------------------------------------------------------------------------------------------------------------------|
+|      **`api`**       | Runs the API server.                                                                                                 |
+| **`api_accountant`** | Runs the API accountant server, which accounts for API usage by user, organization and application.                  |
+|      `consumer`      | Runs a consumer.                                                                                                     |
+|      `migrate`       | Runs migrations.                                                                                                     |
+|        `sudo`        | Sudo is a utility for administration of ident users and related associations within the connected Auth0 environment. |
