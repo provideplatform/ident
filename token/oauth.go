@@ -44,8 +44,7 @@ type OAuthAuthorizationGrantParams struct {
 // PKCE is required such that the state parameter can be used for application
 // state (i.e., instead of CSRF protection)
 //
-// The code_challenge parameter should be encoded by client applications as `base64url(sha256(code_verifier))`
-// The given code_verifier should be verified against the associated code_challenge and code_challenge_method
+// The given code_verifier should be verified against the associated code_challenge
 func authorizeCode(c *gin.Context) {
 	params, err := parseOAuthAuthorizationGrantRequest(c)
 	if err != nil {
