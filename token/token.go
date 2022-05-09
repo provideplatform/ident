@@ -530,6 +530,12 @@ func (t *Token) vendRefreshToken() bool {
 		return false
 	}
 
+	scope := t.Scope
+	if scope != nil {
+		_scope := strings.ReplaceAll(*scope, authorizationScopeOfflineAccess, "")
+		scope = &_scope
+	}
+
 	ttl := int(defaultRefreshTokenTTL.Seconds())
 	refreshToken := &Token{
 		UserID:              t.UserID,
@@ -539,7 +545,7 @@ func (t *Token) vendRefreshToken() bool {
 		Audience:            t.Audience,
 		Issuer:              t.Issuer,
 		Subject:             common.StringOrNil(fmt.Sprintf("token:%s", t.ID.String())),
-		Scope:               t.Scope,
+		Scope:               scope,
 		Permissions:         t.Permissions,
 		ExtendedPermissions: t.ExtendedPermissions,
 		TTL:                 &ttl,
