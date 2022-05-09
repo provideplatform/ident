@@ -38,15 +38,15 @@ type OAuthAuthorizationGrantParams struct {
 	TokenType           *string `json:"token_type,omitempty"`
 }
 
-// authorizeCode attempts to exchange a short-lived OAuth `authorization_code` code
-// for new access/refresh tokens
+// authorizeCode attempts to exchange a short-lived OAuth `authorization_code`
+// code for newly-authorized access/refresh tokens
 //
 // PKCE is required such that the state parameter can be used for application
-// state instead of CSRF protection
+// state (i.e., instead of CSRF protection)
 //
 // The code_challenge parameter should be encoded by client applications as `base64url(sha256(code_verifier))`
 // The given code_verifier should be verified against the associated code_challenge and code_challenge_method
-func authorizeCode(c *gin.Context, bearer *Token) {
+func authorizeCode(c *gin.Context) {
 	params, err := parseOAuthAuthorizationGrantRequest(c)
 	if err != nil {
 		provide.RenderError(err.Error(), 422, c)

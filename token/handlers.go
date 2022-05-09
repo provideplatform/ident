@@ -3,7 +3,6 @@ package token
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	dbconf "github.com/kthomas/go-db-config"
@@ -83,11 +82,18 @@ func createTokenHandler(c *gin.Context) {
 		grantType = &reqGrantType
 	}
 
-	if grantType != nil && (*grantType != authorizationGrantAuthorizationCode && *grantType != authorizationGrantClientCredentials && *grantType != authorizationGrantRefreshToken) {
-		provide.RenderError(fmt.Sprintf("invalid grant_type: %s", *grantType), 422, c)
-		return
-	} else if grantType != nil && strings.EqualFold(*grantType, authorizationGrantRefreshToken) {
-		refreshAccessToken(c, scope)
+	if grantType != nil {
+		switch *grantType {
+		case authorizationGrantAuthorizationCode:
+			authorizeCode(c)
+		case authorizationGrantClientCredentials:
+			authorizeClientCredentials(c)
+		case authorizationGrantRefreshToken:
+			refreshAccessToken(c, scope)
+		default:
+			provide.RenderError(fmt.Sprintf("invalid grant_type: %s", *grantType), 422, c)
+		}
+
 		return
 	}
 
@@ -190,21 +196,6 @@ func createTokenHandler(c *gin.Context) {
 		return
 	}
 
-	if grantType != nil {
-		switch *grantType {
-		case authorizationGrantAuthorizationCode:
-			authorizeCode(c, tkn)
-		case authorizationGrantClientCredentials:
-			authorizeClientCredentials(c)
-		case authorizationGrantRefreshToken:
-			refreshAccessToken(c, scope)
-		default:
-			// no-op -- unreachable
-		}
-
-		return
-	}
-
 	provide.Render(tkn.AsResponse(), 201, c)
 }
 
@@ -281,12 +272,13 @@ func oauthAuthorizeHandler(c *gin.Context) {
 	ttl := int(defaultOAuthCodeTTL.Seconds())
 
 	grant := &OAuthAuthorizationGrantParams{
+		ClientID:            &clientID,
 		CodeChallenge:       common.StringOrNil(c.Query("code_challenge")),
 		CodeChallengeMethod: common.StringOrNil(c.Query("code_challenge_method")),
 		RedirectURI:         common.StringOrNil(c.Query("redirect_uri")),
+		ResponseType:        responseType,
 		Scope:               scope,
 		State:               common.StringOrNil(c.Query("state")),
-		TokenType:           common.StringOrNil(oauthAuthorizationGrantDefaultTokenType),
 	}
 
 	code := &Token{
@@ -304,9 +296,13 @@ func oauthAuthorizeHandler(c *gin.Context) {
 	}
 
 	location := oauthAuthorizationGrantRedirectLocationFactory(&OAuthAuthorizationGrantParams{
-		Code:        code.AccessToken,
-		RedirectURI: grant.AccessToken,
-		State:       grant.State,
+		ClientID:            grant.ClientID,
+		Code:                code.AccessToken,
+		CodeChallenge:       grant.CodeChallenge,
+		CodeChallengeMethod: grant.CodeChallengeMethod,
+		RedirectURI:         grant.RedirectURI,
+		ResponseType:        grant.ResponseType,
+		State:               grant.State,
 	})
 	if location == nil {
 		provide.RenderError("failed to authorize short-lived authorization code; failed to build redirect uri", 500, c)
