@@ -77,28 +77,9 @@ func createTokenHandler(c *gin.Context) {
 		grantType = &reqGrantType
 	}
 
-	var isOAuthAuthorizationGrantAttempt bool
-
-	if grantType != nil {
-		if grantType != nil {
-			switch *grantType {
-			case authorizationGrantAuthorizationCode:
-				isOAuthAuthorizationGrantAttempt = true
-			case authorizationGrantClientCredentials:
-				isOAuthAuthorizationGrantAttempt = true
-			case authorizationGrantImplicit:
-				isOAuthAuthorizationGrantAttempt = true
-			case authorizationGrantRefreshToken:
-				isOAuthAuthorizationGrantAttempt = true
-			default:
-				isOAuthAuthorizationGrantAttempt = false
-			}
-		}
-
-		if *grantType != authorizationGrantAuthorizationCode && *grantType != authorizationGrantClientCredentials && *grantType != authorizationGrantImplicit && *grantType != authorizationGrantRefreshToken {
-			provide.RenderError(fmt.Sprintf("invalid grant_type: %s", *grantType), 422, c)
-			return
-		}
+	if grantType != nil && (*grantType != authorizationGrantAuthorizationCode && *grantType != authorizationGrantClientCredentials && *grantType != authorizationGrantImplicit && *grantType != authorizationGrantRefreshToken) {
+		provide.RenderError(fmt.Sprintf("invalid grant_type: %s", *grantType), 422, c)
+		return
 	}
 
 	var appID *uuid.UUID
@@ -200,7 +181,7 @@ func createTokenHandler(c *gin.Context) {
 		return
 	}
 
-	if isOAuthAuthorizationGrantAttempt {
+	if grantType != nil {
 		switch *grantType {
 		case authorizationGrantAuthorizationCode:
 			authorizeAuthorizationCode(c, tkn)
