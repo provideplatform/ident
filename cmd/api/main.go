@@ -115,6 +115,7 @@ func runAPI() {
 	r.GET("/status", statusHandler)
 	r.GET("/legal/privacy_policy", privacyPolicyHandler)
 	r.GET("/legal/terms_of_service", termsOfServiceHandler)
+	token.InstallPublicOAuthAPI(r)
 	user.InstallPublicUserAPI(r)
 
 	r.Use(token.AuthMiddleware())

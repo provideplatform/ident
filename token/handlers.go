@@ -14,6 +14,11 @@ import (
 	util "github.com/provideplatform/provide-go/common/util"
 )
 
+// InstallPublicTokenAPI installs unauthenticated API handlers using the given gin Engine
+func InstallPublicOAuthAPI(r *gin.Engine) {
+	r.GET("/api/v1/oauth/authorize", oauthAuthorizeHandler)
+}
+
 // InstallTokenAPI installs the handlers using the given gin Engine
 func InstallTokenAPI(r *gin.Engine) {
 	r.GET("/api/v1/tokens", tokensListHandler)
@@ -77,7 +82,7 @@ func createTokenHandler(c *gin.Context) {
 		grantType = &reqGrantType
 	}
 
-	if grantType != nil && (*grantType != authorizationGrantAuthorizationCode && *grantType != authorizationGrantClientCredentials && *grantType != authorizationGrantImplicit && *grantType != authorizationGrantRefreshToken) {
+	if grantType != nil && (*grantType != authorizationGrantAuthorizationCode && *grantType != authorizationGrantClientCredentials && *grantType != authorizationGrantRefreshToken) {
 		provide.RenderError(fmt.Sprintf("invalid grant_type: %s", *grantType), 422, c)
 		return
 	}
@@ -184,11 +189,9 @@ func createTokenHandler(c *gin.Context) {
 	if grantType != nil {
 		switch *grantType {
 		case authorizationGrantAuthorizationCode:
-			authorizeAuthorizationCode(c, tkn)
+			authorizeCode(c, tkn)
 		case authorizationGrantClientCredentials:
 			authorizeClientCredentials(c)
-		case authorizationGrantImplicit:
-			authorizeImplicit(c)
 		case authorizationGrantRefreshToken:
 			refreshAccessToken(c, scope)
 		default:
@@ -254,4 +257,61 @@ func deleteTokenHandler(c *gin.Context) {
 
 	tx.Commit()
 	provide.Render(nil, 204, c)
+}
+
+func oauthAuthorizeHandler(c *gin.Context) {
+	clientID := c.Query("client_id")
+	appID, err := uuid.FromString(clientID)
+	if err != nil {
+		provide.RenderError("failed to parse client_id as valid application id", 422, c)
+		return
+	}
+
+	responseType := common.StringOrNil(c.Query("response_type"))
+	if responseType == nil || *responseType != authorizationGrantResponseTypeCode {
+		provide.RenderError("response_type must be set to 'code'", 422, c)
+		return
+	}
+
+	scope := common.StringOrNil(c.Query("scope"))
+	ttl := int(defaultOAuthCodeTTL.Seconds())
+
+	code := &Token{
+		ApplicationID: &appID,
+		OAuthAuthorizationGrant: &OAuthAuthorizationGrantParams{
+			CodeChallenge:       common.StringOrNil(c.Query("code_challenge")),
+			CodeChallengeMethod: common.StringOrNil(c.Query("code_challenge_method")),
+			RedirectURI:         common.StringOrNil(c.Query("redirect_uri")),
+			Scope:               scope,
+			State:               common.StringOrNil(c.Query("state")),
+			TokenType:           common.StringOrNil(oauthAuthorizationGrantDefaultTokenType),
+		},
+		Scope: scope,
+		TTL:   &ttl,
+	}
+
+	db := dbconf.DatabaseConnection()
+	code, err = VendApplicationToken(db, &appID, nil, nil, nil, nil, scope)
+	if err != nil {
+		provide.RenderError(err.Error(), 401, c)
+		return
+	}
+
+	location := oauthAuthorizationGrantRedirectLocationFactory(&OAuthAuthorizationGrantParams{
+		Code:  code.AccessToken,
+		State: common.StringOrNil(c.Query("state")),
+	})
+	if location == nil {
+		provide.RenderError("failed to authorize short-lived authorization code; failed to build redirect uri", 500, c)
+		return
+	}
+
+	// 	client_id – The client ID (or other client identifier) that requested this code
+	// redirect_uri – The redirect URL that was used. This needs to be stored since the access token request must contain the same redirect URL for verification when issuing the access token.
+	// User info – Some way to identify the user that this authorization code is for, such as a user ID.
+	// Expiration Date – The code needs to include an expiration date so that it only lasts a short time.
+	// Unique ID – The code needs its own unique ID of some sort in order to be able to check if the code has been used before. A database ID or a random string is sufficient.
+	// PKCE: code_challenge and code_challenge_method – When supporting PKCE, these two values provided by the application need to be stored so that they can be verified when issuing the access token later.
+
+	c.Redirect(302, *location)
 }

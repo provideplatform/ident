@@ -22,8 +22,8 @@ import (
 
 const authorizationGrantClientCredentials = "client_credentials"
 const authorizationGrantAuthorizationCode = "authorization_code"
-const authorizationGrantImplicit = "implicit"
 const authorizationGrantRefreshToken = "refresh_token"
+const authorizationGrantResponseTypeCode = "code"
 const authorizationScopeOfflineAccess = "offline_access"
 
 const authorizationSubjectApplication = "application"
@@ -33,6 +33,7 @@ const authorizationSubjectOrganization = "organization"
 const authorizationSubjectToken = "token"
 const authorizationSubjectUser = "user"
 
+const defaultOAuthCodeTTL = time.Minute * 5
 const defaultRefreshTokenTTL = time.Hour * 24 * 30
 const defaultAccessTokenTTL = time.Minute * 60
 
@@ -82,7 +83,8 @@ type Token struct {
 	IsRefreshToken       bool              `sql:"-" json:"-"`
 	IsRevocable          bool              `sql:"-" json:"-"`
 
-	NatsClaims map[string]interface{} `sql:"-" json:"-"` // NATS claims
+	NatsClaims              map[string]interface{}         `sql:"-" json:"-"`               // NATS claims
+	OAuthAuthorizationGrant *OAuthAuthorizationGrantParams `sql:"-" json:"oauth,omitempty"` // OAuth authorization grant
 }
 
 // Response represents the token portion of the response to a successful authentication request

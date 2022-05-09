@@ -4,39 +4,52 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/provideplatform/ident/common"
 	provide "github.com/provideplatform/provide-go/common"
 )
 
-const oauthAuthorizationGrantResponseTypeCode = "code"
-const oauthAuthorizationGrantResponseTypeToken = "token"
+// const oauthAuthorizationGrantResponseTypeCode = "code"
+// const oauthAuthorizationGrantResponseTypeToken = "token"
+// const oauthAuthorizationGrantCodeChallengeMethodS256 = "S256"
+const oauthAuthorizationGrantDefaultTokenType = "bearer"
 
 // OAuthAuthorizationGrantParams for various OAuth authorization grant requests
+//
+// `CodeVerifier`, when non-nil, should be a cryptographically random string using
+// the characters A-Z, a-z, 0-9, and the punctuation characters -._~ (hyphen, period,
+// underscore, and tilde), between 43 and 128 characters long
 type OAuthAuthorizationGrantParams struct {
+	AccessToken         *string `json:"access_token,omitempty"`
 	ClientID            *string `json:"client_id,omitempty"`
 	ClientSecret        *string `json:"client_secret,omitempty"`
 	Code                *string `json:"code,omitempty"`
 	CodeChallenge       *string `json:"code_challenge,omitempty"`
 	CodeChallengeMethod *string `json:"code_challenge_method,omitempty"`
 	CodeVerifier        *string `json:"code_verifier,omitempty"`
+	ExpiresIn           *int64  `json:"expires_in,omitempty"`
 	RedirectURI         *string `json:"redirect_uri,omitempty"`
+	RefreshToken        *string `json:"refresh_token,omitempty"`
 	ResponseType        *string `json:"response_type,omitempty"`
 	Scope               *string `json:"scope,omitempty"`
 	State               *string `json:"state,omitempty"`
+	TokenType           *string `json:"token_type,omitempty"`
 }
 
-// authorizeAuthorizationCode attempts to authorize an `authorization_code` OAuth grant_type
-func authorizeAuthorizationCode(c *gin.Context, bearer *Token) {
+// authorizeCode attempts to exchange a short-lived OAuth `authorization_code` code
+// for new access/refresh tokens
+//
+// PKCE is required such that the state parameter can be used for application
+// state instead of CSRF protection
+//
+// The code_challenge parameter should be encoded by client applications as `base64url(sha256(code_verifier))`
+// The given code_verifier should be verified against the associated code_challenge and code_challenge_method
+func authorizeCode(c *gin.Context, bearer *Token) {
 	params, err := parseOAuthAuthorizationGrantRequest(c)
 	if err != nil {
 		provide.RenderError(err.Error(), 422, c)
-		return
-	}
-
-	if params.ResponseType == nil || !strings.EqualFold(*params.ResponseType, oauthAuthorizationGrantResponseTypeCode) {
-		provide.RenderError("response_type parameter must be set to 'code' for authorization_code grant request", 422, c)
 		return
 	}
 
@@ -45,16 +58,41 @@ func authorizeAuthorizationCode(c *gin.Context, bearer *Token) {
 		return
 	}
 
-	if params.RedirectURI == nil {
-		provide.RenderError("failed to resolve redirect uri", 500, c)
+	if params.ClientSecret == nil {
+		provide.RenderError("client_secret is required", 400, c)
 		return
 	}
 
-	params.Code = bearer.AccessToken // FIXME
+	if params.Code == nil {
+		provide.RenderError("code is required", 400, c)
+		return
+	}
+
+	if params.CodeVerifier == nil {
+		provide.RenderError("code_verifier is required", 400, c)
+		return
+	}
+
+	if params.RedirectURI == nil {
+		provide.RenderError("redirect_uri is required", 422, c)
+		return
+	}
 
 	// FIXME!! verify client_id redirect_uri matches
 
-	location := oauthAuthorizationGrantRedirectLocationFactory(params)
+	var expiresIn *int64
+	if bearer.ExpiresAt != nil {
+		ttl := bearer.ExpiresAt.Unix() - time.Now().Unix()
+		expiresIn = &ttl
+	}
+
+	location := oauthAuthorizationGrantRedirectLocationFactory(&OAuthAuthorizationGrantParams{
+		AccessToken:  bearer.AccessToken,
+		ExpiresIn:    expiresIn,
+		RefreshToken: bearer.RefreshToken,
+		Scope:        params.Scope,
+		TokenType:    common.StringOrNil(oauthAuthorizationGrantDefaultTokenType),
+	})
 	if location == nil {
 		provide.RenderError("failed to resolve redirect uri", 500, c)
 		return
@@ -63,15 +101,48 @@ func authorizeAuthorizationCode(c *gin.Context, bearer *Token) {
 	c.Redirect(302, *location)
 }
 
+// authorizeClientCredentials attempts to authorize a `client_credentials` OAuth grant type
+func authorizeClientCredentials(c *gin.Context) {
+	params, err := parseOAuthAuthorizationGrantRequest(c)
+	if err != nil {
+		provide.RenderError(err.Error(), 422, c)
+		return
+	}
+
+	if params.ClientID == nil {
+		provide.RenderError("client_id is required", 400, c)
+		return
+	}
+
+	if params.ClientSecret == nil {
+		provide.RenderError("client_secret is required", 400, c)
+		return
+	}
+
+	provide.RenderError("not implemented", 501, c)
+}
+
 func oauthAuthorizationGrantRedirectLocationFactory(params *OAuthAuthorizationGrantParams) *string {
-	if params.ResponseType == nil {
+	if params.ClientID == nil || params.RedirectURI == nil {
 		return nil
 	}
 
-	location := fmt.Sprintf("%s?response_type=%s", *params.RedirectURI, *params.ResponseType)
+	location := fmt.Sprintf("%s?client_id=%s", *params.RedirectURI, *params.ClientID)
+
+	if params.ResponseType != nil {
+		location = fmt.Sprintf("%s&response_type=%s", location, *params.ResponseType)
+	}
 
 	if params.Code != nil {
 		location = fmt.Sprintf("%s&code=%s", location, *params.ResponseType)
+	}
+
+	if params.CodeChallenge != nil {
+		location = fmt.Sprintf("%s&code_challenge=%s", location, *params.CodeChallenge)
+	}
+
+	if params.CodeChallengeMethod != nil {
+		location = fmt.Sprintf("%s&code_challenge_method=%s", location, *params.CodeChallengeMethod)
 	}
 
 	if params.Scope != nil {
@@ -83,67 +154,6 @@ func oauthAuthorizationGrantRedirectLocationFactory(params *OAuthAuthorizationGr
 	}
 
 	return common.StringOrNil(location)
-}
-
-// authorizeClientCredentials attempts to authorize a `client_credentials` OAuth grant_type
-func authorizeClientCredentials(c *gin.Context) {
-	// params, err := parseOAuthAuthorizationGrantRequest(c)
-
-	// TODO-- read and handle required and optional params: client_id, client_secret, state, scope and redirect_uri from given context
-
-	// if params.ClientID == nil {
-	// 	provide.RenderError("client_id is required", 400, c)
-	// 	return
-	// }
-
-	// if params.Scope != nil {
-	// 	// FIXME!! handle state
-	// }
-
-	// if params.State != nil {
-	// 	// FIXME!! handle state
-	// }
-
-	// if params.RedirectURI != nil {
-	// 	// FIXME!! handle redirect
-	// }
-
-	provide.RenderError("not implemented", 501, c)
-}
-
-// authorizeImplicit attempts to authorize an `implicit` OAuth grant_type
-func authorizeImplicit(c *gin.Context) {
-	params, err := parseOAuthAuthorizationGrantRequest(c)
-	if err != nil {
-		provide.RenderError(err.Error(), 422, c)
-		return
-	}
-
-	if params.ResponseType == nil || !strings.EqualFold(*params.ResponseType, oauthAuthorizationGrantResponseTypeToken) {
-		provide.RenderError("response_type parameter must be set to 'token' for implicit authorization grant request", 422, c)
-		return
-	}
-
-	// TODO-- read and handle required and optional params: client_id, state, scope and redirect_uri from given context
-
-	// if params.ClientID == nil {
-	// 	provide.RenderError("client_id is required", 400, c)
-	// 	return
-	// }
-
-	// if params.Scope != nil {
-	// 	// FIXME!! handle state
-	// }
-
-	// if params.State != nil {
-	// 	// FIXME!! handle state
-	// }
-
-	// if params.RedirectURI != nil {
-	// 	// FIXME!! handle redirect
-	// }
-
-	provide.RenderError("not implemented", 501, c)
 }
 
 func parseOAuthAuthorizationGrantRequest(c *gin.Context) (*OAuthAuthorizationGrantParams, error) {
