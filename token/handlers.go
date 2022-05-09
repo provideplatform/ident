@@ -3,6 +3,7 @@ package token
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	dbconf "github.com/kthomas/go-db-config"
@@ -84,6 +85,9 @@ func createTokenHandler(c *gin.Context) {
 
 	if grantType != nil && (*grantType != authorizationGrantAuthorizationCode && *grantType != authorizationGrantClientCredentials && *grantType != authorizationGrantRefreshToken) {
 		provide.RenderError(fmt.Sprintf("invalid grant_type: %s", *grantType), 422, c)
+		return
+	} else if grantType != nil && strings.EqualFold(*grantType, authorizationGrantRefreshToken) {
+		refreshAccessToken(c, scope)
 		return
 	}
 
