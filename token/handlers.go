@@ -165,8 +165,7 @@ func createTokenHandler(c *gin.Context) {
 		Scope:          scope,
 	}
 
-	offlineAccess := scope != nil && tkn.HasScope(authorizationScopeOfflineAccess)
-	if appID != nil && !offlineAccess {
+	if appID != nil && !tkn.HasScope(authorizationScopeOfflineAccess) {
 		// overwrite tkn
 		db := dbconf.DatabaseConnection()
 		tkn, err = VendApplicationToken(db, appID, orgID, userID, nil, audience, scope)
@@ -306,13 +305,6 @@ func oauthAuthorizeHandler(c *gin.Context) {
 		provide.RenderError("failed to authorize short-lived authorization code; failed to build redirect uri", 500, c)
 		return
 	}
-
-	// client_id – The client ID (or other client identifier) that requested this code
-	// redirect_uri – The redirect URL that was used. This needs to be stored since the access token request must contain the same redirect URL for verification when issuing the access token.
-	// User info – Some way to identify the user that this authorization code is for, such as a user ID.
-	// Expiration Date – The code needs to include an expiration date so that it only lasts a short time.
-	// Unique ID – The code needs its own unique ID of some sort in order to be able to check if the code has been used before. A database ID or a random string is sufficient.
-	// PKCE: code_challenge and code_challenge_method – When supporting PKCE, these two values provided by the application need to be stored so that they can be verified when issuing the access token later.
 
 	c.Redirect(302, *location)
 }
