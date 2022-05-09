@@ -43,6 +43,11 @@ func InstallApplicationUsersAPI(r *gin.Engine) {
 	r.GET("/api/v1/applications/:id/invitations", applicationInvitationsListHandler)
 }
 
+// InstallPublicTokenAPI installs unauthenticated API handlers using the given gin Engine
+func InstallPublicOAuthApplicationsAPI(r *gin.Engine) {
+	r.GET("/api/v1/oauth/applications/:id", oauthApplicationDetailsHandler)
+}
+
 func resolveAppUser(db *gorm.DB, app *Application, userID *uuid.UUID) *user.User {
 	if userID == nil {
 		return nil
@@ -759,4 +764,23 @@ func deleteApplicationUserHandler(c *gin.Context) {
 		obj["errors"] = usr.Errors
 		provide.Render(obj, 422, c)
 	}
+}
+
+func oauthApplicationDetailsHandler(c *gin.Context) {
+	db := dbconf.DatabaseConnection()
+
+	var app = &Application{}
+	db.Where("id = ?", c.Param("id")).Find(&app)
+	if app == nil || app.ID == uuid.Nil {
+		provide.RenderError("oauth client application not found", 404, c)
+		return
+	}
+
+	clientApplication, err := app.OAuthClientApplication()
+	if err != nil {
+		provide.RenderError("oauth client application not found", 404, c)
+		return
+	}
+
+	provide.Render(clientApplication, 200, c)
 }

@@ -15,7 +15,7 @@ import (
 	util "github.com/provideplatform/provide-go/common/util"
 )
 
-// InstallPublicTokenAPI installs unauthenticated API handlers using the given gin Engine
+// InstallPublicOAuthAPI installs unauthenticated API handlers using the given gin Engine
 func InstallPublicOAuthAPI(r *gin.Engine) {
 	r.GET("/api/v1/oauth/authorize", oauthAuthorizeHandler)
 }
