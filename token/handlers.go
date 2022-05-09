@@ -280,18 +280,20 @@ func oauthAuthorizeHandler(c *gin.Context) {
 	scope := common.StringOrNil(c.Query("scope"))
 	ttl := int(defaultOAuthCodeTTL.Seconds())
 
+	grant := &OAuthAuthorizationGrantParams{
+		CodeChallenge:       common.StringOrNil(c.Query("code_challenge")),
+		CodeChallengeMethod: common.StringOrNil(c.Query("code_challenge_method")),
+		RedirectURI:         common.StringOrNil(c.Query("redirect_uri")),
+		Scope:               scope,
+		State:               common.StringOrNil(c.Query("state")),
+		TokenType:           common.StringOrNil(oauthAuthorizationGrantDefaultTokenType),
+	}
+
 	code := &Token{
-		ApplicationID: &appID,
-		OAuthAuthorizationGrant: &OAuthAuthorizationGrantParams{
-			CodeChallenge:       common.StringOrNil(c.Query("code_challenge")),
-			CodeChallengeMethod: common.StringOrNil(c.Query("code_challenge_method")),
-			RedirectURI:         common.StringOrNil(c.Query("redirect_uri")),
-			Scope:               scope,
-			State:               common.StringOrNil(c.Query("state")),
-			TokenType:           common.StringOrNil(oauthAuthorizationGrantDefaultTokenType),
-		},
-		Scope: scope,
-		TTL:   &ttl,
+		ApplicationID:           &appID,
+		OAuthAuthorizationGrant: grant,
+		Scope:                   scope,
+		TTL:                     &ttl,
 	}
 
 	db := dbconf.DatabaseConnection()
@@ -302,8 +304,9 @@ func oauthAuthorizeHandler(c *gin.Context) {
 	}
 
 	location := oauthAuthorizationGrantRedirectLocationFactory(&OAuthAuthorizationGrantParams{
-		Code:  code.AccessToken,
-		State: common.StringOrNil(c.Query("state")),
+		Code:        code.AccessToken,
+		RedirectURI: grant.AccessToken,
+		State:       grant.State,
 	})
 	if location == nil {
 		provide.RenderError("failed to authorize short-lived authorization code; failed to build redirect uri", 500, c)
