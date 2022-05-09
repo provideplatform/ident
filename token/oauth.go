@@ -23,6 +23,7 @@ const oauthAuthorizationGrantDefaultTokenType = "bearer"
 // underscore, and tilde), between 43 and 128 characters long
 type OAuthAuthorizationGrantParams struct {
 	AccessToken         *string `json:"access_token,omitempty"`
+	AuthorizeURI        *string `json:"authorize_uri,omitempty"`
 	ClientID            *string `json:"client_id,omitempty"`
 	ClientSecret        *string `json:"client_secret,omitempty"`
 	Code                *string `json:"code,omitempty"`
