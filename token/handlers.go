@@ -67,19 +67,38 @@ func createTokenHandler(c *gin.Context) {
 		return
 	}
 
-	if grantType, grantTypeOk := params["grant_type"].(string); grantTypeOk {
-		if grantType == authorizationGrantRefreshToken {
-			refreshAccessToken(c)
-			return
-		}
-
-		provide.RenderError(fmt.Sprintf("invalid grant_type: %s", grantType), 422, c)
-		return
-	}
-
 	var scope *string
 	if reqScope, reqScopeOk := params["scope"].(string); reqScopeOk {
 		scope = &reqScope
+	}
+
+	var grantType *string
+	if reqGrantType, reqGrantTypeOk := params["grant_type"].(string); reqGrantTypeOk {
+		grantType = &reqGrantType
+	}
+
+	var isOAuthAuthorizationGrantAttempt bool
+
+	if grantType != nil {
+		if grantType != nil {
+			switch *grantType {
+			case authorizationGrantAuthorizationCode:
+				isOAuthAuthorizationGrantAttempt = true
+			case authorizationGrantClientCredentials:
+				isOAuthAuthorizationGrantAttempt = true
+			case authorizationGrantImplicit:
+				isOAuthAuthorizationGrantAttempt = true
+			case authorizationGrantRefreshToken:
+				isOAuthAuthorizationGrantAttempt = true
+			default:
+				isOAuthAuthorizationGrantAttempt = false
+			}
+		}
+
+		if *grantType != authorizationGrantAuthorizationCode && *grantType != authorizationGrantClientCredentials && *grantType != authorizationGrantImplicit && *grantType != authorizationGrantRefreshToken {
+			provide.RenderError(fmt.Sprintf("invalid grant_type: %s", *grantType), 422, c)
+			return
+		}
 	}
 
 	var appID *uuid.UUID
@@ -160,12 +179,10 @@ func createTokenHandler(c *gin.Context) {
 		Scope:          scope,
 	}
 
-	offlineAccess := scope != nil && *scope == authorizationScopeOfflineAccess
-
-	if appID != nil && !offlineAccess {
+	if appID != nil && !tkn.HasScope(authorizationScopeOfflineAccess) {
 		// overwrite tkn
 		db := dbconf.DatabaseConnection()
-		tkn, err = VendApplicationToken(db, appID, orgID, userID, nil, audience) // FIXME-- support users and extended permissions
+		tkn, err = VendApplicationToken(db, appID, orgID, userID, nil, audience, scope)
 		if err != nil {
 			provide.RenderError(err.Error(), 401, c)
 			return
@@ -183,13 +200,36 @@ func createTokenHandler(c *gin.Context) {
 		return
 	}
 
+	if isOAuthAuthorizationGrantAttempt {
+		switch *grantType {
+		case authorizationGrantAuthorizationCode:
+			authorizeAuthorizationCode(c, tkn)
+		case authorizationGrantClientCredentials:
+			authorizeClientCredentials(c)
+		case authorizationGrantImplicit:
+			authorizeImplicit(c)
+		case authorizationGrantRefreshToken:
+			refreshAccessToken(c, scope)
+		default:
+			// no-op -- unreachable
+		}
+
+		return
+	}
+
 	provide.Render(tkn.AsResponse(), 201, c)
 }
 
 func deleteTokenHandler(c *gin.Context) {
 	bearer := InContext(c)
-	userID := bearer.UserID
-	appID := bearer.ApplicationID
+	var userID *uuid.UUID
+	var appID *uuid.UUID
+
+	if bearer != nil {
+		userID = bearer.UserID
+		appID = bearer.ApplicationID
+	}
+
 	if bearer == nil || ((userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) && !bearer.HasAnyPermission(common.DeleteToken, common.Sudo)) {
 		provide.RenderError("unauthorized", 401, c)
 		return

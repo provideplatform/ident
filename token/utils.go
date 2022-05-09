@@ -2,13 +2,11 @@ package token
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/provideplatform/ident/common"
-	provide "github.com/provideplatform/provide-go/common"
 )
 
 // InContext returns the previously authorized token instance in
@@ -38,39 +36,4 @@ func parseJWTTimestampClaim(claims jwt.MapClaims, claim string) *time.Time {
 		return nil
 	}
 	return retval
-}
-
-// refreshAccessToken authorizes a new access token using the refresh token
-// provided as authorization in the given gin context; the subject of a refresh
-// token is `token:<jti>`
-func refreshAccessToken(c *gin.Context) {
-	refreshToken := authorize(c)
-	if refreshToken != nil {
-		ttl := int(defaultAccessTokenTTL.Seconds())
-		accessToken := &Token{
-			ApplicationID:       refreshToken.ApplicationID,
-			UserID:              refreshToken.UserID,
-			OrganizationID:      refreshToken.OrganizationID,
-			Scope:               refreshToken.Scope,
-			Permissions:         refreshToken.Permissions,
-			ExtendedPermissions: refreshToken.ExtendedPermissions,
-			TTL:                 &ttl,
-		}
-
-		if accessToken.Vend() {
-			accessToken.Token = nil
-			provide.Render(accessToken.AsResponse(), 201, c)
-			return
-		}
-
-		var err error
-		if len(accessToken.Errors) > 0 {
-			err = fmt.Errorf("failed to authorize access token using refresh token on behalf of subject: %s; %s", *accessToken.Subject, *accessToken.Errors[0].Message)
-			common.Log.Warningf(err.Error())
-			provide.RenderError(err.Error(), 401, c)
-			return
-		}
-	}
-
-	provide.RenderError("unauthorized", 401, c)
 }

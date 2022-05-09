@@ -20,6 +20,9 @@ import (
 	util "github.com/provideplatform/provide-go/common/util"
 )
 
+const authorizationGrantClientCredentials = "client_credentials"
+const authorizationGrantAuthorizationCode = "authorization_code"
+const authorizationGrantImplicit = "implicit"
 const authorizationGrantRefreshToken = "refresh_token"
 const authorizationScopeOfflineAccess = "offline_access"
 
@@ -464,6 +467,21 @@ func (t *Token) HasAnyExtendedPermission(resource string, permissions ...common.
 	return false
 }
 
+// HasScope returns true if the given scope is authorized for the underlying token
+func (t *Token) HasScope(scope string) bool {
+	if t.Scope == nil {
+		return false
+	}
+
+	for _, scp := range strings.Split(*t.Scope, " ") {
+		if strings.EqualFold(strings.ToLower(strings.Trim(scp, " ")), strings.ToLower(scope)) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // Vend an access/refresh token pair which may be subsequently used by the bearer to access various platform resources
 // as well as obtain new access tokens; legacy API tokens are the only tokens actually written to persistent storage,
 // but that method is deprecated and all newly-issued tokens are ephemeral, in-memory only prior to be signed and
@@ -482,11 +500,10 @@ func (t *Token) Vend() bool {
 			t.ID = jti
 		}
 
-		if t.Scope != nil && *t.Scope == authorizationScopeOfflineAccess {
+		if t.HasScope(authorizationScopeOfflineAccess) {
 			if !t.vendRefreshToken() {
-				msg := "failed to vend refresh token for access/refresh token pair"
 				if len(t.Errors) > 0 {
-					msg = fmt.Sprintf("%s; %s", msg, *t.Errors[0].Message)
+					t.Errors[0].Message = common.StringOrNil(fmt.Sprintf("failed to vend refresh token; %s", *t.Errors[0].Message))
 				}
 				return false
 			}
@@ -501,6 +518,7 @@ func (t *Token) Vend() bool {
 		}
 		return t.Token != nil || t.AccessToken != nil || t.RefreshToken != nil
 	}
+
 	return false
 }
 
@@ -519,6 +537,7 @@ func (t *Token) vendRefreshToken() bool {
 		Audience:            t.Audience,
 		Issuer:              t.Issuer,
 		Subject:             common.StringOrNil(fmt.Sprintf("token:%s", t.ID.String())),
+		Scope:               t.Scope,
 		Permissions:         t.Permissions,
 		ExtendedPermissions: t.ExtendedPermissions,
 		TTL:                 &ttl,
@@ -543,7 +562,8 @@ func VendApplicationToken(
 	organizationID,
 	userID *uuid.UUID,
 	extPermissions map[string]common.Permission,
-	audience *string,
+	audience,
+	scope *string,
 ) (*Token, error) {
 	var db *gorm.DB
 	if tx != nil {
@@ -566,6 +586,7 @@ func VendApplicationToken(
 		Permissions:         common.DefaultApplicationResourcePermission,
 		ExtendedPermissions: &extPermissionsJSON,
 		Audience:            audience,
+		Scope:               scope,
 		IsRevocable:         true,
 	}
 
@@ -925,29 +946,21 @@ func (t *Token) encodeJWTNatsClaims() (map[string]interface{}, error) {
 		if permissions, permissionsOk := t.NatsClaims["permissions"].(map[string]interface{}); permissionsOk {
 			if pub, pubOk := permissions["publish"].(map[string]interface{}); pubOk {
 				if allow, allowOk := pub["allow"].([]string); allowOk {
-					for _, subject := range allow {
-						publishAllow = append(publishAllow, subject)
-					}
+					publishAllow = append(publishAllow, allow...)
 				}
 
 				if deny, denyOk := pub["deny"].([]string); denyOk {
-					for _, subject := range deny {
-						publishDeny = append(publishDeny, subject)
-					}
+					publishDeny = append(publishDeny, deny...)
 				}
 			}
 
 			if sub, subOk := permissions["subscribe"].(map[string]interface{}); subOk {
 				if allow, allowOk := sub["allow"].([]string); allowOk {
-					for _, subject := range allow {
-						subscribeAllow = append(subscribeAllow, subject)
-					}
+					subscribeAllow = append(subscribeAllow, allow...)
 				}
 
 				if deny, denyOk := sub["deny"].([]string); denyOk {
-					for _, subject := range deny {
-						subscribeDeny = append(subscribeDeny, subject)
-					}
+					subscribeDeny = append(subscribeDeny, deny...)
 				}
 			}
 
