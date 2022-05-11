@@ -78,18 +78,43 @@ func authorizeCode(c *gin.Context) {
 		return
 	}
 
+	code, err := Parse(*params.Code)
+	if err != nil {
+		provide.RenderError("invalid code", 401, c)
+		return
+	}
+
+	if code.ExpiresAt != nil {
+		if !time.Now().Before(*code.ExpiresAt) {
+			provide.RenderError("expired code", 401, c)
+			return
+		}
+	}
+
 	// FIXME!! verify client_id redirect_uri matches
 
+	// TODO-- read validity length from claims and calculate ttl...
 	var expiresIn *int64
-	if bearer.ExpiresAt != nil {
-		ttl := bearer.ExpiresAt.Unix() - time.Now().Unix()
-		expiresIn = &ttl
+	// ttl := code.ExpiresAt.Unix() - time.Now().Unix()
+	// expiresIn = &ttl
+
+	token := &Token{
+		ApplicationID:  code.ApplicationID,
+		OrganizationID: code.OrganizationID,
+		UserID:         code.UserID,
+		Scope:          code.Scope,
+		// TTL:                     expiresIn,
+	}
+
+	if !token.Vend() {
+		provide.RenderError(*token.Errors[0].Message, 401, c)
+		return
 	}
 
 	location := oauthAuthorizationGrantRedirectLocationFactory(&OAuthAuthorizationGrantParams{
-		AccessToken:  bearer.AccessToken,
+		AccessToken:  token.AccessToken,
 		ExpiresIn:    expiresIn,
-		RefreshToken: bearer.RefreshToken,
+		RefreshToken: token.RefreshToken, //.RefreshToken,
 		Scope:        params.Scope,
 		TokenType:    common.StringOrNil(oauthAuthorizationGrantDefaultTokenType),
 	})
