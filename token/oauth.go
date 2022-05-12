@@ -114,7 +114,7 @@ func authorizeCode(c *gin.Context) {
 	location := oauthAuthorizationGrantRedirectLocationFactory(&OAuthAuthorizationGrantParams{
 		AccessToken:  token.AccessToken,
 		ExpiresIn:    expiresIn,
-		RefreshToken: token.RefreshToken, //.RefreshToken,
+		RefreshToken: token.RefreshToken,
 		Scope:        params.Scope,
 		TokenType:    common.StringOrNil(oauthAuthorizationGrantDefaultTokenType),
 	})
