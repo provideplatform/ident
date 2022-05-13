@@ -2,11 +2,13 @@ package token
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	dbconf "github.com/kthomas/go-db-config"
 	"github.com/kthomas/go-redisutil"
 	"github.com/provideplatform/ident/common"
 	provide "github.com/provideplatform/provide-go/common"
@@ -88,7 +90,11 @@ func authorizeCode(c *gin.Context) {
 		}
 	}
 
-	// FIXME!! verify client_id, client_secret & redirect_uri match
+	err = verifyOAuthClient(*params.ClientID, *params.ClientSecret, params.RedirectURI)
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
 
 	challengeRaw, err := redisutil.Get(fmt.Sprintf("oauth.%s", common.SHA256(*params.Code))) // FIXME
 	if challengeRaw == nil || err != nil {
@@ -111,7 +117,6 @@ func authorizeCode(c *gin.Context) {
 		return
 	}
 
-	// TODO-- read validity length from claims and calculate ttl...
 	// var expiresIn *int64
 	// ttl := code.ExpiresAt.Unix() - time.Now().Unix()
 	// expiresIn = &ttl
@@ -132,7 +137,7 @@ func authorizeCode(c *gin.Context) {
 		UserID:         code.UserID,
 		Scope:          common.StringOrNil(strings.Trim(scope, " ")),
 		State:          code.State,
-		// TTL:                     expiresIn,
+		// TTL:            expiresIn,
 	}
 
 	if !token.Vend() {
@@ -263,4 +268,53 @@ func refreshAccessToken(c *gin.Context, scope *string) {
 	}
 
 	provide.RenderError("unauthorized", 401, c)
+}
+
+// verifyOAuthClientParams ensures the given client secret and redirect uri match the application
+func verifyOAuthClient(clientID, clientSecret string, redirectURI *string) error {
+	db := dbconf.DatabaseConnection()
+
+	out := []string{}
+	db.Table("applications").Select("config").Where("applications.id = ?", clientID).Pluck("config", &out)
+	if len(out) == 0 {
+		return fmt.Errorf("application lookup failed for OAuth client_id: %s", clientID)
+	}
+
+	config := map[string]interface{}{}
+	err := json.Unmarshal([]byte(out[0]), &config)
+	if err != nil {
+		return err
+	}
+
+	if oauth, oauthOk := config["oauth"].(map[string]interface{}); oauthOk {
+		oauthRaw, _ := json.Marshal(oauth)
+
+		var params *OAuthAuthorizationGrantParams
+		err := json.Unmarshal(oauthRaw, &params)
+		if err != nil {
+			return err
+		}
+
+		if params.ClientSecret == nil {
+			return errors.New("no client_secret configured for OAuth application")
+		}
+
+		if *params.ClientSecret != clientSecret {
+			return errors.New("client_secret mismatch")
+		}
+
+		if params.CallbackURI == nil {
+			return errors.New("no callback_uri configured for OAuth application")
+		}
+
+		if redirectURI != nil {
+			if strings.EqualFold(*params.CallbackURI, *redirectURI) {
+				return errors.New("redirect_uri mismatch")
+			}
+		}
+
+		return nil
+	}
+
+	return fmt.Errorf("no oauth config resolved for client_id: %s", clientID)
 }
