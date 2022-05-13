@@ -299,7 +299,7 @@ func verifyOAuthClient(clientID, clientSecret string, redirectURI *string) error
 			return errors.New("no client_secret configured for OAuth application")
 		}
 
-		if *params.ClientSecret != clientSecret {
+		if !strings.EqualFold(*params.ClientSecret, clientSecret) {
 			return errors.New("client_secret mismatch")
 		}
 
@@ -308,7 +308,7 @@ func verifyOAuthClient(clientID, clientSecret string, redirectURI *string) error
 		}
 
 		if redirectURI != nil {
-			if strings.EqualFold(*params.CallbackURI, *redirectURI) {
+			if !strings.EqualFold(*params.CallbackURI, *redirectURI) {
 				return errors.New("redirect_uri mismatch")
 			}
 		}
