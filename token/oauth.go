@@ -59,6 +59,11 @@ func authorizeCode(c *gin.Context) {
 		return
 	}
 
+	if params.ClientSecret == nil {
+		provide.RenderError("client_secret is required", 400, c)
+		return
+	}
+
 	if params.Code == nil {
 		provide.RenderError("code is required", 400, c)
 		return
@@ -82,7 +87,7 @@ func authorizeCode(c *gin.Context) {
 		}
 	}
 
-	// FIXME!! verify client_id redirect_uri matches
+	// FIXME!! verify client_id, client_secret & redirect_uri match
 
 	challengeRaw, err := redisutil.Get(fmt.Sprintf("oauth.%s", common.SHA256(*params.Code))) // FIXME
 	if challengeRaw == nil || err != nil {
@@ -97,9 +102,8 @@ func authorizeCode(c *gin.Context) {
 		return
 	}
 
-	// FIXME!! check code_verifier against cached code_challenge...
 	if strings.EqualFold(*challenge.CodeChallengeMethod, "S256") && !strings.EqualFold(common.SHA256(*params.CodeVerifier), *challenge.CodeChallenge) {
-		provide.RenderError("PKCE verifier code failed failed validation", 401, c)
+		provide.RenderError("PKCE verifier code failed validation", 401, c)
 		return
 	} else if strings.EqualFold(*challenge.CodeChallengeMethod, "plain") && !strings.EqualFold(*params.CodeVerifier, *challenge.CodeChallenge) {
 		provide.RenderError("PKCE verifier code failed validation", 401, c)
