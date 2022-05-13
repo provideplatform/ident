@@ -137,7 +137,7 @@ func TestListApplicationUsers(t *testing.T) {
 			}
 		} else {
 			// let's add this user to the application as the creating user is automatically added...
-			err := provide.CreateApplicationUser(*appToken.Token, app.ID.String(), map[string]interface{}{
+			err := provide.CreateApplicationUser(*appToken.AccessToken, app.ID.String(), map[string]interface{}{
 				"user_id": user.ID.String(),
 			})
 			if err != nil {
@@ -153,7 +153,7 @@ func TestListApplicationUsers(t *testing.T) {
 		return
 	}
 
-	users, err = provide.ListApplicationUsers(string(*appToken.Token), app.ID.String(), map[string]interface{}{})
+	users, err = provide.ListApplicationUsers(string(*appToken.AccessToken), app.ID.String(), map[string]interface{}{})
 	if err != nil {
 		t.Errorf("error getting users list %s", err.Error())
 		return
@@ -812,7 +812,7 @@ func TestCreateApplicationOrganization(t *testing.T) {
 		}
 
 		path := fmt.Sprintf("applications/%s/organizations", app.ID)
-		status, _, err := provide.InitIdentService(appToken.Token).Post(path, map[string]interface{}{
+		status, _, err := provide.InitIdentService(appToken.AccessToken).Post(path, map[string]interface{}{
 			"organization_id": org.ID,
 		})
 		if err != nil {
@@ -897,7 +897,7 @@ func UpdateApplicationOrganization(t *testing.T) {
 		}
 
 		path := fmt.Sprintf("applications/%s/organizations", app.ID)
-		status, _, err := provide.InitIdentService(appToken.Token).Post(path, map[string]interface{}{
+		status, _, err := provide.InitIdentService(appToken.AccessToken).Post(path, map[string]interface{}{
 			"organization_id": org.ID,
 		})
 		if err != nil {
@@ -910,7 +910,7 @@ func UpdateApplicationOrganization(t *testing.T) {
 
 		//update application organization
 		path = fmt.Sprintf("applications/%s/organizations/%s", app.ID, org.ID)
-		status, _, err = provide.InitIdentService(appToken.Token).Put(path, map[string]interface{}{
+		status, _, err = provide.InitIdentService(appToken.AccessToken).Put(path, map[string]interface{}{
 			"organization_id": org.ID,
 		})
 		if err != nil {
@@ -995,7 +995,7 @@ func TestDeleteApplicationOrganizationWithApplicationAPIToken(t *testing.T) {
 		}
 
 		path := fmt.Sprintf("applications/%s/organizations", app.ID)
-		status, _, err := provide.InitIdentService(appToken.Token).Post(path, map[string]interface{}{
+		status, _, err := provide.InitIdentService(appToken.AccessToken).Post(path, map[string]interface{}{
 			"organization_id": org.ID,
 		})
 		if err != nil {
@@ -1006,7 +1006,7 @@ func TestDeleteApplicationOrganizationWithApplicationAPIToken(t *testing.T) {
 			t.Errorf("invalid status returned from add org to app. expected 204, got %d", status)
 		}
 
-		err = provide.DeleteApplicationOrganization(*appToken.Token, app.ID.String(), org.ID.String())
+		err = provide.DeleteApplicationOrganization(*appToken.AccessToken, app.ID.String(), org.ID.String())
 		if err != nil {
 			t.Errorf("failed to delete application organization; status: %v; %s", status, err.Error())
 			return
@@ -1082,7 +1082,7 @@ func TestCreateApplicationUser(t *testing.T) {
 			}
 		} else {
 			// let's add this user to the application as the creating user is automatically added...
-			err := provide.CreateApplicationUser(*appToken.Token, app.ID.String(), map[string]interface{}{
+			err := provide.CreateApplicationUser(*appToken.AccessToken, app.ID.String(), map[string]interface{}{
 				"user_id": user.ID.String(),
 			})
 			if err != nil {
