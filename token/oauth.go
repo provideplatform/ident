@@ -25,6 +25,7 @@ const oauthAuthorizationGrantDefaultTokenType = "bearer"
 type OAuthAuthorizationGrantParams struct {
 	AccessToken         *string `json:"access_token,omitempty"`
 	AuthorizeURI        *string `json:"authorize_uri,omitempty"`
+	CallbackURI         *string `json:"callback_uri,omitempty"`
 	ClientID            *string `json:"client_id,omitempty"`
 	ClientSecret        *string `json:"client_secret,omitempty"`
 	Code                *string `json:"code,omitempty"`
