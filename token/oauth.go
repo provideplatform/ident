@@ -58,11 +58,6 @@ func authorizeCode(c *gin.Context) {
 		return
 	}
 
-	if params.ClientSecret == nil {
-		provide.RenderError("client_secret is required", 400, c)
-		return
-	}
-
 	if params.Code == nil {
 		provide.RenderError("code is required", 400, c)
 		return
@@ -92,6 +87,7 @@ func authorizeCode(c *gin.Context) {
 	}
 
 	// FIXME!! verify client_id redirect_uri matches
+	// FIXME!! check code_verifier against cached code_challenge...
 
 	// TODO-- read validity length from claims and calculate ttl...
 	var expiresIn *int64
@@ -136,11 +132,6 @@ func authorizeClientCredentials(c *gin.Context) {
 
 	if params.ClientID == nil {
 		provide.RenderError("client_id is required", 400, c)
-		return
-	}
-
-	if params.ClientSecret == nil {
-		provide.RenderError("client_secret is required", 400, c)
 		return
 	}
 
