@@ -114,7 +114,7 @@ func authorizeCode(c *gin.Context) {
 		return
 	}
 
-	c.Redirect(302, *location)
+	provide.Render(token, 201, c)
 }
 
 // authorizeClientCredentials attempts to authorize a `client_credentials` OAuth grant type
