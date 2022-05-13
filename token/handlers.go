@@ -1,8 +1,10 @@
 package token
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 
 	"github.com/gin-gonic/gin"
 	dbconf "github.com/kthomas/go-db-config"
@@ -64,6 +66,7 @@ func createTokenHandler(c *gin.Context) {
 		provide.RenderError(err.Error(), 400, c)
 		return
 	}
+	c.Request.Body = ioutil.NopCloser(bytes.NewReader(buf))
 
 	params := map[string]interface{}{}
 	err = json.Unmarshal(buf, &params)
