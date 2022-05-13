@@ -1,3 +1,4 @@
+//go:build integration || ident
 // +build integration ident
 
 package integration
@@ -221,7 +222,7 @@ func TestInviteApplicationUserWithApplicationAPIToken(t *testing.T) {
 	inviteTestId, _ := uuid.NewV4()
 	inviteEmail := fmt.Sprintf("%s@example.local", inviteTestId.String())
 
-	err = provide.CreateInvitation(*apptkn.Token, map[string]interface{}{
+	err = provide.CreateInvitation(*apptkn.AccessToken, map[string]interface{}{
 		"email":      inviteEmail,
 		"first_name": "A",
 		"last_name":  "User",
@@ -231,7 +232,7 @@ func TestInviteApplicationUserWithApplicationAPIToken(t *testing.T) {
 		return
 	}
 
-	invitations, err := provide.ListApplicationInvitations(*apptkn.Token, app.ID.String(), map[string]interface{}{})
+	invitations, err := provide.ListApplicationInvitations(*apptkn.AccessToken, app.ID.String(), map[string]interface{}{})
 	if err != nil {
 		t.Errorf("listing app invitations failed for application id %s; %s", app.ID, err.Error())
 		return
@@ -279,7 +280,7 @@ func TestInviteOrganizationUserWithOrganizationAPIToken(t *testing.T) {
 	inviteTestId, _ := uuid.NewV4()
 	inviteEmail := fmt.Sprintf("%s@example.local", inviteTestId.String())
 
-	err = provide.CreateInvitation(*orgtkn.Token, map[string]interface{}{
+	err = provide.CreateInvitation(*orgtkn.AccessToken, map[string]interface{}{
 		"email":      inviteEmail,
 		"first_name": "A",
 		"last_name":  "User",
@@ -289,7 +290,7 @@ func TestInviteOrganizationUserWithOrganizationAPIToken(t *testing.T) {
 		return
 	}
 
-	invitations, err := provide.ListOrganizationInvitations(*orgtkn.Token, org.ID.String(), map[string]interface{}{})
+	invitations, err := provide.ListOrganizationInvitations(*orgtkn.AccessToken, org.ID.String(), map[string]interface{}{})
 	if err != nil {
 		t.Errorf("listing org invitations failed for organization id %s; %s", org.ID, err.Error())
 		return

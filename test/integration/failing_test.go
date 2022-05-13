@@ -1,3 +1,4 @@
+//go:build failing || ident
 // +build failing ident
 
 package integration
@@ -53,11 +54,11 @@ func TestOrganizationDetailsWithOrgToken(t *testing.T) {
 	}
 
 	t.Logf("user id: %s", user.ID)
-	t.Logf("authy auth: %s", *auth.Token.Token)
+	t.Logf("authy auth: %s", *auth.Token.AccessToken)
 
 	for counter, tc := range tt {
 		// create the orgs all at once, because if we create them one at a time, we might not catch the bug (always returning latest org, maybe)
-		org, err := provide.CreateOrganization(string(*auth.Token.Token), map[string]interface{}{
+		org, err := provide.CreateOrganization(string(*auth.Token.AccessToken), map[string]interface{}{
 			"name":        tc.name,
 			"description": tc.description,
 		})
@@ -76,12 +77,12 @@ func TestOrganizationDetailsWithOrgToken(t *testing.T) {
 		// get the org details
 		t.Logf("getting organisation details for org %s", tc_deets.identifier.String())
 
-		orgToken, err := orgTokenFactory(*auth.Token.Token, *tc_deets.identifier)
+		orgToken, err := orgTokenFactory(*auth.Token.AccessToken, *tc_deets.identifier)
 		if err != nil {
 			t.Errorf("error generating org token for org %s", tc_deets.identifier.String())
 		}
 
-		deets, err := provide.GetOrganizationDetails(*orgToken.Token, tc_deets.identifier.String(), map[string]interface{}{})
+		deets, err := provide.GetOrganizationDetails(*orgToken.AccessToken, tc_deets.identifier.String(), map[string]interface{}{})
 		if err != nil {
 			t.Errorf("error getting organization details. Error: %s", err.Error())
 			return
