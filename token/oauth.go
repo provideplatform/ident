@@ -159,7 +159,7 @@ func oauthAuthorizationGrantRedirectLocationFactory(params *OAuthAuthorizationGr
 	}
 
 	if params.Code != nil {
-		location = fmt.Sprintf("%s&code=%s", location, *params.ResponseType)
+		location = fmt.Sprintf("%s&code=%s", location, *params.Code)
 	}
 
 	if params.CodeChallenge != nil {
