@@ -102,18 +102,6 @@ func authorizeCode(c *gin.Context) {
 		return
 	}
 
-	location := oauthAuthorizationGrantRedirectLocationFactory(&OAuthAuthorizationGrantParams{
-		AccessToken:  token.AccessToken,
-		ExpiresIn:    expiresIn,
-		RefreshToken: token.RefreshToken,
-		Scope:        params.Scope,
-		TokenType:    common.StringOrNil(oauthAuthorizationGrantDefaultTokenType),
-	})
-	if location == nil {
-		provide.RenderError("failed to resolve redirect uri", 500, c)
-		return
-	}
-
 	provide.Render(token, 201, c)
 }
 
