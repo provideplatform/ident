@@ -1,3 +1,4 @@
+//go:build integration || ident
 // +build integration ident
 
 package integration
@@ -98,7 +99,7 @@ func TestDeleteOrganizationUser(t *testing.T) {
 		return
 	}
 	// associate org to app, using the app token
-	err = apporgFactory(*appToken.Token, Application.ID.String(), Organization.ID.String())
+	err = apporgFactory(*appToken.AccessToken, Application.ID.String(), Organization.ID.String())
 	if err != nil {
 		t.Errorf("error associating org %s to app %s", Organization.ID, Application.ID)
 		return
@@ -129,14 +130,14 @@ func TestDeleteOrganizationUser(t *testing.T) {
 	// now we'll do stuff and stuff with them...
 
 	//1. let's try deleting an app org user with an app token
-	err = provide.DeleteOrganizationUser(*appToken.Token, Organization.ID.String(), users[0].userID.String())
+	err = provide.DeleteOrganizationUser(*appToken.AccessToken, Organization.ID.String(), users[0].userID.String())
 	if err != nil {
 		t.Errorf("error deleting organization user %s with app token. Error: %s", users[0].userID.String(), err.Error())
 		return
 	}
 
 	//2. let's try deleting an app org user with an org token
-	err = provide.DeleteOrganizationUser(*orgToken.Token, Organization.ID.String(), users[1].userID.String())
+	err = provide.DeleteOrganizationUser(*orgToken.AccessToken, Organization.ID.String(), users[1].userID.String())
 	if err != nil {
 		t.Errorf("error deleting organization user %s with org token. Error: %s", users[1].userID.String(), err.Error())
 		return
@@ -212,7 +213,7 @@ func TestListOrganizationUsersWithNoUsersInOrg(t *testing.T) {
 		t.Errorf("Error deleting user %s for org %s", orgUser.ID, Organization.ID)
 	}
 
-	users, err := provide.ListOrganizationUsers(*orgToken.Token, Organization.ID.String(), map[string]interface{}{})
+	users, err := provide.ListOrganizationUsers(*orgToken.AccessToken, Organization.ID.String(), map[string]interface{}{})
 	if err != nil {
 		t.Errorf("error getting organization users list %s", err.Error())
 		return
@@ -336,7 +337,7 @@ func TestListOrganizationUsers(t *testing.T) {
 		}
 
 		if organizingUserToken == nil {
-			organizingUserToken = auth.Token
+			organizingUserToken = auth.AccessToken
 		}
 
 		// Create an Organization if it doesn't exist

@@ -1,3 +1,4 @@
+//go:build integration || ident
 // +build integration ident
 
 package integration
@@ -1147,7 +1148,7 @@ func TestDeleteApplicationUserWithApplicationAPIToken(t *testing.T) {
 	}
 
 	// let's add this user to the application as the creating user is automatically added...
-	err = provide.CreateApplicationUser(*apptkn.Token, app.ID.String(), map[string]interface{}{
+	err = provide.CreateApplicationUser(*apptkn.AccessToken, app.ID.String(), map[string]interface{}{
 		"user_id": user.ID.String(),
 	})
 	if err != nil {
@@ -1156,13 +1157,13 @@ func TestDeleteApplicationUserWithApplicationAPIToken(t *testing.T) {
 	}
 
 	//now we'll delete the user
-	err = provide.DeleteApplicationUser(*apptkn.Token, app.ID.String(), user.ID.String())
+	err = provide.DeleteApplicationUser(*apptkn.AccessToken, app.ID.String(), user.ID.String())
 	if err != nil {
 		t.Errorf("failed to delete user %s from application %s; %s", user.ID, app.ID.String(), err.Error())
 		return
 	}
 
-	users, err := provide.ListApplicationUsers(string(*apptkn.Token), app.ID.String(), map[string]interface{}{})
+	users, err := provide.ListApplicationUsers(string(*apptkn.AccessToken), app.ID.String(), map[string]interface{}{})
 	if err != nil {
 		t.Errorf("error getting users list %s", err.Error())
 		return
