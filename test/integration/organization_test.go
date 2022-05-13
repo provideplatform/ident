@@ -1,3 +1,4 @@
+//go:build integration || ident
 // +build integration ident
 
 package integration
@@ -226,7 +227,7 @@ func TestOrganizationDetailsWithOrgToken(t *testing.T) {
 			t.Errorf("error generating org token for org %s", tc_deets.identifier.String())
 		}
 
-		deets, err := provide.GetOrganizationDetails(*orgToken.Token, tc_deets.identifier.String(), map[string]interface{}{})
+		deets, err := provide.GetOrganizationDetails(*orgToken.AccessToken, tc_deets.identifier.String(), map[string]interface{}{})
 		if err != nil {
 			t.Errorf("error getting organization details. Error: %s", err.Error())
 			return
