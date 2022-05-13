@@ -426,7 +426,7 @@ func (t *Token) AsResponse() *Response {
 		resp.RefreshToken = t.RefreshToken
 	}
 
-	if resp.RefreshToken == nil && t.Token != nil {
+	if resp.RefreshToken == nil && t.AccessToken == nil && t.Token != nil {
 		resp.Token = t.Token // deprecated
 	} else if t.AccessToken != nil {
 		resp.AccessToken = t.AccessToken
