@@ -64,6 +64,7 @@ type Token struct {
 	AccessToken  *string `sql:"-" json:"access_token,omitempty"`
 	RefreshToken *string `sql:"-" json:"refresh_token,omitempty"`
 	Scope        *string `sql:"-" json:"scope,omitempty"`
+	State        *string `sql:"-" json:"state,omitempty"`
 
 	// Ephemeral JWT header fields and claims; these are here for convenience and are not
 	// always populated, even if they exist on the underlying token
@@ -95,6 +96,7 @@ type Response struct {
 	IDToken      *string    `json:"id_token,omitempty"`
 	ExpiresIn    *int64     `json:"expires_in,omitempty"`
 	Scope        *string    `sql:"-" json:"scope,omitempty"`
+	State        *string    `sql:"-" json:"state,omitempty"`
 	Token        *string    `json:"token,omitempty"` // token
 	Permissions  *uint32    `json:"permissions,omitempty"`
 }
@@ -419,6 +421,7 @@ func (t *Token) AsResponse() *Response {
 		ID:          &t.ID,
 		ExpiresIn:   expiresIn,
 		Scope:       t.Scope,
+		State:       t.State,
 		Permissions: &permissions,
 	}
 
@@ -546,6 +549,7 @@ func (t *Token) vendRefreshToken() bool {
 		Issuer:              t.Issuer,
 		Subject:             common.StringOrNil(fmt.Sprintf("token:%s", t.ID.String())),
 		Scope:               scope,
+		State:               t.State,
 		Permissions:         t.Permissions,
 		ExtendedPermissions: t.ExtendedPermissions,
 		TTL:                 &ttl,
@@ -571,7 +575,8 @@ func VendApplicationToken(
 	userID *uuid.UUID,
 	extPermissions map[string]common.Permission,
 	audience,
-	scope *string,
+	scope,
+	state *string,
 ) (*Token, error) {
 	var db *gorm.DB
 	if tx != nil {
@@ -595,6 +600,7 @@ func VendApplicationToken(
 		ExtendedPermissions: &extPermissionsJSON,
 		Audience:            audience,
 		Scope:               scope,
+		State:               state,
 		IsRevocable:         true,
 	}
 

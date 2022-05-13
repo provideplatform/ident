@@ -80,6 +80,11 @@ func createTokenHandler(c *gin.Context) {
 		scope = &reqScope
 	}
 
+	var state *string
+	if reqState, reqStateOk := params["state"].(string); reqStateOk {
+		state = &reqState
+	}
+
 	var grantType *string
 	if reqGrantType, reqGrantTypeOk := params["grant_type"].(string); reqGrantTypeOk {
 		grantType = &reqGrantType
@@ -176,12 +181,13 @@ func createTokenHandler(c *gin.Context) {
 		Permissions:    permissions,
 		UserID:         userID,
 		Scope:          scope,
+		State:          state,
 	}
 
 	if appID != nil && !tkn.HasScope(authorizationScopeOfflineAccess) {
 		// overwrite tkn
 		db := dbconf.DatabaseConnection()
-		tkn, err = VendApplicationToken(db, appID, orgID, userID, nil, audience, scope)
+		tkn, err = VendApplicationToken(db, appID, orgID, userID, nil, audience, scope, state)
 		if err != nil {
 			provide.RenderError(err.Error(), 401, c)
 			return
@@ -292,7 +298,7 @@ func oauthAuthorizeHandler(c *gin.Context) {
 	}
 
 	db := dbconf.DatabaseConnection()
-	code, err = VendApplicationToken(db, &appID, nil, nil, nil, nil, scope)
+	code, err = VendApplicationToken(db, &appID, nil, nil, nil, nil, scope, grant.State)
 	if err != nil {
 		provide.RenderError(err.Error(), 401, c)
 		return

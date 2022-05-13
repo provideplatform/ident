@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kthomas/go-redisutil"
 	"github.com/provideplatform/ident/common"
 	provide "github.com/provideplatform/provide-go/common"
 )
@@ -81,8 +82,25 @@ func authorizeCode(c *gin.Context) {
 		}
 	}
 
+	// FIXME!! cache and re-read an object...
+	challenge, err := redisutil.Get(fmt.Sprintf("oauth.%s", common.SHA256(*params.Code))) // FIXME
+	if challenge == nil || err != nil {
+		provide.RenderError("invalid code", 401, c)
+		return
+	}
+
 	// FIXME!! verify client_id redirect_uri matches
+
+	challengeMethod := "S256" // FIXME
+	// challengeMethod, err := redisutil.Get(fmt.Sprintf("oauth.%s.methd", common.SHA256(*params.Code))) // FIXME
 	// FIXME!! check code_verifier against cached code_challenge...
+	if strings.EqualFold(challengeMethod, "S256") && !strings.EqualFold(common.SHA256(*params.CodeVerifier), *challenge) {
+		provide.RenderError("PKCE verifier code failed failed validation", 401, c)
+		return
+	} else if strings.EqualFold(challengeMethod, "plain") && !strings.EqualFold(*params.CodeVerifier, *challenge) {
+		provide.RenderError("PKCE verifier code failed validation", 401, c)
+		return
+	}
 
 	// TODO-- read validity length from claims and calculate ttl...
 	// var expiresIn *int64
