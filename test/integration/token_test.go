@@ -1,3 +1,4 @@
+//go:build integration || ident
 // +build integration ident
 
 package integration
@@ -143,13 +144,8 @@ func TestAppRevocableToken(t *testing.T) {
 		return
 	}
 
-	if token.Token == nil {
+	if token.AccessToken == nil {
 		t.Error("token not returned for revocable application api token")
-		return
-	}
-
-	if token.AccessToken != nil {
-		t.Error("access token returned for revocable application api token")
 		return
 	}
 
