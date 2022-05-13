@@ -68,11 +68,6 @@ func authorizeCode(c *gin.Context) {
 		return
 	}
 
-	if params.RedirectURI == nil {
-		provide.RenderError("redirect_uri is required", 422, c)
-		return
-	}
-
 	code, err := Parse(*params.Code)
 	if err != nil {
 		provide.RenderError("invalid code", 401, c)
