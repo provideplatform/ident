@@ -337,7 +337,7 @@ func TestListOrganizationUsers(t *testing.T) {
 		}
 
 		if organizingUserToken == nil {
-			organizingUserToken = auth.AccessToken
+			organizingUserToken = auth.Token.AccessToken
 		}
 
 		// Create an Organization if it doesn't exist
