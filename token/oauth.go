@@ -98,10 +98,10 @@ func authorizeCode(c *gin.Context) {
 	}
 
 	// FIXME!! check code_verifier against cached code_challenge...
-	if strings.EqualFold(*challenge.CodeChallengeMethod, "S256") && !strings.EqualFold(common.SHA256(*params.CodeVerifier), *challenge.CodeVerifier) {
+	if strings.EqualFold(*challenge.CodeChallengeMethod, "S256") && !strings.EqualFold(common.SHA256(*params.CodeVerifier), *challenge.CodeChallenge) {
 		provide.RenderError("PKCE verifier code failed failed validation", 401, c)
 		return
-	} else if strings.EqualFold(*challenge.CodeChallengeMethod, "plain") && !strings.EqualFold(*params.CodeVerifier, *challenge.CodeVerifier) {
+	} else if strings.EqualFold(*challenge.CodeChallengeMethod, "plain") && !strings.EqualFold(*params.CodeVerifier, *challenge.CodeChallenge) {
 		provide.RenderError("PKCE verifier code failed validation", 401, c)
 		return
 	}
