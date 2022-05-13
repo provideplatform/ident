@@ -116,11 +116,19 @@ func authorizeCode(c *gin.Context) {
 	// ttl := code.ExpiresAt.Unix() - time.Now().Unix()
 	// expiresIn = &ttl
 
+	var scope string
+	if code.Scope != nil {
+		if !strings.Contains(*code.Scope, "offline_access") {
+			scope = "offline_access"
+		}
+		scope = fmt.Sprintf("%s %s", scope, *code.Scope)
+	}
+
 	token := &Token{
 		ApplicationID:  code.ApplicationID,
 		OrganizationID: code.OrganizationID,
 		UserID:         code.UserID,
-		Scope:          code.Scope,
+		Scope:          &scope,
 		State:          code.State,
 		// TTL:                     expiresIn,
 	}
