@@ -85,7 +85,7 @@ func authorizeCode(c *gin.Context) {
 	// FIXME!! check code_verifier against cached code_challenge...
 
 	// TODO-- read validity length from claims and calculate ttl...
-	var expiresIn *int64
+	// var expiresIn *int64
 	// ttl := code.ExpiresAt.Unix() - time.Now().Unix()
 	// expiresIn = &ttl
 
