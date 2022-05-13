@@ -711,7 +711,7 @@ func TestApplicationOrganizationList(t *testing.T) {
 		}
 
 		path := fmt.Sprintf("applications/%s/organizations", app.ID)
-		status, _, err := provide.InitIdentService(appToken.Token).Post(path, map[string]interface{}{
+		status, _, err := provide.InitIdentService(appToken.AccessToken).Post(path, map[string]interface{}{
 			"organization_id": org.ID,
 		})
 		if err != nil {
@@ -722,7 +722,7 @@ func TestApplicationOrganizationList(t *testing.T) {
 			t.Errorf("invalid status returned from add org to app. expected 204, got %d", status)
 		}
 
-		listAppOrgs, err := provide.ListApplicationOrganizations(*appToken.Token, app.ID.String(), map[string]interface{}{})
+		listAppOrgs, err := provide.ListApplicationOrganizations(*appToken.AccessToken, app.ID.String(), map[string]interface{}{})
 		if err != nil {
 			t.Errorf("error getting application organizations. Error: %s", err.Error())
 		}
