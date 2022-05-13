@@ -292,10 +292,36 @@ func oauthAuthorizeHandler(c *gin.Context) {
 		State:               common.StringOrNil(c.Query("state")),
 	}
 
+	if grant.CodeChallenge == nil {
+		provide.RenderError("code_challenge is required", 422, c)
+		return
+	}
+
+	if grant.CodeChallengeMethod == nil {
+		provide.RenderError("code_challenge_method is required", 422, c)
+		return
+	}
+
+	if grant.RedirectURI == nil {
+		provide.RenderError("redirect_uri is required", 422, c)
+		return
+	}
+
+	if grant.Scope == nil {
+		provide.RenderError("scope is required", 422, c)
+		return
+	}
+
+	if grant.State == nil {
+		provide.RenderError("state is required", 422, c)
+		return
+	}
+
 	code := &Token{
 		ApplicationID:           &appID,
 		OAuthAuthorizationGrant: grant,
 		Scope:                   scope,
+		State:                   grant.State,
 		TTL:                     &ttl,
 	}
 
