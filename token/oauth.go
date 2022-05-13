@@ -82,22 +82,26 @@ func authorizeCode(c *gin.Context) {
 		}
 	}
 
-	// FIXME!! cache and re-read an object...
-	challenge, err := redisutil.Get(fmt.Sprintf("oauth.%s", common.SHA256(*params.Code))) // FIXME
-	if challenge == nil || err != nil {
+	// FIXME!! verify client_id redirect_uri matches
+
+	challengeRaw, err := redisutil.Get(fmt.Sprintf("oauth.%s", common.SHA256(*params.Code))) // FIXME
+	if challengeRaw == nil || err != nil {
 		provide.RenderError("invalid code", 401, c)
 		return
 	}
 
-	// FIXME!! verify client_id redirect_uri matches
+	var challenge *OAuthAuthorizationGrantParams
+	err = json.Unmarshal([]byte(*challengeRaw), &challenge)
+	if err != nil {
+		provide.RenderError("invalid code", 401, c)
+		return
+	}
 
-	challengeMethod := "S256" // FIXME
-	// challengeMethod, err := redisutil.Get(fmt.Sprintf("oauth.%s.methd", common.SHA256(*params.Code))) // FIXME
 	// FIXME!! check code_verifier against cached code_challenge...
-	if strings.EqualFold(challengeMethod, "S256") && !strings.EqualFold(common.SHA256(*params.CodeVerifier), *challenge) {
+	if strings.EqualFold(*challenge.CodeChallengeMethod, "S256") && !strings.EqualFold(common.SHA256(*params.CodeVerifier), *challenge.CodeVerifier) {
 		provide.RenderError("PKCE verifier code failed failed validation", 401, c)
 		return
-	} else if strings.EqualFold(challengeMethod, "plain") && !strings.EqualFold(*params.CodeVerifier, *challenge) {
+	} else if strings.EqualFold(*challenge.CodeChallengeMethod, "plain") && !strings.EqualFold(*params.CodeVerifier, *challenge.CodeVerifier) {
 		provide.RenderError("PKCE verifier code failed validation", 401, c)
 		return
 	}
@@ -112,6 +116,7 @@ func authorizeCode(c *gin.Context) {
 		OrganizationID: code.OrganizationID,
 		UserID:         code.UserID,
 		Scope:          code.Scope,
+		State:          code.State,
 		// TTL:                     expiresIn,
 	}
 

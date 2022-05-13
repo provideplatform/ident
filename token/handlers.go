@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	dbconf "github.com/kthomas/go-db-config"
+	"github.com/kthomas/go-redisutil"
 	uuid "github.com/kthomas/go.uuid"
 
 	// "github.com/provideplatform/ident/application"
@@ -301,6 +303,19 @@ func oauthAuthorizeHandler(c *gin.Context) {
 	code, err = VendApplicationToken(db, &appID, nil, nil, nil, nil, scope, grant.State)
 	if err != nil {
 		provide.RenderError(err.Error(), 401, c)
+		return
+	}
+
+	grantRaw, err := json.Marshal(grant)
+	if err != nil {
+		provide.RenderError(err.Error(), 500, c)
+		return
+	}
+
+	redisTTL, _ := time.ParseDuration(fmt.Sprintf("%ds", ttl))
+	err = redisutil.Set(fmt.Sprintf("oauth.%s", common.SHA256(*code.AccessToken)), grantRaw, &redisTTL)
+	if err != nil {
+		provide.RenderError(err.Error(), 500, c)
 		return
 	}
 
