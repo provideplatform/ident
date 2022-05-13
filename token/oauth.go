@@ -134,7 +134,7 @@ func authorizeClientCredentials(c *gin.Context) {
 }
 
 func oauthAuthorizationGrantRedirectLocationFactory(params *OAuthAuthorizationGrantParams) *string {
-	if params.ClientID == nil || params.RedirectURI == nil {
+	if params.ClientID == nil {
 		return nil
 	}
 
@@ -154,6 +154,10 @@ func oauthAuthorizationGrantRedirectLocationFactory(params *OAuthAuthorizationGr
 
 	if params.CodeChallengeMethod != nil {
 		location = fmt.Sprintf("%s&code_challenge_method=%s", location, *params.CodeChallengeMethod)
+	}
+
+	if params.RedirectURI != nil {
+		location = fmt.Sprintf("%s&redirect_uri=%s", location, *params.RedirectURI)
 	}
 
 	if params.Scope != nil {
