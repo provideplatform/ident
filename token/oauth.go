@@ -118,17 +118,19 @@ func authorizeCode(c *gin.Context) {
 
 	var scope string
 	if code.Scope != nil {
-		if !strings.Contains(*code.Scope, "offline_access") {
-			scope = "offline_access"
+		if !strings.Contains(*code.Scope, authorizationScopeOfflineAccess) {
+			scope = authorizationScopeOfflineAccess
 		}
 		scope = fmt.Sprintf("%s %s", scope, *code.Scope)
+	} else {
+		scope = authorizationScopeOfflineAccess
 	}
 
 	token := &Token{
 		ApplicationID:  code.ApplicationID,
 		OrganizationID: code.OrganizationID,
 		UserID:         code.UserID,
-		Scope:          &scope,
+		Scope:          common.StringOrNil(strings.Trim(scope, " ")),
 		State:          code.State,
 		// TTL:                     expiresIn,
 	}
