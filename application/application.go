@@ -256,11 +256,8 @@ func (app *Application) addOrganization(tx *gorm.DB, org organization.Organizati
 		common.Log.Debugf("added organization %s to application: %s", org.ID, app.ID)
 		db.Exec("DELETE FROM applications_users WHERE applications_users.application_id=? AND applications_users.user_id IN (SELECT user_id FROM organizations_users WHERE organizations_users.organization_id=?)", app.ID, org.ID)
 
-		cfg := app.ParseConfig()
-		if isBaseline, baselinedOk := cfg["baselined"].(bool); baselinedOk && isBaseline {
-			go app.initOrgRegistration(db, org.ID)
-			go app.initImplicitDiffieHellmanKeyExchange(db, org.ID)
-		}
+		go app.initOrgRegistration(db, org.ID)
+		go app.initImplicitDiffieHellmanKeyExchange(db, org.ID)
 	} else {
 		common.Log.Warningf("failed to add organization %s to application: %s", org.ID, app.ID)
 	}
