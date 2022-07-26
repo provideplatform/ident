@@ -400,16 +400,24 @@ func (app *Application) Create(tx *gorm.DB) bool {
 			success := rowsAffected > 0
 			if success {
 				usr := user.Find(app.UserID)
-				if usr != nil && app.addUser(db, *usr, common.DefaultApplicationUserResourcePermission) {
-					if app.OrganizationID != nil {
-						org := organization.Find(*app.OrganizationID)
-						if org != nil && app.addOrganization(db, *org, common.DefaultApplicationOrganizationPermission) {
-							db.Commit()
-						}
-					} else {
-						db.Commit()
+				if usr != nil && !app.addUser(db, *usr, common.DefaultApplicationUserResourcePermission) {
+					app.Errors = append(app.Errors, &provide.Error{
+						Message: common.StringOrNil(fmt.Sprintf("failed to add application user: %s", usr.ID)),
+					})
+					return false
+				}
+
+				if app.OrganizationID != nil {
+					org := organization.Find(*app.OrganizationID)
+					if org != nil && !app.addOrganization(db, *org, common.DefaultApplicationOrganizationPermission) {
+						app.Errors = append(app.Errors, &provide.Error{
+							Message: common.StringOrNil(fmt.Sprintf("failed to add application organization: %s", org.ID)),
+						})
+						return false
 					}
 				}
+
+				db.Commit()
 
 				if common.DispatchSiaNotifications {
 					payload, _ := json.Marshal(map[string]interface{}{
