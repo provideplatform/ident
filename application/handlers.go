@@ -586,11 +586,6 @@ func applicationInvitationsListHandler(c *gin.Context) {
 		return
 	}
 
-	if userID != nil && *userID != app.UserID {
-		provide.RenderError("forbidden", 403, c)
-		return
-	}
-
 	invitations := app.pendingInvitations() // FIXME-- paginate the in-memory invitations list within redis
 	invitedUsers := make([]*user.User, 0)
 	for _, invite := range invitations {
