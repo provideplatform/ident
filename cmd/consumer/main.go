@@ -48,7 +48,7 @@ func init() {
 		return
 	}
 
-	util.RequireJWT()
+	common.JWTKeypairs = util.RequireJWT()
 	pgputil.RequirePGP()
 	redisutil.RequireRedis()
 }
