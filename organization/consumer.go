@@ -199,7 +199,7 @@ func consumeCreatedOrganizationMsg(msg *nats.Msg) {
 		return
 	}
 
-	vlt, err := vault.CreateVault(*orgToken.Token, map[string]interface{}{
+	vlt, err := vault.CreateVault(*orgToken.AccessToken, map[string]interface{}{
 		"name":            fmt.Sprintf("%s vault", *organization.Name),
 		"description":     "default organizational keystore",
 		"organization_id": organizationID,
