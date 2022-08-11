@@ -33,6 +33,8 @@ import (
 	util "github.com/provideplatform/provide-go/common/util"
 )
 
+const jwtVerifierRefreshInterval = 60 * time.Second
+const jwtVerifierGracePeriod = 60 * time.Second
 const natsStreamingSubscriptionStatusTickerInterval = 5 * time.Second
 const natsStreamingSubscriptionStatusSleepInterval = 250 * time.Millisecond
 
@@ -59,6 +61,10 @@ func main() {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 	shutdownCtx, cancelF = context.WithCancel(context.Background())
 
+	startAt := time.Now()
+	gracePeriodEndAt := startAt.Add(jwtVerifierGracePeriod)
+	verifiersRefreshedAt := time.Now()
+
 	common.Log.Debugf("running dedicated NATS streaming subscription consumer main()")
 	timer := time.NewTicker(natsStreamingSubscriptionStatusTickerInterval)
 	defer timer.Stop()
@@ -67,6 +73,14 @@ func main() {
 		select {
 		case <-timer.C:
 			// TODO: check NATS subscription statuses
+
+			now := time.Now()
+			if now.Before(gracePeriodEndAt) {
+				util.RequireJWTVerifiers()
+			} else if now.After(verifiersRefreshedAt.Add(jwtVerifierRefreshInterval)) {
+				verifiersRefreshedAt = now
+				util.RequireJWTVerifiers()
+			}
 		case sig := <-sigs:
 			common.Log.Infof("received signal: %s", sig)
 			common.Log.Warningf("NATS streaming connection subscriptions are not yet being drained...")
