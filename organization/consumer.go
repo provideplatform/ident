@@ -233,14 +233,14 @@ func consumeOrganizationImplicitKeyExchangeInitMsg(msg *nats.Msg) {
 	organizationID, organizationIDOk := params["organization_id"].(string)
 	if !organizationIDOk {
 		common.Log.Warning("failed to parse organization_id during implicit key exchange message handler")
-		msg.Nak()
+		msg.Term()
 		return
 	}
 
 	peerOrganizationID, peerOrganizationIDOk := params["peer_organization_id"].(string)
 	if !peerOrganizationIDOk {
 		common.Log.Warning("failed to parse peer_organization_id during implicit key exchange message handler")
-		msg.Nak()
+		msg.Term()
 		return
 	}
 
@@ -251,7 +251,6 @@ func consumeOrganizationImplicitKeyExchangeInitMsg(msg *nats.Msg) {
 
 	if organization == nil || organization.ID == uuid.Nil {
 		common.Log.Warningf("failed to resolve organization during implicit key exchange message handler; organization id: %s", organizationID)
-		msg.Nak()
 		return
 	}
 
@@ -369,28 +368,28 @@ func consumeOrganizationImplicitKeyExchangeCompleteMsg(msg *nats.Msg) {
 	organizationID, organizationIDOk := params["organization_id"].(string)
 	if !organizationIDOk {
 		common.Log.Warning("failed to parse organization_id during implicit key exchange message handler")
-		msg.Nak()
+		msg.Term()
 		return
 	}
 
 	peerOrganizationID, peerOrganizationIDOk := params["peer_organization_id"].(string)
 	if !peerOrganizationIDOk {
 		common.Log.Warning("failed to parse peer_organization_id during implicit key exchange message handler")
-		msg.Nak()
+		msg.Term()
 		return
 	}
 
 	peerPublicKey, peerPublicKeyOk := params["public_key"].(string)
 	if !peerPublicKeyOk {
 		common.Log.Warning("failed to parse peer public key during implicit key exchange message handler")
-		msg.Nak()
+		msg.Term()
 		return
 	}
 
 	peerSigningKey, peerSigningKeyOk := params["signing_key"].(string)
 	if !peerSigningKeyOk {
 		common.Log.Warning("failed to parse peer signing key during implicit key exchange message handler")
-		msg.Nak()
+		msg.Term()
 		return
 	}
 
@@ -404,7 +403,7 @@ func consumeOrganizationImplicitKeyExchangeCompleteMsg(msg *nats.Msg) {
 	signature, signatureOk := params["signature"].(string)
 	if !signatureOk {
 		common.Log.Warning("failed to parse signature during implicit key exchange message handler")
-		msg.Nak()
+		msg.Term()
 		return
 	}
 
@@ -415,7 +414,6 @@ func consumeOrganizationImplicitKeyExchangeCompleteMsg(msg *nats.Msg) {
 
 	if organization == nil || organization.ID == uuid.Nil {
 		common.Log.Warningf("failed to resolve organization during implicit key exchange message handler; organization id: %s", organizationID)
-		msg.Nak()
 		return
 	}
 
