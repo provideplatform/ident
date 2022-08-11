@@ -175,7 +175,7 @@ func consumeCreatedOrganizationMsg(msg *nats.Msg) {
 	organizationID, organizationIDOk := params["organization_id"].(string)
 	if !organizationIDOk {
 		common.Log.Warning("failed to unmarshal organization_id during created message handler")
-		msg.Nak()
+		msg.Term()
 		return
 	}
 
@@ -186,7 +186,6 @@ func consumeCreatedOrganizationMsg(msg *nats.Msg) {
 
 	if organization == nil || organization.ID == uuid.Nil {
 		common.Log.Warningf("failed to resolve organization during created message handler; organization id: %s", organizationID)
-		msg.Nak()
 		return
 	}
 
