@@ -31,5 +31,5 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/provideplatform/provide-go v0.0.0-20210624064849-d7328258f0d8
-	golang.org/x/crypto v0.0.0-20210314154223-e6e6c4f2bb5b
+	golang.org/x/crypto v0.1.0
 )
