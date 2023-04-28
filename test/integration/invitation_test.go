@@ -222,7 +222,7 @@ func TestInviteApplicationUserWithApplicationAPIToken(t *testing.T) {
 	}
 
 	// create the app
-	app, err := appFactory(*auth.Token.AccessToken, "test app", "baseline workgroup")
+	app, err := appFactory(*auth.Token.AccessToken, "test app", "axiom workgroup")
 	if err != nil {
 		t.Errorf("app creaton failed; %s", err.Error())
 		return
