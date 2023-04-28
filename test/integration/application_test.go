@@ -153,23 +153,23 @@ func TestListApplicationUsers(t *testing.T) {
 			}
 		} else {
 			// let's add this user to the application as the creating user is automatically added...
-			err := provide.CreateApplicationUser(*appToken.AccessToken, app.ID.String(), map[string]interface{}{
-				"user_id": user.ID.String(),
+			err := provide.CreateApplicationUser(*appToken.AccessToken, *app.ID, map[string]interface{}{
+				"user_id": *user.ID,
 			})
 			if err != nil {
-				t.Errorf("failed to add user %s to application %s; %s", user.ID, app.ID.String(), err.Error())
+				t.Errorf("failed to add user %s to application %s; %s", user.ID, *app.ID, err.Error())
 				return
 			}
 		}
 	}
 
-	users, err := provide.ListApplicationUsers(string(*userToken.AccessToken), app.ID.String(), map[string]interface{}{})
+	users, err := provide.ListApplicationUsers(string(*userToken.AccessToken), *app.ID, map[string]interface{}{})
 	if err != nil { // the user who created the application is *currently* allowed to operate on the application. probably needs a permissions update.
 		t.Errorf("error getting users list %s", err.Error())
 		return
 	}
 
-	users, err = provide.ListApplicationUsers(string(*appToken.AccessToken), app.ID.String(), map[string]interface{}{})
+	users, err = provide.ListApplicationUsers(string(*appToken.AccessToken), *app.ID, map[string]interface{}{})
 	if err != nil {
 		t.Errorf("error getting users list %s", err.Error())
 		return
@@ -229,7 +229,7 @@ func TestGetApplicationDetails(t *testing.T) {
 			return
 		}
 
-		deets, err := provide.GetApplicationDetails(*auth.Token.AccessToken, app.ID.String(), map[string]interface{}{})
+		deets, err := provide.GetApplicationDetails(*auth.Token.AccessToken, *app.ID, map[string]interface{}{})
 		if err != nil {
 			t.Errorf("error getting application details. Error: %s", err.Error())
 			return
@@ -245,8 +245,8 @@ func TestGetApplicationDetails(t *testing.T) {
 			return
 		}
 
-		if app.UserID.String() != deets.UserID.String() {
-			t.Errorf("UserID mismatch. Expected %s, got %s", app.UserID.String(), deets.UserID.String())
+		if *app.UserID != *deets.UserID {
+			t.Errorf("UserID mismatch. Expected %s, got %s", *app.UserID, *deets.UserID)
 			return
 		}
 	}
@@ -305,7 +305,7 @@ func TestUpdateApplicationDetails(t *testing.T) {
 		updatedName := tc.name + testId.String()
 		updatedDescription := tc.description + testId.String()
 
-		err = provide.UpdateApplication(string(*auth.Token.AccessToken), app.ID.String(), map[string]interface{}{
+		err = provide.UpdateApplication(string(*auth.Token.AccessToken), *app.ID, map[string]interface{}{
 			"name":        updatedName,
 			"description": updatedDescription,
 		})
@@ -313,7 +313,7 @@ func TestUpdateApplicationDetails(t *testing.T) {
 			t.Errorf("error updating application details. Error: %s", err.Error())
 		}
 
-		deets, err := provide.GetApplicationDetails(*auth.Token.AccessToken, app.ID.String(), map[string]interface{}{})
+		deets, err := provide.GetApplicationDetails(*auth.Token.AccessToken, *app.ID, map[string]interface{}{})
 		if err != nil {
 			t.Errorf("error getting application details. Error: %s", err.Error())
 			return
@@ -329,8 +329,8 @@ func TestUpdateApplicationDetails(t *testing.T) {
 			return
 		}
 
-		if app.UserID.String() != deets.UserID.String() {
-			t.Errorf("UserID mismatch. Expected %s, got %s", app.UserID.String(), deets.UserID.String())
+		if *app.UserID != *deets.UserID {
+			t.Errorf("UserID mismatch. Expected %s, got %s", *app.UserID, *deets.UserID)
 			return
 		}
 	}
@@ -408,7 +408,7 @@ func TestFetchAppDetailsFailsWithUnauthorizedUser(t *testing.T) {
 		t.Logf("about to check app details with unauthorized user")
 		t.Logf("app id: %s", app.ID)
 		t.Logf("user id: %+v", notAuthorizedUser)
-		_, err = provide.GetApplicationDetails(*nonAuth.Token.AccessToken, app.ID.String(), map[string]interface{}{})
+		_, err = provide.GetApplicationDetails(*nonAuth.Token.AccessToken, *app.ID, map[string]interface{}{})
 		if err == nil {
 			t.Errorf("expected error getting application details by a user not associated with the application")
 			return
@@ -489,7 +489,7 @@ func TestUserUpdateAppDetailsAccess(t *testing.T) {
 		updatedName := tc.name + testId.String()
 		updatedDescription := tc.description + testId.String()
 
-		err = provide.UpdateApplication(*nonAuth.Token.AccessToken, app.ID.String(), map[string]interface{}{
+		err = provide.UpdateApplication(*nonAuth.Token.AccessToken, *app.ID, map[string]interface{}{
 			"name":        updatedName,
 			"description": updatedDescription,
 			"user_id":     nonUser.ID,
@@ -498,7 +498,7 @@ func TestUserUpdateAppDetailsAccess(t *testing.T) {
 			t.Errorf("expected error updating application details by a user not associated with the application")
 		}
 
-		deets, err := provide.GetApplicationDetails(*auth.Token.AccessToken, app.ID.String(), map[string]interface{}{})
+		deets, err := provide.GetApplicationDetails(*auth.Token.AccessToken, *app.ID, map[string]interface{}{})
 		if err != nil {
 			t.Errorf("error getting application details. Error: %s", err.Error())
 			return
@@ -515,8 +515,8 @@ func TestUserUpdateAppDetailsAccess(t *testing.T) {
 			return
 		}
 
-		if deets.UserID.String() != app.UserID.String() {
-			t.Errorf("UserID updated by non-Application user! Expected %s, got %s", app.UserID.String(), deets.UserID.String())
+		if *deets.UserID != *app.UserID {
+			t.Errorf("UserID updated by non-Application user! Expected %s, got %s", *app.UserID, *deets.UserID)
 			return
 		}
 	}
@@ -573,12 +573,12 @@ func TestDeleteApplication(t *testing.T) {
 		}
 
 		// start the actual tests... lol... we gotta hire someone to DRY up this suite someday :D
-		err = provide.DeleteApplication(string(*auth.Token.AccessToken), app.ID.String())
+		err = provide.DeleteApplication(string(*auth.Token.AccessToken), *app.ID)
 		if err != nil {
 			t.Errorf("error soft-deleting application %s", app.ID)
 			return
 		}
-		deets, err := provide.GetApplicationDetails(*auth.Token.AccessToken, app.ID.String(), map[string]interface{}{})
+		deets, err := provide.GetApplicationDetails(*auth.Token.AccessToken, *app.ID, map[string]interface{}{})
 		if err != nil {
 			t.Errorf("failed retrieving application details for soft-deleted app %s", app.ID)
 			return
@@ -641,7 +641,7 @@ func TestListApplicationTokens(t *testing.T) {
 		createdTokens[looper] = *token
 	}
 
-	listOfTokens, err := provide.ListApplicationTokens(*auth.Token.AccessToken, app.ID.String(), map[string]interface{}{})
+	listOfTokens, err := provide.ListApplicationTokens(*auth.Token.AccessToken, *app.ID, map[string]interface{}{})
 	if err != nil {
 		t.Errorf("error getting list of application tokens. Error: %s", err.Error())
 		return
@@ -738,7 +738,7 @@ func TestApplicationOrganizationList(t *testing.T) {
 			t.Errorf("invalid status returned from add org to app. expected 204, got %d", status)
 		}
 
-		listAppOrgs, err := provide.ListApplicationOrganizations(*appToken.AccessToken, app.ID.String(), map[string]interface{}{})
+		listAppOrgs, err := provide.ListApplicationOrganizations(*appToken.AccessToken, *app.ID, map[string]interface{}{})
 		if err != nil {
 			t.Errorf("error getting application organizations. Error: %s", err.Error())
 		}
@@ -1022,7 +1022,7 @@ func TestDeleteApplicationOrganizationWithApplicationAPIToken(t *testing.T) {
 			t.Errorf("invalid status returned from add org to app. expected 204, got %d", status)
 		}
 
-		err = provide.DeleteApplicationOrganization(*appToken.AccessToken, app.ID.String(), org.ID.String())
+		err = provide.DeleteApplicationOrganization(*appToken.AccessToken, *app.ID, *org.ID)
 		if err != nil {
 			t.Errorf("failed to delete application organization; status: %v; %s", status, err.Error())
 			return
@@ -1098,11 +1098,11 @@ func TestCreateApplicationUser(t *testing.T) {
 			}
 		} else {
 			// let's add this user to the application as the creating user is automatically added...
-			err := provide.CreateApplicationUser(*appToken.AccessToken, app.ID.String(), map[string]interface{}{
-				"user_id": user.ID.String(),
+			err := provide.CreateApplicationUser(*appToken.AccessToken, *app.ID, map[string]interface{}{
+				"user_id": *user.ID,
 			})
 			if err != nil {
-				t.Errorf("failed to add user %s to application %s; %s", user.ID, app.ID.String(), err.Error())
+				t.Errorf("failed to add user %s to application %s; %s", user.ID, *app.ID, err.Error())
 				return
 			}
 		}
@@ -1164,22 +1164,22 @@ func TestDeleteApplicationUserWithApplicationAPIToken(t *testing.T) {
 	}
 
 	// let's add this user to the application as the creating user is automatically added...
-	err = provide.CreateApplicationUser(*apptkn.AccessToken, app.ID.String(), map[string]interface{}{
-		"user_id": user.ID.String(),
+	err = provide.CreateApplicationUser(*apptkn.AccessToken, *app.ID, map[string]interface{}{
+		"user_id": *user.ID,
 	})
 	if err != nil {
-		t.Errorf("failed to add user %s to application %s; %s", user.ID, app.ID.String(), err.Error())
+		t.Errorf("failed to add user %s to application %s; %s", user.ID, *app.ID, err.Error())
 		return
 	}
 
 	//now we'll delete the user
-	err = provide.DeleteApplicationUser(*apptkn.AccessToken, app.ID.String(), user.ID.String())
+	err = provide.DeleteApplicationUser(*apptkn.AccessToken, *app.ID, *user.ID)
 	if err != nil {
-		t.Errorf("failed to delete user %s from application %s; %s", user.ID, app.ID.String(), err.Error())
+		t.Errorf("failed to delete user %s from application %s; %s", user.ID, *app.ID, err.Error())
 		return
 	}
 
-	users, err := provide.ListApplicationUsers(string(*apptkn.AccessToken), app.ID.String(), map[string]interface{}{})
+	users, err := provide.ListApplicationUsers(string(*apptkn.AccessToken), *app.ID, map[string]interface{}{})
 	if err != nil {
 		t.Errorf("error getting users list %s", err.Error())
 		return

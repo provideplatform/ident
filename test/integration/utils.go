@@ -57,7 +57,7 @@ func permissionedUserFactory(firstName, lastName, email, password string, permis
 
 	usr := &identuser.User{}
 	db := dbconf.DatabaseConnection()
-	db.Where("id = ?", user.ID.String()).Find(&usr)
+	db.Where("id = ?", *user.ID).Find(&usr)
 	usr.Permissions = permissions
 	db.Save(usr)
 
