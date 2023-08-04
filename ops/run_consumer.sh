@@ -319,14 +319,6 @@ fi
 #NATS_ROOT_CA_CERTIFICATES=/Users/kt/selfsigned-ca/ca.pem \
 #NATS_TLS_CERTIFICATES='{"/Users/kt/selfsigned-ca/peer.key": "/Users/kt/selfsigned-ca/peer.crt"}' \
 
-if [[ -z "${GOLDMINE_API_HOST}" ]]; then
-  GOLDMINE_API_HOST=goldmine.provide.services
-fi
-
-if [[ -z "${GOLDMINE_API_SCHEME}" ]]; then
-  GOLDMINE_API_SCHEME=https
-fi
-
 if [[ -z "${REDIS_HOSTS}" ]]; then
   REDIS_HOSTS=localhost:6379
 fi
@@ -382,6 +374,3 @@ IDENTITYMIND_API_USER=${IDENTITYMIND_API_USER} \
 IDENTITYMIND_API_TOKEN=${IDENTITYMIND_API_TOKEN} \
 VOUCHED_API_TOKEN=${VOUCHED_API_TOKEN} \
 ./.bin/ident_consumer
-
-#EMAIL_VERIFICATION_FROM_DOMAIN=provide.services \
-#EMAIL_VERIFICATION_FROM_ADDRESS=hello@provide.services \

@@ -41,7 +41,7 @@ import (
 	util "github.com/provideplatform/provide-go/common/util"
 )
 
-const didDocumentVocab = "https://ident.provide.services/"
+const didDocumentVocab = "https://ident.provide.technology/"
 const jsonWebKey2020Type = "JsonWebKey2020"
 
 const privacyPolicyUpdatedAt = "2018-10-19T00:00:00.000000"

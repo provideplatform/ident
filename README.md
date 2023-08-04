@@ -6,4 +6,4 @@ Microservice for authn, authz and identity.
 
 ## Documentation
 
-See the ident documentation [here](https://docs.provide.services/ident).
+See the ident documentation [here](https://docs.provide.technology/ident).
