@@ -32,6 +32,7 @@ import (
 
 const natsApplicationImplicitKeyExchangeInitSubject = "ident.application.keys.exchange.init"
 const natsOrganizationUpdatedInitSubject = "ident.organization.updated"
+const natsSiaOrganizationNotificationSubject = "sia.organization.notification"
 const organizationResourceKey = "organization"
 
 // Organization model
@@ -233,6 +234,13 @@ func (o *Organization) Create(tx *gorm.DB) bool {
 						"organization_id": o.ID.String(),
 					})
 					natsutil.NatsJetstreamPublish(natsCreatedOrganizationCreatedSubject, payload)
+
+					if common.DispatchSiaNotifications {
+						payload, _ := json.Marshal(map[string]interface{}{
+							"id": o.ID.String(),
+						})
+						natsutil.NatsJetstreamPublish(natsSiaOrganizationNotificationSubject, payload)
+					}
 				}
 
 				return success
