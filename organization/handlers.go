@@ -141,6 +141,10 @@ func organizationDetailsHandler(c *gin.Context) {
 		orgID = &organizationID
 	}
 
+	if bearer.HasPermission(common.DefaultAuth0RequestPermission) {
+		userID = nil
+	}
+
 	db := dbconf.DatabaseConnection()
 	org := &Organization{}
 	resolveOrganization(db, orgID, nil, userID).Find(&org)
