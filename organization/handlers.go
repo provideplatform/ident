@@ -119,7 +119,7 @@ func organizationDetailsHandler(c *gin.Context) {
 	userID := bearer.UserID
 	orgID := bearer.OrganizationID
 
-	if (userID == nil || *userID == uuid.Nil) && (orgID == nil || *orgID == uuid.Nil) {
+	if (userID == nil || *userID == uuid.Nil) && (orgID == nil || *orgID == uuid.Nil) && !bearer.HasPermission(common.DefaultAuth0RequestPermission) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
