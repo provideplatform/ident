@@ -265,6 +265,7 @@ func refreshAccessToken(c *gin.Context, scope *string) {
 					err = fmt.Errorf("failed to authorize access token; refresh token does not authorize requested scope: %s", string(forbiddenScopesRaw))
 					common.Log.Tracef(err.Error())
 					provide.RenderError(err.Error(), 403, c)
+					return
 				}
 			}
 		}
