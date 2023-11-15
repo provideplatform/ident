@@ -153,7 +153,6 @@ func (a *accountant) flush() error {
 				} else if apiCall != nil {
 					apiCall.CalculateHash(&packet)
 					apiCall.Raw = json.RawMessage(packet)
-					apiCall.Hash = apiCall.Sha256 // HACK
 					apiCall.enrich(a.db)
 					packets = append(packets, *apiCall)
 				}

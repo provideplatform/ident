@@ -47,8 +47,7 @@ type siaAPICall struct {
 	Sha256        *string   `json:"sha256,omitempty"`
 	UserAgent     *string   `json:"user_agent,omitempty"`
 
-	Hash *string `gorm:"column:sha256" json:"sha256"`
-	Raw  []byte  `json:"raw"`
+	Raw []byte `json:"raw"`
 
 	// sia types
 	AccountID      *uint //`json:"account_id"`
@@ -240,14 +239,14 @@ func (call *siaAPICall) enrich(db *gorm.DB) {
 	}
 
 	if account == nil || account.ID == 0 {
-		resolverErr = fmt.Errorf("failed to resolve responsible account for API call event: %s", *call.Hash)
+		resolverErr = fmt.Errorf("failed to resolve responsible account for API call event: %s", *call.Sha256)
 	}
 
 	if resolverErr != nil {
-		common.Log.Warningf("failed to persist API call event: %s; %s", *call.Hash, resolverErr.Error())
+		common.Log.Warningf("failed to persist API call event: %s; %s", *call.Sha256, resolverErr.Error())
 		return
 	}
 
 	call.AccountID = &account.ID
-	common.Log.Debugf("resolved responsible account %d for API call event: %s", *call.AccountID, *call.Hash)
+	common.Log.Debugf("resolved responsible account %d for API call event: %s", *call.AccountID, *call.Sha256)
 }
