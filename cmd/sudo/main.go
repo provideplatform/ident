@@ -270,6 +270,7 @@ func syncIdent() {
 }
 
 func vendToken(email string, ttl *int, appclaims map[string]interface{}) {
+	util.RequireJWT()
 	util.RequireVault()
 
 	user := user.FindByEmail(email, nil, nil)
@@ -297,6 +298,7 @@ func vendToken(email string, ttl *int, appclaims map[string]interface{}) {
 }
 
 func vendApplicationToken(appID string, ttl *int, appclaims map[string]interface{}) {
+	util.RequireJWT()
 	util.RequireVault()
 
 	appUUID, _ := uuid.FromString(appID)
@@ -321,6 +323,7 @@ func vendApplicationToken(appID string, ttl *int, appclaims map[string]interface
 }
 
 func vendOrganizationToken(orgID string, ttl *int, appclaims map[string]interface{}) {
+	util.RequireJWT()
 	util.RequireVault()
 
 	orgUUID, _ := uuid.FromString(orgID)
