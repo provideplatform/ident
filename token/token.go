@@ -100,6 +100,7 @@ type Token struct {
 	IsRefreshToken       bool              `sql:"-" json:"-"`
 	IsRevocable          bool              `sql:"-" json:"-"`
 
+	ApplicationClaims       map[string]interface{}         `sql:"-" json:"-"`               // Additional claims; must not conflict with standard claims
 	NatsClaims              map[string]interface{}         `sql:"-" json:"-"`               // NATS claims
 	OAuthAuthorizationGrant *OAuthAuthorizationGrantParams `sql:"-" json:"oauth,omitempty"` // OAuth authorization grant
 }
@@ -279,15 +280,16 @@ func Parse(token string) (*Token, error) {
 	}
 
 	tkn = &Token{
-		Token:          &jwtToken.Raw,
-		IssuedAt:       iat,
-		ExpiresAt:      exp,
-		IsRefreshToken: isRefreshToken,
-		NotBefore:      nbf,
-		Subject:        common.StringOrNil(sub),
-		UserID:         userID,
-		ApplicationID:  appID,
-		OrganizationID: orgID,
+		Token:             &jwtToken.Raw,
+		IssuedAt:          iat,
+		ExpiresAt:         exp,
+		IsRefreshToken:    isRefreshToken,
+		NotBefore:         nbf,
+		Subject:           common.StringOrNil(sub),
+		UserID:            userID,
+		ApplicationID:     appID,
+		OrganizationID:    orgID,
+		ApplicationClaims: appclaims,
 	}
 
 	if kid, kidOk := jwtToken.Header["kid"].(string); kidOk {
@@ -921,6 +923,12 @@ func (t *Token) encodeJWT() error {
 func (t *Token) encodeJWTAppClaims() map[string]interface{} {
 	appClaims := map[string]interface{}{
 		"permissions": t.Permissions,
+	}
+
+	// insert application claims here such that application_id,
+	// organization_id and user_id claims would be overridden below...
+	for key := range t.ApplicationClaims {
+		appClaims[key] = t.ApplicationClaims[key]
 	}
 
 	if t.ApplicationID != nil {
