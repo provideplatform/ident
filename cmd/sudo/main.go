@@ -29,6 +29,7 @@ import (
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideplatform/ident/application"
 	"github.com/provideplatform/ident/common"
+	"github.com/provideplatform/ident/organization"
 	"github.com/provideplatform/ident/token"
 	"github.com/provideplatform/ident/user"
 )
@@ -45,6 +46,7 @@ const syncAuth0Cmd = "syncauth0"
 const syncIdentCmd = "syncident"
 const vendTokenCmd = "vendtoken"
 const vendApplicationTokenCmd = "vendapptoken"
+const vendOrganizationTokenCmd = "vendorgtoken"
 
 func init() {
 	auth0.RequireAuth0()
@@ -111,7 +113,16 @@ func main() {
 			}
 			ttl = &parsedttl
 		}
-		vendToken(email, ttl)
+
+		appclaims := map[string]interface{}{}
+		if len(argv) == 4 {
+			err := json.Unmarshal([]byte(argv[3]), &appclaims)
+			if err != nil {
+				exit(fmt.Sprintf("failed to vend auth token for user: %s; could not parse application claims; %s", email, err.Error()), 1)
+			}
+		}
+
+		vendToken(email, ttl, appclaims)
 	case vendApplicationTokenCmd:
 		appID := strings.ToLower(argv[1])
 
@@ -123,7 +134,37 @@ func main() {
 			}
 			ttl = &parsedttl
 		}
-		vendApplicationToken(appID, ttl)
+
+		appclaims := map[string]interface{}{}
+		if len(argv) == 4 {
+			err := json.Unmarshal([]byte(argv[3]), &appclaims)
+			if err != nil {
+				exit(fmt.Sprintf("failed to vend auth token for application: %s; could not parse application claims; %s", appID, err.Error()), 1)
+			}
+		}
+
+		vendApplicationToken(appID, ttl, appclaims)
+	case vendOrganizationTokenCmd:
+		orgID := strings.ToLower(argv[1])
+
+		var ttl *int
+		if len(argv) == 3 {
+			parsedttl, err := strconv.Atoi(argv[2])
+			if err != nil {
+				exit(fmt.Sprintf("failed to vend auth token for organization: %s; could not parse ttl for expiration; %s", orgID, err.Error()), 1)
+			}
+			ttl = &parsedttl
+		}
+
+		appclaims := map[string]interface{}{}
+		if len(argv) == 4 {
+			err := json.Unmarshal([]byte(argv[3]), &appclaims)
+			if err != nil {
+				exit(fmt.Sprintf("failed to vend auth token for organization: %s; could not parse application claims; %s", orgID, err.Error()), 1)
+			}
+		}
+
+		vendOrganizationToken(orgID, ttl, appclaims)
 	default:
 		common.Log.Warningf("sudo cmd not implemented: %s", cmd)
 		os.Exit(1)
@@ -167,7 +208,7 @@ func createUser(email string, permission common.Permission, rawjson *string) {
 		common.Log.Debugf("granted sudo permission to user: %s", email)
 	}
 
-	vendToken(email, nil)
+	vendToken(email, nil, map[string]interface{}{})
 }
 
 func deleteUser(email string) {
@@ -227,7 +268,7 @@ func syncIdent() {
 	common.Log.Debug("ident -> auth0 sync completed successfully")
 }
 
-func vendToken(email string, ttl *int) {
+func vendToken(email string, ttl *int, appclaims map[string]interface{}) {
 	user := user.FindByEmail(email, nil, nil)
 	if user == nil {
 		exit(fmt.Sprintf("user does not exist: %s", email), 1)
@@ -235,8 +276,9 @@ func vendToken(email string, ttl *int) {
 
 	common.Log.Debugf("attempting to vend bearer token for user: %s", email)
 	token := &token.Token{
-		UserID:      &user.ID,
-		Permissions: user.Permissions,
+		UserID:            &user.ID,
+		Permissions:       user.Permissions,
+		ApplicationClaims: appclaims,
 	}
 	if ttl != nil {
 		token.TTL = ttl
@@ -251,7 +293,7 @@ func vendToken(email string, ttl *int) {
 	}
 }
 
-func vendApplicationToken(appID string, ttl *int) {
+func vendApplicationToken(appID string, ttl *int, appclaims map[string]interface{}) {
 	appUUID, _ := uuid.FromString(appID)
 	app := application.FindByID(appUUID)
 	if app == nil {
@@ -260,7 +302,8 @@ func vendApplicationToken(appID string, ttl *int) {
 
 	common.Log.Debugf("attempting to vend bearer token for application: %s", appID)
 	token := &token.Token{
-		ApplicationID: &app.ID,
+		ApplicationID:     &app.ID,
+		ApplicationClaims: appclaims,
 	}
 	if ttl != nil {
 		token.TTL = ttl
@@ -270,4 +313,26 @@ func vendApplicationToken(appID string, ttl *int) {
 	}
 
 	common.Log.Debugf("bearer token created for application: %s\n\n\t%s\n\nPlease keep this in a safe place and treat it as you would other private keys.", appID, *token.Token)
+}
+
+func vendOrganizationToken(orgID string, ttl *int, appclaims map[string]interface{}) {
+	orgUUID, _ := uuid.FromString(orgID)
+	org := organization.Find(orgUUID)
+	if org == nil {
+		exit(fmt.Sprintf("org does not exist: %s", orgID), 1)
+	}
+
+	common.Log.Debugf("attempting to vend bearer token for organization: %s", orgID)
+	token := &token.Token{
+		OrganizationID:    &org.ID,
+		ApplicationClaims: appclaims,
+	}
+	if ttl != nil {
+		token.TTL = ttl
+	}
+	if !token.Vend() {
+		exit(fmt.Sprintf("failed to vend bearer token for organization: %s", orgID), 1)
+	}
+
+	common.Log.Debugf("bearer token created for organization: %s\n\n\t%s\n\nPlease keep this in a safe place and treat it as you would other private keys.", orgID, *token.Token)
 }
