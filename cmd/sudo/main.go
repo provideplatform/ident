@@ -32,6 +32,7 @@ import (
 	"github.com/provideplatform/ident/organization"
 	"github.com/provideplatform/ident/token"
 	"github.com/provideplatform/ident/user"
+	"github.com/provideplatform/provide-go/common/util"
 )
 
 const defaultLegacyAuthTokenLength = 64
@@ -269,6 +270,8 @@ func syncIdent() {
 }
 
 func vendToken(email string, ttl *int, appclaims map[string]interface{}) {
+	util.RequireVault()
+
 	user := user.FindByEmail(email, nil, nil)
 	if user == nil {
 		exit(fmt.Sprintf("user does not exist: %s", email), 1)
@@ -294,6 +297,8 @@ func vendToken(email string, ttl *int, appclaims map[string]interface{}) {
 }
 
 func vendApplicationToken(appID string, ttl *int, appclaims map[string]interface{}) {
+	util.RequireVault()
+
 	appUUID, _ := uuid.FromString(appID)
 	app := application.FindByID(appUUID)
 	if app == nil {
@@ -316,6 +321,8 @@ func vendApplicationToken(appID string, ttl *int, appclaims map[string]interface
 }
 
 func vendOrganizationToken(orgID string, ttl *int, appclaims map[string]interface{}) {
+	util.RequireVault()
+
 	orgUUID, _ := uuid.FromString(orgID)
 	org := organization.Find(orgUUID)
 	if org == nil {
