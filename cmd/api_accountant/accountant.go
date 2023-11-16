@@ -30,6 +30,8 @@ import (
 	api "github.com/provideplatform/provide-go/api"
 )
 
+const ecoAPIPathSegment = "/eco/"
+
 type siaAPICall struct {
 	SiaModel
 
@@ -46,6 +48,10 @@ type siaAPICall struct {
 	StatusCode    int       `json:"status_code,omitempty"`
 	Sha256        *string   `json:"sha256,omitempty"`
 	UserAgent     *string   `json:"user_agent,omitempty"`
+
+	Metadata *json.RawMessage `json:"metadata,omitempty"`
+	Revenue  *float64         `json:"revenue,omitempty"`
+	IsECO    bool             `json:"is_eco"`
 
 	Raw []byte `json:"raw"`
 
@@ -249,4 +255,26 @@ func (call *siaAPICall) enrich(db *gorm.DB) {
 
 	call.AccountID = &account.ID
 	common.Log.Debugf("resolved responsible account %d for API call event: %s", *call.AccountID, *call.Sha256)
+
+	call.IsECO = strings.Contains(strings.ToLower(call.Path), ecoAPIPathSegment)
+
+	metadata := call.parseMetadata()
+	if metadata != nil {
+		if revenue, ok := metadata["revenue"].(float64); ok {
+			call.Revenue = &revenue
+		}
+	}
+}
+
+// parseMetadata parse the metadeta
+func (call *siaAPICall) parseMetadata() map[string]interface{} {
+	metadata := map[string]interface{}{}
+	if call.Metadata != nil {
+		err := json.Unmarshal(*call.Metadata, &metadata)
+		if err != nil {
+			common.Log.Warningf("failed to unmarshal metadata; %s", err.Error())
+			return nil
+		}
+	}
+	return metadata
 }
