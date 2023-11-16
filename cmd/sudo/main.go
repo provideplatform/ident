@@ -325,6 +325,7 @@ func vendOrganizationToken(orgID string, ttl *int, appclaims map[string]interfac
 	common.Log.Debugf("attempting to vend bearer token for organization: %s", orgID)
 	token := &token.Token{
 		OrganizationID:    &org.ID,
+		Scope:             common.StringOrNil("offline_access"),
 		ApplicationClaims: appclaims,
 	}
 	if ttl != nil {
