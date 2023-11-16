@@ -55,6 +55,9 @@ type siaAPICall struct {
 
 	Raw []byte `json:"raw"`
 
+	// prvd types
+	PRVDOrganizationID *uuid.UUID `gorm:"prvd_organization_id" json:"-"`
+
 	// sia types
 	AccountID      *uint //`json:"account_id"`
 	ApplicationID  *uint //`json:"application_id"`
@@ -205,6 +208,7 @@ func (call *siaAPICall) enrich(db *gorm.DB) {
 		db.Where("prvd_organization_id = ?", organizationUUID).Find(&organization)
 		if organization != nil && organization.ID != 0 {
 			call.OrganizationID = &organization.ID
+			call.PRVDOrganizationID = &organizationUUID
 			common.Log.Debugf("resolving responsible organization account from sia db for organization id: %s", organization.OrganizationID)
 			db.Where("id = ?", organization.AccountID).Find(&account)
 		} else if organization != nil && organization.ID != 0 {
