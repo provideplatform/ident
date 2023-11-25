@@ -117,9 +117,9 @@ func TestUserDetails(t *testing.T) {
 		}
 
 		// get the user details
-		deets, err := provide.GetUserDetails(*auth.Token.AccessToken, user.ID.String(), map[string]interface{}{})
+		deets, err := provide.GetUserDetails(*auth.Token.AccessToken, *user.ID, map[string]interface{}{})
 		if err != nil {
-			t.Errorf("error getting details for user id %s. Error: %s", user.ID, err.Error())
+			t.Errorf("error getting details for user id %s. Error: %s", *user.ID, err.Error())
 			return
 		}
 
@@ -186,7 +186,7 @@ func TestUserUpdate(t *testing.T) {
 		updatedEmail := fmt.Sprintf("%s%s", tc.email, testId.String())
 		updatedPassword := fmt.Sprintf("%s%s", tc.password, testId.String())
 
-		err = provide.UpdateUser(*auth.Token.AccessToken, user.ID.String(), map[string]interface{}{
+		err = provide.UpdateUser(*auth.Token.AccessToken, *user.ID, map[string]interface{}{
 			"first_name": updatedFirstName,
 			"last_name":  updatedLastName,
 			"email":      updatedEmail,
@@ -197,9 +197,9 @@ func TestUserUpdate(t *testing.T) {
 		}
 
 		// get the user details
-		deets, err := provide.GetUserDetails(*auth.Token.AccessToken, user.ID.String(), map[string]interface{}{})
+		deets, err := provide.GetUserDetails(*auth.Token.AccessToken, *user.ID, map[string]interface{}{})
 		if err != nil {
-			t.Errorf("error getting details for user id %s. Error: %s", user.ID, err.Error())
+			t.Errorf("error getting details for user id %s. Error: %s", *user.ID, err.Error())
 			return
 		}
 

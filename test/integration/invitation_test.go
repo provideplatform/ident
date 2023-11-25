@@ -186,7 +186,7 @@ func TestInviteUserWithUserAPIToken(t *testing.T) {
 		"last_name":  "User",
 	})
 	if err != nil {
-		t.Errorf("creating invitation failed by user with id %s; %s", user.ID, err.Error())
+		t.Errorf("creating invitation failed by user with id %s; %s", *user.ID, err.Error())
 		return
 	}
 
@@ -197,7 +197,7 @@ func TestInviteUserWithUserAPIToken(t *testing.T) {
 		"last_name":  "User",
 	})
 	if err != nil {
-		t.Errorf("creating second invitation failed by user with id %s; %s", user.ID, err.Error())
+		t.Errorf("creating second invitation failed by user with id %s; %s", *user.ID, err.Error())
 		return
 	}
 }
@@ -229,7 +229,7 @@ func TestInviteApplicationUserWithApplicationAPIToken(t *testing.T) {
 	}
 
 	// create a token for the application
-	apptkn, err := appTokenFactory(*auth.Token.AccessToken, app.ID)
+	apptkn, err := appTokenFactory(*auth.Token.AccessToken, app.ID.String())
 	if err != nil {
 		t.Errorf("token creation failed for application id %s; %s", app.ID, err.Error())
 		return
@@ -287,9 +287,9 @@ func TestInviteOrganizationUserWithOrganizationAPIToken(t *testing.T) {
 	}
 
 	// create a token for the organization
-	orgtkn, err := orgTokenFactory(*auth.Token.AccessToken, org.ID)
+	orgtkn, err := orgTokenFactory(*auth.Token.AccessToken, *org.ID)
 	if err != nil {
-		t.Errorf("token creation failed for organization id %s; %s", org.ID, err.Error())
+		t.Errorf("token creation failed for organization id %s; %s", *org.ID, err.Error())
 		return
 	}
 
@@ -306,14 +306,14 @@ func TestInviteOrganizationUserWithOrganizationAPIToken(t *testing.T) {
 		return
 	}
 
-	invitations, err := provide.ListOrganizationInvitations(*orgtkn.AccessToken, org.ID.String(), map[string]interface{}{})
+	invitations, err := provide.ListOrganizationInvitations(*orgtkn.AccessToken, *org.ID, map[string]interface{}{})
 	if err != nil {
-		t.Errorf("listing org invitations failed for organization id %s; %s", org.ID, err.Error())
+		t.Errorf("listing org invitations failed for organization id %s; %s", *org.ID, err.Error())
 		return
 	}
 
 	if len(invitations) != 1 {
-		t.Errorf("listing org invitations failed for organization id %s; expected 1 invitation, got %d", org.ID, len(invitations))
+		t.Errorf("listing org invitations failed for organization id %s; expected 1 invitation, got %d", *org.ID, len(invitations))
 		return
 	}
 }

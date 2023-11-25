@@ -21,7 +21,6 @@ package integration
 
 import (
 	dbconf "github.com/kthomas/go-db-config"
-	uuid "github.com/kthomas/go.uuid"
 	identcommon "github.com/provideplatform/ident/common"
 	identuser "github.com/provideplatform/ident/user"
 	provide "github.com/provideplatform/provide-go/api/ident"
@@ -93,19 +92,19 @@ func apporgFactory(token, applicationID, organizationID string) error {
 	})
 }
 
-func appTokenFactory(auth string, applicationID uuid.UUID) (*provide.Token, error) {
+func appTokenFactory(auth string, applicationID string) (*provide.Token, error) {
 	return provide.CreateToken(auth, map[string]interface{}{
 		"application_id": applicationID,
 	})
 }
 
-func orgTokenFactory(auth string, organizationID uuid.UUID) (*provide.Token, error) {
+func orgTokenFactory(auth string, organizationID string) (*provide.Token, error) {
 	return provide.CreateToken(auth, map[string]interface{}{
 		"organization_id": organizationID,
 	})
 }
 
-func orgUserTokenFactory(auth string, organizationID, userID uuid.UUID) (*provide.Token, error) {
+func orgUserTokenFactory(auth string, organizationID, userID string) (*provide.Token, error) {
 	return provide.CreateToken(auth, map[string]interface{}{
 		"organization_id": organizationID,
 		"user_id":         userID,

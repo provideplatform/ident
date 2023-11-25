@@ -18,6 +18,7 @@ package application
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
@@ -288,10 +289,22 @@ func updateApplicationHandler(c *gin.Context) {
 		return
 	}
 
+	_app := &Application{}
+	err = json.Unmarshal(buf, _app)
+	if err != nil {
+		provide.RenderError(err.Error(), 422, c)
+		return
+	}
+
 	app := &Application{}
 	dbconf.DatabaseConnection().Where("id = ?", c.Param("id")).Find(&app)
 	if app.ID == uuid.Nil {
 		provide.RenderError("app not found", 404, c)
+		return
+	}
+
+	if _app.UserID != uuid.Nil && !strings.EqualFold(app.UserID.String(), _app.UserID.String()) {
+		provide.RenderError("user_id cannot be changed", 400, c)
 		return
 	}
 
