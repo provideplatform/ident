@@ -20,7 +20,7 @@ require (
 	github.com/nats-io/nats.go v1.31.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.30.0
-	github.com/provideplatform/provide-go v0.0.0-20231127231557-813a41b6d639
+	github.com/provideplatform/provide-go v0.0.0-20231128064227-1e47281359cc
 	golang.org/x/crypto v0.15.0
 )
 
