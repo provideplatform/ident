@@ -1,8 +1,6 @@
 module github.com/provideplatform/ident
 
-go 1.21
-
-toolchain go1.22.4
+go 1.22
 
 require (
 	github.com/badoux/checkmail v1.2.1
