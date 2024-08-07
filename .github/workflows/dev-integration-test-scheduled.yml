@@ -6,8 +6,6 @@ jobs:
   scheduled_test:
     runs-on: ubuntu-latest
     timeout-minutes: 10    
-    env:
-      SLACK_WEBHOOK_URL: ${{ secrets.INTEGRATION_SLACK_WEBHOOK }}
     steps:
       - name: set_up_environment
         id: setup
