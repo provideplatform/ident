@@ -305,7 +305,7 @@ func (i *Invite) Create() bool {
 			}
 		}
 		if i.OrganizationID != nil {
-			key := fmt.Sprintf("organization.%s.invitations", i.OrganizationID.String())
+			key := fmt.Sprintf("organization.%s.invitations", *i.OrganizationID)
 			err := redisutil.WithRedlock(key, func() error { return i.cache(key) })
 			if err != nil {
 				common.Log.Warningf("failed to cache invite by Org ID; %s", err.Error())

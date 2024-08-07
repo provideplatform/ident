@@ -173,9 +173,9 @@ func createTokenHandler(c *gin.Context) {
 		var out []int64
 
 		if orgID != nil {
-			db.Table("organizations_users").Select("permissions").Where("organizations_users.organization_id = ? AND organizations_users.user_id = ?", orgID.String(), userID.String()).Pluck("permissions", &out)
+			db.Table("organizations_users").Select("permissions").Where("organizations_users.organization_id = ? AND organizations_users.user_id = ?", orgID, userID).Pluck("permissions", &out)
 			if len(out) == 0 {
-				msg := fmt.Sprintf("permissions lookup failed for organization: %s", userID)
+				msg := fmt.Sprintf("permissions lookup failed for organization: %s", *userID)
 				common.Log.Warning(msg)
 				provide.RenderError(msg, 500, c)
 				return
@@ -183,9 +183,9 @@ func createTokenHandler(c *gin.Context) {
 
 			permissions = common.Permission(out[0])
 		} else {
-			db.Table("users").Select("permissions").Where("users.id = ?", userID.String()).Pluck("permissions", &out)
+			db.Table("users").Select("permissions").Where("users.id = ?", userID).Pluck("permissions", &out)
 			if len(out) == 0 {
-				msg := fmt.Sprintf("permissions lookup failed for user: %s", userID)
+				msg := fmt.Sprintf("permissions lookup failed for user: %s", *userID)
 				common.Log.Warning(msg)
 				provide.RenderError(msg, 500, c)
 				return
@@ -231,7 +231,7 @@ func createTokenHandler(c *gin.Context) {
 
 func deleteTokenHandler(c *gin.Context) {
 	bearer := InContext(c)
-	var userID *uuid.UUID
+	var userID *string
 	var appID *uuid.UUID
 
 	if bearer != nil {
@@ -239,7 +239,7 @@ func deleteTokenHandler(c *gin.Context) {
 		appID = bearer.ApplicationID
 	}
 
-	if bearer == nil || ((userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) && !bearer.HasAnyPermission(common.DeleteToken, common.Sudo)) {
+	if bearer == nil || (userID == nil && (appID == nil || *appID == uuid.Nil) && !bearer.HasAnyPermission(common.DeleteToken, common.Sudo)) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}

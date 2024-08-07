@@ -105,7 +105,7 @@ func FindByEmail(email string, applicationID *uuid.UUID, organizationID *string)
 		query = query.Where("users.application_id IS NULL")
 	}
 
-	if organizationID != nil && *organizationID != uuid.Nil {
+	if organizationID != nil {
 		query = query.Joins("LEFT OUTER JOIN organizations_users as ou ON ou.user_id = users.id")
 		query = query.Where("ou.organization_id = ?", organizationID)
 
@@ -308,7 +308,7 @@ func (u *User) Create(tx *gorm.DB, createAuth0User bool) bool {
 			if createAuth0User && common.Auth0IntegrationEnabled && !common.Auth0IntegrationCustomDatabase {
 				err := u.createAuth0User()
 				if err != nil {
-					common.Log.Debugf("failed to create auth0: %s", common.StringOrNil(err.Error()))
+					common.Log.Debugf("failed to create auth0 user: %s", err.Error())
 					u.Errors = append(u.Errors, &provide.Error{
 						Message: common.StringOrNil(err.Error()),
 					})
@@ -378,13 +378,13 @@ func (u *User) addApplicationAssociation(tx *gorm.DB, appID uuid.UUID, permissio
 		db = dbconf.DatabaseConnection()
 	}
 
-	common.Log.Debugf("adding user %s to application: %s", u.ID, appID)
+	common.Log.Debugf("adding user %s to application: %s", *u.ID, appID.String())
 	result := db.Exec("INSERT INTO applications_users (application_id, user_id, permissions) VALUES (?, ?, ?)", appID, u.ID, permissions)
 	success := result.RowsAffected == 1
 	if success {
-		common.Log.Debugf("added user %s to application: %s", u.ID, appID)
+		common.Log.Debugf("added user %s to application: %s", *u.ID, appID.String())
 	} else {
-		common.Log.Warningf("failed to add user %s to application: %s", u.ID, appID)
+		common.Log.Warningf("failed to add user %s to application: %s", *u.ID, appID.String())
 		errors := result.GetErrors()
 		if len(errors) > 0 {
 			for _, err := range errors {
@@ -405,13 +405,13 @@ func (u *User) addOrganizationAssociation(tx *gorm.DB, orgID string, permissions
 		db = dbconf.DatabaseConnection()
 	}
 
-	common.Log.Debugf("adding user %s to organization: %s", u.ID, orgID)
+	common.Log.Debugf("adding user %s to organization: %s", *u.ID, orgID)
 	result := db.Exec("INSERT INTO organizations_users (organization_id, user_id, permissions) VALUES (?, ?, ?)", orgID, u.ID, permissions)
 	success := result.RowsAffected == 1
 	if success {
-		common.Log.Debugf("added user %s to organization: %s", u.ID, orgID)
+		common.Log.Debugf("added user %s to organization: %s", *u.ID, orgID)
 	} else {
-		common.Log.Warningf("failed to add user %s to organization: %s", u.ID, orgID)
+		common.Log.Warningf("failed to add user %s to organization: %s", *u.ID, orgID)
 		errors := result.GetErrors()
 		if len(errors) > 0 {
 			for _, err := range errors {
@@ -608,7 +608,7 @@ func (u *User) AsResponse() *Response {
 // requestPasswordReset attempts to dispatch a reset password token
 func (u *User) requestPasswordReset(db *gorm.DB) bool {
 	if u.CreateResetPasswordToken(db) {
-		common.Log.Debugf("created reset password token for user: %s", u.ID)
+		common.Log.Debugf("created reset password token for user: %s", *u.ID)
 		common.Log.Warningf("TODO: dispatch reset password token to user out-of-band...")
 		common.Log.Debugf("%s", *u.ResetPasswordToken)
 		return true

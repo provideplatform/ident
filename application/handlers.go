@@ -117,7 +117,7 @@ func applicationsListHandler(c *gin.Context) {
 	orgID := bearer.OrganizationID
 	userID := bearer.UserID
 
-	if (userID == nil || *userID == uuid.Nil) && (orgID == nil || *orgID == uuid.Nil) {
+	if userID == nil && orgID == nil {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -304,7 +304,7 @@ func updateApplicationHandler(c *gin.Context) {
 		return
 	}
 
-	if _app.UserID != uuid.Nil && !strings.EqualFold(app.UserID.String(), _app.UserID.String()) {
+	if !strings.EqualFold(app.UserID, _app.UserID) {
 		provide.RenderError("user_id cannot be changed", 400, c)
 		return
 	}
@@ -421,7 +421,7 @@ func createApplicationOrganizationHandler(c *gin.Context) {
 	appID := bearer.ApplicationID
 	orgID := bearer.OrganizationID
 
-	if (appID == nil || *appID == uuid.Nil) && (orgID == nil || *orgID == uuid.Nil) {
+	if (appID == nil || *appID == uuid.Nil) && orgID == nil {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}

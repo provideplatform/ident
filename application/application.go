@@ -93,7 +93,7 @@ func (app *Application) HasOrganization(db *gorm.DB, organizationID string) bool
 	query := db.Select("organizations.id")
 	query = query.Joins("JOIN applications_organizations as ao ON ao.organization_id = organizations.id")
 	query.Where("ao.application_id = ? AND ao.organization_id = ?", app.ID, organizationID).Find(&orgs)
-	return orgs != nil && len(orgs) == 1
+	return len(orgs) == 1
 }
 
 // OrganizationsListQuery returns a db query which joins the organization applications and returns the query for pagination
@@ -249,17 +249,17 @@ func (app *Application) addOrganization(tx *gorm.DB, org organization.Organizati
 		db = dbconf.DatabaseConnection()
 	}
 
-	common.Log.Debugf("adding organization %s to application: %s", org.ID, app.ID)
+	common.Log.Debugf("adding organization %s to application: %s", *org.ID, app.ID)
 	result := db.Exec("INSERT INTO applications_organizations (application_id, organization_id, permissions) VALUES (?, ?, ?)", app.ID, org.ID, permissions)
 	success := result.RowsAffected == 1
 	if success {
-		common.Log.Debugf("added organization %s to application: %s", org.ID, app.ID)
+		common.Log.Debugf("added organization %s to application: %s", *org.ID, app.ID)
 		db.Exec("DELETE FROM applications_users WHERE applications_users.application_id=? AND applications_users.user_id IN (SELECT user_id FROM organizations_users WHERE organizations_users.organization_id=?)", app.ID, org.ID)
 
-		go app.initOrgRegistration(db, org.ID)
-		go app.initImplicitDiffieHellmanKeyExchange(db, org.ID)
+		go app.initOrgRegistration(db, *org.ID)
+		go app.initImplicitDiffieHellmanKeyExchange(db, *org.ID)
 	} else {
-		common.Log.Warningf("failed to add organization %s to application: %s", org.ID, app.ID)
+		common.Log.Warningf("failed to add organization %s to application: %s", *org.ID, app.ID)
 	}
 	return success
 }
@@ -272,13 +272,13 @@ func (app *Application) removeOrganization(tx *gorm.DB, org organization.Organiz
 		db = dbconf.DatabaseConnection()
 	}
 
-	common.Log.Debugf("removing organization %s from application: %s", org.ID, app.ID)
+	common.Log.Debugf("removing organization %s from application: %s", *org.ID, app.ID)
 	result := db.Exec("DELETE FROM applications_organizations WHERE application_id = ? AND organization_id = ?", app.ID, org.ID)
 	success := result.RowsAffected == 1
 	if success {
-		common.Log.Debugf("removed organization %s from application: %s", org.ID, app.ID)
+		common.Log.Debugf("removed organization %s from application: %s", *org.ID, app.ID)
 	} else {
-		common.Log.Warningf("failed to remove organization %s from application: %s", org.ID, app.ID)
+		common.Log.Warningf("failed to remove organization %s from application: %s", *org.ID, app.ID)
 	}
 	return success
 }
@@ -291,13 +291,13 @@ func (app *Application) updateOrganization(tx *gorm.DB, org organization.Organiz
 		db = dbconf.DatabaseConnection()
 	}
 
-	common.Log.Debugf("updating organization %s for application: %s", org.ID, app.ID)
+	common.Log.Debugf("updating organization %s for application: %s", *org.ID, app.ID)
 	result := db.Exec("UPDATE applications_organizations SET permissions = ? WHERE application_id = ? AND organization_id = ?", permissions, app.ID, org.ID)
 	success := result.RowsAffected == 1
 	if success {
-		common.Log.Debugf("updated organization %s for application: %s", org.ID, app.ID)
+		common.Log.Debugf("updated organization %s for application: %s", *org.ID, app.ID)
 	} else {
-		common.Log.Warningf("failed to update organization %s for application: %s", org.ID, app.ID)
+		common.Log.Warningf("failed to update organization %s for application: %s", *org.ID, app.ID)
 	}
 	return success
 }
@@ -310,13 +310,13 @@ func (app *Application) addUser(tx *gorm.DB, usr user.User, permissions common.P
 		db = dbconf.DatabaseConnection()
 	}
 
-	common.Log.Debugf("adding user %s to application: %s", usr.ID, app.ID)
+	common.Log.Debugf("adding user %s to application: %s", *usr.ID, app.ID)
 	result := db.Exec("INSERT INTO applications_users (application_id, user_id, permissions) VALUES (?, ?, ?)", app.ID, usr.ID, permissions)
 	success := result.RowsAffected == 1
 	if success {
-		common.Log.Debugf("added user %s to application: %s", usr.ID, app.ID)
+		common.Log.Debugf("added user %s to application: %s", *usr.ID, app.ID)
 	} else {
-		common.Log.Warningf("failed to add user %s to application: %s", usr.ID, app.ID)
+		common.Log.Warningf("failed to add user %s to application: %s", *usr.ID, app.ID)
 	}
 	return success
 }
@@ -329,13 +329,13 @@ func (app *Application) removeUser(tx *gorm.DB, usr user.User) bool {
 		db = dbconf.DatabaseConnection()
 	}
 
-	common.Log.Debugf("removing user %s from application: %s", usr.ID, app.ID)
+	common.Log.Debugf("removing user %s from application: %s", *usr.ID, app.ID)
 	result := db.Exec("DELETE FROM applications_users WHERE application_id = ? AND user_id = ?", app.ID, usr.ID)
 	success := result.RowsAffected == 1
 	if success {
-		common.Log.Debugf("removed user %s from application: %s", usr.ID, app.ID)
+		common.Log.Debugf("removed user %s from application: %s", *usr.ID, app.ID)
 	} else {
-		common.Log.Warningf("failed to remove user %s from application: %s", usr.ID, app.ID)
+		common.Log.Warningf("failed to remove user %s from application: %s", *usr.ID, app.ID)
 	}
 	return success
 }
@@ -348,13 +348,13 @@ func (app *Application) updateUser(tx *gorm.DB, usr user.User, permissions commo
 		db = dbconf.DatabaseConnection()
 	}
 
-	common.Log.Debugf("updating user %s for application: %s", usr.ID, app.ID)
+	common.Log.Debugf("updating user %s for application: %s", *usr.ID, app.ID)
 	result := db.Exec("UPDATE applications_users SET permissions = ? WHERE application_id = ? AND user_id = ?", permissions, app.ID, usr.ID)
 	success := result.RowsAffected == 1
 	if success {
-		common.Log.Debugf("updated user %s for application: %s", usr.ID, app.ID)
+		common.Log.Debugf("updated user %s for application: %s", *usr.ID, app.ID)
 	} else {
-		common.Log.Warningf("failed to update user %s for application: %s", usr.ID, app.ID)
+		common.Log.Warningf("failed to update user %s for application: %s", *usr.ID, app.ID)
 	}
 	return success
 }
@@ -399,7 +399,7 @@ func (app *Application) Create(tx *gorm.DB) bool {
 				usr := user.Find(app.UserID)
 				if usr != nil && !app.addUser(db, *usr, common.DefaultApplicationUserResourcePermission) {
 					app.Errors = append(app.Errors, &provide.Error{
-						Message: common.StringOrNil(fmt.Sprintf("failed to add application user: %s", usr.ID)),
+						Message: common.StringOrNil(fmt.Sprintf("failed to add application user: %s", *usr.ID)),
 					})
 					return false
 				}
@@ -408,7 +408,7 @@ func (app *Application) Create(tx *gorm.DB) bool {
 					org := organization.Find(*app.OrganizationID)
 					if org != nil && !app.addOrganization(db, *org, common.DefaultApplicationOrganizationPermission) {
 						app.Errors = append(app.Errors, &provide.Error{
-							Message: common.StringOrNil(fmt.Sprintf("failed to add application organization: %s", org.ID)),
+							Message: common.StringOrNil(fmt.Sprintf("failed to add application organization: %s", *org.ID)),
 						})
 						return false
 					}

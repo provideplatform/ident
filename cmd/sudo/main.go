@@ -326,15 +326,14 @@ func vendOrganizationToken(orgID string, ttl *int, appclaims map[string]interfac
 	util.RequireJWT()
 	util.RequireVault()
 
-	orgUUID, _ := uuid.FromString(orgID)
-	org := organization.Find(orgUUID)
+	org := organization.Find(orgID)
 	if org == nil {
 		exit(fmt.Sprintf("org does not exist: %s", orgID), 1)
 	}
 
 	common.Log.Debugf("attempting to vend bearer token for organization: %s", orgID)
 	token := &token.Token{
-		OrganizationID:    &org.ID,
+		OrganizationID:    org.ID,
 		Scope:             common.StringOrNil("offline_access"),
 		ApplicationClaims: appclaims,
 	}

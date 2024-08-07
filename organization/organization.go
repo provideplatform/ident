@@ -254,13 +254,13 @@ func (o *Organization) Create(tx *gorm.DB) bool {
 
 				if success {
 					payload, _ := json.Marshal(map[string]interface{}{
-						"organization_id": o.ID.String(),
+						"organization_id": *o.ID,
 					})
 					natsutil.NatsJetstreamPublish(natsCreatedOrganizationCreatedSubject, payload)
 
 					if common.DispatchSiaNotifications {
 						payload, _ := json.Marshal(map[string]interface{}{
-							"id": o.ID.String(),
+							"id": *o.ID,
 						})
 						natsutil.NatsJetstreamPublish(natsSiaOrganizationNotificationSubject, payload)
 					}
