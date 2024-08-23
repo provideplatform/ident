@@ -65,7 +65,10 @@ func init() {
 		return
 	}
 
-	auth0.RequireAuth0()
+	if common.Auth0IntegrationEnabled {
+		auth0.RequireAuth0()
+	}
+
 	common.JWTKeypairs = util.RequireJWT()
 	util.RequireGin()
 	pgputil.RequirePGP()

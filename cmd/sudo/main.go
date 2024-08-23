@@ -50,7 +50,9 @@ const vendApplicationTokenCmd = "vendapptoken"
 const vendOrganizationTokenCmd = "vendorgtoken"
 
 func init() {
-	auth0.RequireAuth0()
+	if common.Auth0IntegrationEnabled {
+		auth0.RequireAuth0()
+	}
 }
 
 func exit(message string, code int) {
